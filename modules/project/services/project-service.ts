@@ -180,14 +180,11 @@ export const projectService = {
     assertValid(validation);
 
     const input = parseWriteData(payload, images);
-    console.log("PARESEEET:\n\n\n",input)
 
     try {
       const created = await projectRepository.create(input);
       return toProjectDto(created);
     } catch (error) {
-      console.log("SERVICE:   \n",error)
-
       return mapKnownError(error);
     }
   },

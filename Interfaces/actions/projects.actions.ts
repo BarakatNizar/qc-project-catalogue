@@ -89,7 +89,6 @@ export async function createProjectAction( payload: CreateProjectPayload, formDa
     revalidatePath("/projects");
     return { ok: true };
   } catch (error) {
-    console.log("ERROR:   \n",error)
     return { error: toSafeMessage(error) };
   }
 }

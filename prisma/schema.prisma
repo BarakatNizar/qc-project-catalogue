@@ -118,7 +118,7 @@ model Project {
 model ProjectFeature {
   id        String             @id @default(uuid()) @db.Uuid
   projectId String             @db.Uuid
-  content   String             @db.VarChar(500)
+  content   String             @db.VarChar(1000)
   scope     ProjectFeatureScope //IN | OUT
   sortOrder Int                @default(0)
   createdAt DateTime           @default(now())

@@ -71,7 +71,7 @@ const projectFeatureListSchema = z
       .string()
       .trim()
       .min(1, "Feature entries cannot be empty.")
-      .max(500, "Each feature must not exceed 200 characters."),
+      .max(1000, "Each feature must not exceed 1000 characters."),
   )
   .max(50, "Provide no more than 50 entries.");
 
@@ -160,7 +160,6 @@ export function checkProject_Create_Schema(
   const parsed = createProjectSchema.safeParse(payload);
 
   if (!parsed.success) {
-    console.log(parsed.error);
     return {
       ok: false,
       reason: `Invalid project creation payload: ${parsed.error.issues
