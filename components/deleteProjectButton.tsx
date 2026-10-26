@@ -1,0 +1,48 @@
+"use client";
+import { notify } from './notificationToaster'
+import { deleteProjectAction,  } from '@/Interfaces/actions/projects.actions'
+import { useRouter } from 'next/navigation'
+import { ConfirmSubmitButton } from './forms/confirm-submit-button';
+
+type Props = {
+    projectId: string,
+}
+
+const DeleteProjectButton = ({ projectId }: Props) => {
+    const router = useRouter()
+
+    const handleDeleteProject=async()=>{
+        try {
+            if(!projectId){
+                notify.error("Invalid Project Id!");
+                return;
+            }
+            const toastId= notify.loading(`Deleting Projec ...`)
+            const result = await deleteProjectAction({projectId});
+            notify.dismiss(toastId);
+            if ("error" in result){
+                notify.error("Error" , result.error)
+            }else {
+                notify.success("Project Deleted");
+                router.back()
+            }
+        } catch (error) {
+            console.error(error);
+            notify.error("Network Error");
+        }
+    }
+
+    return (
+        <div>
+            <ConfirmSubmitButton
+              className="rounded-xl px-3.5 py-1.5 text-xs font-semibold text-destructive hover:bg-destructive/10 transition-colors"
+              confirmMessage="Permanently delete this project and all its features, images, AI responses, and suggestions?"
+                onClick={()=>handleDeleteProject()}
+            >
+              Delete project
+            </ConfirmSubmitButton>
+          </div>
+    )
+}
+
+export default DeleteProjectButton

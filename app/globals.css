@@ -1,0 +1,161 @@
+@import "tailwindcss";
+
+/* 1. Import daisyUI plugin for Tailwind v4 */
+@plugin "daisyui" {
+  themes: qc-light, qc-dark;
+}
+
+/* 2. Configure Tailwind v4 Theme Variables & Custom Utilities */
+@theme {
+  /* Dynamic border radius matching SpeedyJob containers */
+  --radius-2xl: 2rem;
+  --radius-xl: 1.5rem;
+  --radius-lg: 1rem;
+
+  /* Map shadcn utility color tokens to custom CSS variables */
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+}
+
+/* 3. daisyUI Custom Theme Definitions */
+@plugin "daisyui/theme" {
+  name: "qc-light";
+  default: false;
+  prefersdark: false;
+  color-scheme: "light";
+
+  --color-base-100: oklch(99% 0.005 120);
+  --color-base-200: oklch(96% 0.01 120);
+  --color-base-300: oklch(91% 0.015 120);
+  --color-base-content: oklch(20% 0.02 120);
+
+  --color-primary: oklch(48% 0.14 150);      /* Crisp QC Emerald */
+  --color-primary-content: oklch(98% 0 0);
+  --color-secondary: oklch(42% 0.08 240);    /* Deep Slate Blue */
+  --color-secondary-content: oklch(98% 0 0);
+  --color-accent: oklch(65% 0.18 135);       /* Bright Mint Accent */
+  --color-accent-content: oklch(15% 0.04 135);
+
+  --color-neutral: oklch(25% 0.02 120);
+  --color-neutral-content: oklch(98% 0 0);
+
+  --color-info: oklch(60% 0.12 230);
+  --color-success: oklch(58% 0.15 142);
+  --color-warning: oklch(75% 0.15 75);
+  --color-error: oklch(60% 0.18 25);
+
+  --radius-selector: 1rem;
+  --radius-field: 0.75rem;
+  --radius-box: 2rem;                       /* SpeedyJob rounded-[2rem] */
+}
+
+@plugin "daisyui/theme" {
+  name: "qc-dark";
+  default: true;
+  prefersdark: true;
+  color-scheme: "dark";
+
+  --color-base-100: oklch(14% 0.015 150);    /* Deep luxury dark green/slate backdrop */
+  --color-base-200: oklch(18% 0.020 150);    /* Card background */
+  --color-base-300: oklch(24% 0.025 150);    /* Elevated surfaces / borders */
+  --color-base-content: oklch(95% 0.01 120);
+
+  --color-primary: oklch(68% 0.18 150);      /* Vibrant Forest Emerald */
+  --color-primary-content: oklch(12% 0.03 150);
+  --color-secondary: oklch(60% 0.12 240);    /* Muted Slate Accent */
+  --color-secondary-content: oklch(98% 0 0);
+  --color-accent: oklch(78% 0.20 135);       /* High-contrast Neon Mint */
+  --color-accent-content: oklch(10% 0.04 135);
+
+  --color-neutral: oklch(20% 0.02 150);
+  --color-neutral-content: oklch(95% 0.01 120);
+
+  --color-info: oklch(70% 0.14 230);
+  --color-success: oklch(70% 0.18 142);
+  --color-warning: oklch(80% 0.16 75);
+  --color-error: oklch(68% 0.20 25);
+
+  --radius-selector: 1rem;
+  --radius-field: 0.75rem;
+  --radius-box: 2rem;                       /* SpeedyJob rounded-[2rem] */
+}
+
+/* 4. Bridge shadcn CSS Variables to daisyUI QC Themes */
+:root,
+[data-theme="qc-light"] {
+  --background: oklch(99% 0.005 120);
+  --foreground: oklch(20% 0.02 120);
+  --card: oklch(96% 0.01 120);
+  --card-foreground: oklch(20% 0.02 120);
+  --popover: oklch(99% 0.005 120);
+  --popover-foreground: oklch(20% 0.02 120);
+  --primary: oklch(48% 0.14 150);
+  --primary-foreground: oklch(98% 0 0);
+  --secondary: oklch(91% 0.015 120);
+  --secondary-foreground: oklch(20% 0.02 120);
+  --muted: oklch(91% 0.015 120);
+  --muted-foreground: oklch(50% 0.02 120);
+  --accent: oklch(91% 0.015 120);
+  --accent-foreground: oklch(20% 0.02 120);
+  --destructive: oklch(60% 0.18 25);
+  --destructive-foreground: oklch(98% 0 0);
+  --border: oklch(88% 0.015 120);
+  --input: oklch(88% 0.015 120);
+  --ring: oklch(48% 0.14 150);
+}
+
+.dark,
+[data-theme="qc-dark"] {
+  --background: oklch(14% 0.015 150);
+  --foreground: oklch(95% 0.01 120);
+  --card: oklch(18% 0.020 150);
+  --card-foreground: oklch(95% 0.01 120);
+  --popover: oklch(18% 0.020 150);
+  --popover-foreground: oklch(95% 0.01 120);
+  --primary: oklch(68% 0.18 150);
+  --primary-foreground: oklch(12% 0.03 150);
+  --secondary: oklch(24% 0.025 150);
+  --secondary-foreground: oklch(95% 0.01 120);
+  --muted: oklch(24% 0.025 150);
+  --muted-foreground: oklch(65% 0.015 120);
+  --accent: oklch(24% 0.025 150);
+  --accent-foreground: oklch(95% 0.01 120);
+  --destructive: oklch(68% 0.20 25);
+  --destructive-foreground: oklch(98% 0 0);
+  --border: oklch(26% 0.02 150 / 0.6);
+  --input: oklch(26% 0.02 150 / 0.6);
+  --ring: oklch(68% 0.18 150);
+}
+
+/* 5. Base Styles & Global Glassmorphism Utilities */
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+}
+
+/* SpeedyJob Card Glass Effect Helper */
+.qc-card {
+  @apply bg-card/80 backdrop-blur-md border border-white/10 rounded-2xl shadow-xl transition-all duration-200;
+}
