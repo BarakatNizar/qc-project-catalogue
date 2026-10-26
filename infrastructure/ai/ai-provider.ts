@@ -17,8 +17,11 @@ export type AiGenerationInput = {
     problemStatement: string | null;
     proposedSolution: string | null;
     objectives: string | null;
+    targetUsers:string|null;
+    availableResources:string|null;
+    constraints:string|null;
     projectType: string;
-    projectSupervisorName: string;
+    projectSupervisorName: string | null;
     features: { content: string; scope: string }[];
     technologies: { name: string }[];
     existingSuggestions: { content: string; title: string }[];

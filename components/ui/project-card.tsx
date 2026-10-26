@@ -7,7 +7,7 @@ type CardProject = {
   id: string;
   title: string;
   summary: string;
-  projectSupervisorName: string;
+  projectSupervisorName: string|null;
   projectType: ProjectType;
   visibility: ProjectVisibility;
   technologies: { name: string }[];
