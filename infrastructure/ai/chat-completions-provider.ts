@@ -213,8 +213,7 @@ export class ChatCompletionsProvider implements AiProvider {
     const result = await this.requestJson({
       operation: "suggestions",
       context,
-      temperature: 0.6,
-      maxTokens: 3000,
+      maxTokens: 10000,
       messages: [
         { role: "system", content: SYSTEM_PROMPT },
         { role: "user", content: JSON.stringify(input) },
@@ -234,7 +233,7 @@ export class ChatCompletionsProvider implements AiProvider {
       operation: "project_extraction",
       context,
       temperature: 0.2,
-      maxTokens: 7000,
+      maxTokens: 50000,
       messages: [
         { role: "system", content: DOCUMENT_EXTRACTION_SYSTEM_PROMPT },
         { role: "user", content: documentText },
