@@ -21,7 +21,7 @@ const optionalEmail = z
   .transform((value) => value || undefined);
 
 const loginIdSchema= z.string().trim().min(9).max(120);
-const passwordSchema= z.string().min(9).max(256);
+const passwordSchema= z.string("Password must be between 9 ~ 256 characters").min(9).max(256);
 // ==========================================
 // Login
 // ==========================================
@@ -48,10 +48,9 @@ export function checkLogin_Schema(payload: LoginPayload): ValidationResult {
 // ==========================================
 export const createSupervisorSchema = z.object({
   loginId: z.string().trim().min(9).max(80).regex(/^\d+$/, { message: 'Login ID must contain numbers only' }),
-  name: z.string().trim().min(2).max(160),
+  name: z.string("name must be 2 to 100 characters only").trim().min(2).max(160),
   email: optionalEmail,
-  password:
-  passwordSchema,
+  password:passwordSchema,
 });
 export type CreateSupervisorPayload = z.infer<typeof createSupervisorSchema>;
 

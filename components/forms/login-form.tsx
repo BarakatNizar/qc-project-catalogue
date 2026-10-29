@@ -83,21 +83,21 @@ export function LoginForm() {
           <CardTitle>Quick Fill-In</CardTitle>
         </CardHeader>
         <CardContent className="space-x-4">
-          <button className="btn btn-sm btn-primary"
+          <button type="button" className="btn btn-sm btn-primary"
           onClick={()=>{
             setLoginId("admin");
             setPassword("adminadmin12")
           }}>
             Admin
             </button>
-          <button className="btn btn-sm btn-primary"
+          <button type="button" className="btn btn-sm btn-primary"
           onClick={()=>{
             setLoginId("123456789");
             setPassword("123456789")
           }}>
             Supervisor
           </button>
-          <button className="btn btn-sm btn-primary"
+          <button type="button" className="btn btn-sm btn-primary"
           onClick={()=>{
             setLoginId("987654321");
             setPassword("987654321")
@@ -122,7 +122,6 @@ export function LoginForm() {
             size={17}
             className="pointer-events-none absolute start-3.5 shrink-0 text-muted-foreground"
           />
-
           <input
             id="loginId"
             name="loginId"

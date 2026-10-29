@@ -1,8 +1,7 @@
 
 "use client";
 
-import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
-import Link from "next/link";
+import { useCallback, useEffect, useRef, useState } from "react"; import Link from "next/link";
 import {
   ArrowLeft,
   ArrowRight,
@@ -33,7 +32,6 @@ import type { CreateSupervisorPayload } from "@/shared/validation/user";
 import { notify } from "@/components/notificationToaster";
 import ErrorState from "@/components/ErrorState";
 import { PageHeading } from "@/components/ui/page-heading";
-import { FormField, TextInput } from "@/components/ui/form-field";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Button } from "@/components/ui/button";
 
@@ -82,6 +80,11 @@ export default function SupervisorsPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
+
+  const [name, setName] = useState("");
+  const [loginId, setLoginId] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
 
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isMutating, setIsMutating] = useState(false);
@@ -182,20 +185,14 @@ export default function SupervisorsPage() {
     setCurrentPage(page);
   }
 
-  async function handleCreateSupervisor(
-    event: FormEvent<HTMLFormElement>,
-  ) {
-    event.preventDefault();
-
+  async function handleCreateSupervisor() {
     if (isMutating) return;
 
-    const formData = new FormData(event.currentTarget);
-
     const payload: CreateSupervisorPayload = {
-      loginId: String(formData.get("loginId") ?? ""),
-      name: String(formData.get("name") ?? ""),
-      email: String(formData.get("email") ?? ""),
-      password: String(formData.get("password") ?? ""),
+      name: name.trim(),
+      loginId: loginId.trim(),
+      email: email.trim() ?? undefined,
+      password,
     };
 
     setIsMutating(true);
@@ -213,7 +210,10 @@ export default function SupervisorsPage() {
         "Credentials have been successfully initialized.",
       );
 
-      event.currentTarget.reset();
+      setName("");
+      setLoginId("");
+      setEmail("");
+      setPassword("");
 
       await loadDirectory(searchQuery.trim(), currentPage);
     } catch (error) {
@@ -617,77 +617,104 @@ export default function SupervisorsPage() {
                   account holder.
                 </p>
               </div>
-
-              <form
-                onSubmit={handleCreateSupervisor}
-                className="min-w-0 space-y-4"
-              >
-                <fieldset
-                  disabled={isMutating}
-                  className="min-w-0 space-y-4"
-                >
-                  <legend className="sr-only">
-                    New supervisor account details
-                  </legend>
-
-                  <FormField
-                    label="Full name"
+              <div className="min-w-0 space-y-4">
+                <div className="space-y-2">
+                  <label
+                    htmlFor="supervisor-name"
+                    className="text-sm font-medium"
+                  >
+                    Full name *
+                  </label>
+                  <input
+                    id="supervisor-name"
                     name="name"
-                  >
-                    <TextInput
-                      name="name"
-                      required
-                      minLength={2}
-                      maxLength={160}
-                      autoComplete="name"
-                      placeholder="Supervisor name"
-                    />
-                  </FormField>
+                    type="text"
+                    required
+                    minLength={2}
+                    maxLength={160}
+                    autoComplete="name"
+                    placeholder="Supervisor name"
+                    value={name}
+                    onChange={(event) => setName(event.target.value)}
+                    disabled={isMutating}
+                    className="h-11 w-full min-w-0 rounded-xl border border-border/80 bg-background px-3 text-sm outline-none transition placeholder:text-muted-foreground/80 focus:border-primary/60 focus:ring-2 focus:ring-primary/15 disabled:cursor-not-allowed disabled:opacity-50"
+                  />
+                </div>
 
-                  <FormField
-                    label="Login ID"
+                <div className="space-y-2">
+                  <label
+                    htmlFor="supervisor-login-id"
+                    className="text-sm font-medium"
+                  >
+                    Login ID *
+                  </label>
+                  <p className="text-xs text-muted-foreground">
+                    The identifier the supervisor will use to sign in.
+                  </p>
+                  <input
+                    id="supervisor-login-id"
                     name="loginId"
-                    hint="The identifier the supervisor will use to sign in."
-                  >
-                    <TextInput
-                      name="loginId"
-                      required
-                      minLength={3}
-                      maxLength={120}
-                      autoComplete="off"
-                      placeholder="e.g. 202110878"
-                    />
-                  </FormField>
+                    type="text"
+                    required
+                    minLength={3}
+                    maxLength={120}
+                    autoComplete="off"
+                    placeholder="e.g. 202110878"
+                    value={loginId}
+                    onChange={(event) => setLoginId(event.target.value)}
+                    disabled={isMutating}
+                    className="h-11 w-full min-w-0 rounded-xl border border-border/80 bg-background px-3 text-sm outline-none transition placeholder:text-muted-foreground/80 focus:border-primary/60 focus:ring-2 focus:ring-primary/15 disabled:cursor-not-allowed disabled:opacity-50"
+                  />
+                </div>
 
-                  <FormField
-                    label="Email address"
+                <div className="space-y-2">
+                  <label
+                    htmlFor="supervisor-email"
+                    className="text-sm font-medium"
+                  >
+                    Email address
+                  </label>
+                  <p className="text-xs text-muted-foreground">
+                    Optional. No email delivery is implied by entering an address.
+                  </p>
+                  <input
+                    id="supervisor-email"
                     name="email"
-                    hint="Optional. No email delivery is implied by entering an address."
-                  >
-                    <TextInput
-                      name="email"
-                      type="email"
-                      autoComplete="email"
-                      placeholder="name@university.edu"
-                    />
-                  </FormField>
+                    type="email"
+                    autoComplete="email"
+                    placeholder="name@university.edu"
+                    value={email}
+                    onChange={(event) => setEmail(event.target.value)}
+                    disabled={isMutating}
+                    className="h-11 w-full min-w-0 rounded-xl border border-border/80 bg-background px-3 text-sm outline-none transition placeholder:text-muted-foreground/80 focus:border-primary/60 focus:ring-2 focus:ring-primary/15 disabled:cursor-not-allowed disabled:opacity-50"
+                  />
+                </div>
 
-                  <FormField
-                    label="Temporary password"
-                    name="password"
-                    hint="Use at least 9 characters. QC does not automatically generate or email passwords."
+                <div className="space-y-2">
+                  <label
+                    htmlFor="supervisor-password"
+                    className="text-sm font-medium"
                   >
-                    <TextInput
-                      name="password"
-                      type="password"
-                      required
-                      minLength={9}
-                      maxLength={128}
-                      autoComplete="new-password"
-                      placeholder="Enter a temporary password"
-                    />
-                  </FormField>
-                </fieldset>
+                    Temporary password *
+                  </label>
+                  <p className="text-xs text-muted-foreground">
+                    Use at least 9 characters. QC does not automatically generate or email passwords.
+                  </p>
+                  <input
+                    id="supervisor-password"
+                    name="password"
+                    type="password"
+                    required
+                    minLength={9}
+                    maxLength={128}
+                    autoComplete="new-password"
+                    placeholder="Enter a temporary password"
+                    value={password}
+                    onChange={(event) => setPassword(event.target.value)}
+                    disabled={isMutating}
+                    className="h-11 w-full min-w-0 rounded-xl border border-border/80 bg-background px-3 text-sm outline-none transition placeholder:text-muted-foreground/80 focus:border-primary/60 focus:ring-2 focus:ring-primary/15 disabled:cursor-not-allowed disabled:opacity-50"
+                  />
+                </div>
 
                 <div className="flex items-start gap-2 border-t border-border/70 pt-4 text-xs leading-5 text-muted-foreground">
                   <Clock3
@@ -701,8 +728,9 @@ export default function SupervisorsPage() {
                 </div>
 
                 <Button
-                  type="submit"
+                  type="button"
                   disabled={isMutating}
+                  onClick={() => void handleCreateSupervisor()}
                   className="w-full rounded-xl font-semibold"
                 >
                   {isMutating ? (
@@ -715,7 +743,7 @@ export default function SupervisorsPage() {
                   )}
                   {isMutating ? "Processing…" : "Create supervisor account"}
                 </Button>
-              </form>
+              </div>
             </div>
           </section>
         </aside>
