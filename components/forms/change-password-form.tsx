@@ -1,25 +1,130 @@
-// components/auth/change-password-form.tsx (or your respective path)
+
 "use client";
 
-import { useState, useTransition } from "react";
-import { LockKeyhole, Eye, EyeOff, AlertCircle, Loader2 } from "lucide-react";
+import { useState, useTransition, type FormEvent } from "react";
+import {
+  LockKeyhole,
+  Eye,
+  EyeOff,
+  AlertCircle,
+  Loader2,
+  Check,
+} from "lucide-react";
+
 import { changePasswordAction } from "@/Interfaces/actions/auth.actions";
 import { Button } from "@/components/ui/button";
 import type { ChangePasswordPayload } from "@/shared/validation/user";
 
-export function ChangePasswordForm({ initialPassword }: { initialPassword: boolean }) {
+type ChangePasswordFormProps = {
+  initialPassword: boolean;
+};
+
+type PasswordFieldProps = {
+  id: string;
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  visible: boolean;
+  onToggleVisibility: () => void;
+  placeholder: string;
+  autoComplete: "current-password" | "new-password";
+  disabled: boolean;
+  minLength?: number;
+  maxLength?: number;
+  hint?: string;
+  hintId?: string;
+};
+
+function PasswordField({
+  id,
+  label,
+  value,
+  onChange,
+  visible,
+  onToggleVisibility,
+  placeholder,
+  autoComplete,
+  disabled,
+  minLength,
+  maxLength,
+  hint,
+  hintId,
+}: PasswordFieldProps) {
+  return (
+    <div className="space-y-2">
+      <label
+        htmlFor={id}
+        className="block text-xs font-semibold tracking-wide text-foreground"
+      >
+        {label}
+      </label>
+
+      <div className="relative flex min-h-12 items-center rounded-xl border border-border bg-background transition-colors duration-200 focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20">
+        <LockKeyhole
+          size={17}
+          aria-hidden="true"
+          className="pointer-events-none absolute start-3.5 shrink-0 text-muted-foreground"
+        />
+
+        <input
+          id={id}
+          name={id}
+          type={visible ? "text" : "password"}
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+          autoComplete={autoComplete}
+          required
+          disabled={disabled}
+          minLength={minLength}
+          maxLength={maxLength}
+          placeholder={placeholder}
+          aria-describedby={hintId}
+          className="min-w-0 w-full bg-transparent py-3 ps-10 pe-12 text-sm text-foreground outline-none placeholder:text-muted-foreground/60 disabled:cursor-not-allowed disabled:opacity-60"
+        />
+
+        <button
+          type="button"
+          onClick={onToggleVisibility}
+          disabled={disabled}
+          aria-label={visible ? `Hide ${label.toLowerCase()}` : `Show ${label.toLowerCase()}`}
+          aria-pressed={visible}
+          className="absolute end-2 grid size-8 place-items-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          {visible ? <EyeOff size={17} /> : <Eye size={17} />}
+        </button>
+      </div>
+
+      {hint && (
+        <p
+          id={hintId}
+          className="text-xs leading-5 text-muted-foreground"
+        >
+          {hint}
+        </p>
+      )}
+    </div>
+  );
+}
+
+export function ChangePasswordForm({
+  initialPassword,
+}: ChangePasswordFormProps) {
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
 
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+
   const [showCurrent, setShowCurrent] = useState(false);
   const [showNew, setShowNew] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
 
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
+  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    if (pending) return;
+
     setError(null);
 
     const payload: ChangePasswordPayload = {
@@ -29,138 +134,141 @@ export function ChangePasswordForm({ initialPassword }: { initialPassword: boole
     };
 
     startTransition(async () => {
-      const res = await changePasswordAction(payload);
-      if (res && res.error) {
-        setError(res.error);
+      try {
+        const res = await changePasswordAction(payload);
+
+        if (res && res.error) {
+          setError(res.error);
+        }
+      } catch (err) {
+        console.error("Change password request failed:", err);
+        setError("Unable to update your password. Please try again.");
       }
     });
   };
 
   return (
-    <form onSubmit={handleSubmit} className="mt-6 space-y-4">
-      {/* Error Banner */}
+    <form
+      onSubmit={handleSubmit}
+      aria-busy={pending}
+      className="space-y-5"
+    >
+      {/* Server or request error */}
       {error && (
         <div
           role="alert"
-          className="flex items-center gap-2.5 rounded-xl border border-destructive/30 bg-destructive/10 p-3.5 text-xs font-semibold text-destructive backdrop-blur-md animate-in fade-in slide-in-from-top-1"
+          aria-live="assertive"
+          className="flex items-start gap-3 rounded-xl border border-destructive/30 bg-destructive/10 p-3.5 text-sm text-destructive"
         >
-          <AlertCircle size={16} className="shrink-0" />
-          <span>{error}</span>
+          <AlertCircle
+            size={18}
+            className="mt-0.5 shrink-0"
+            aria-hidden="true"
+          />
+          <p className="min-w-0 flex-1 leading-5">{error}</p>
         </div>
       )}
 
-      {/* Current Password Input */}
-      <div className="space-y-1.5">
-        <label htmlFor="currentPassword" className="font-mono text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
-          Current password
-        </label>
-        <div className="relative flex items-center rounded-xl border border-border/70 bg-background/50 backdrop-blur-md transition-all duration-200 focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20">
-          <LockKeyhole size={17} className="absolute left-3.5 text-muted-foreground/70" />
-          <input
-            id="currentPassword"
-            name="currentPassword"
-            type={showCurrent ? "text" : "password"}
-            value={currentPassword}
-            onChange={(e) => setCurrentPassword(e.target.value)}
-            autoComplete="current-password"
-            required
-            placeholder="Enter current password"
-            className="w-full bg-transparent py-2.5 pl-10 pr-11 text-sm font-medium text-foreground outline-none placeholder:text-muted-foreground/50"
-          />
-          <button
-            type="button"
-            onClick={() => setShowCurrent((prev) => !prev)}
-            className="absolute right-2 flex size-8 items-center justify-center rounded-lg text-muted-foreground/70 transition-colors hover:bg-muted hover:text-foreground"
-            aria-label={showCurrent ? "Hide password" : "Show password"}
-          >
-            {showCurrent ? <EyeOff size={16} /> : <Eye size={16} />}
-          </button>
-        </div>
-      </div>
+      <PasswordField
+        id="currentPassword"
+        label="Current password"
+        value={currentPassword}
+        onChange={setCurrentPassword}
+        visible={showCurrent}
+        onToggleVisibility={() => setShowCurrent((value) => !value)}
+        placeholder="Enter current password"
+        autoComplete="current-password"
+        disabled={pending}
+      />
 
-      {/* New Password Input */}
-      <div className="space-y-1.5">
-        <label htmlFor="newPassword" className="font-mono text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
-          New password
-        </label>
-        <div className="relative flex items-center rounded-xl border border-border/70 bg-background/50 backdrop-blur-md transition-all duration-200 focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20">
-          <LockKeyhole size={17} className="absolute left-3.5 text-muted-foreground/70" />
-          <input
-            id="newPassword"
-            name="newPassword"
-            type={showNew ? "text" : "password"}
-            value={newPassword}
-            onChange={(e) => setNewPassword(e.target.value)}
-            autoComplete="new-password"
-            minLength={9}
-            maxLength={128}
-            required
-            placeholder="Enter new password"
-            className="w-full bg-transparent py-2.5 pl-10 pr-11 text-sm font-medium text-foreground outline-none placeholder:text-muted-foreground/50"
-          />
-          <button
-            type="button"
-            onClick={() => setShowNew((prev) => !prev)}
-            className="absolute right-2 flex size-8 items-center justify-center rounded-lg text-muted-foreground/70 transition-colors hover:bg-muted hover:text-foreground"
-            aria-label={showNew ? "Hide password" : "Show password"}
-          >
-            {showNew ? <EyeOff size={16} /> : <Eye size={16} />}
-          </button>
-        </div>
-        <p className="text-[11px] leading-relaxed text-muted-foreground/70">At least 9 characters.</p>
-      </div>
+      <PasswordField
+        id="newPassword"
+        label="New password"
+        value={newPassword}
+        onChange={setNewPassword}
+        visible={showNew}
+        onToggleVisibility={() => setShowNew((value) => !value)}
+        placeholder="Enter new password"
+        autoComplete="new-password"
+        minLength={9}
+        maxLength={128}
+        hint="Use at least 9 characters."
+        hintId="newPassword-hint"
+        disabled={pending}
+      />
 
-      {/* Confirm Password Input */}
-      <div className="space-y-1.5">
-        <label htmlFor="confirmPassword" className="font-mono text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
-          Confirm new password
-        </label>
-        <div className="relative flex items-center rounded-xl border border-border/70 bg-background/50 backdrop-blur-md transition-all duration-200 focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20">
-          <LockKeyhole size={17} className="absolute left-3.5 text-muted-foreground/70" />
-          <input
-            id="confirmPassword"
-            name="confirmPassword"
-            type={showConfirm ? "text" : "password"}
-            value={confirmPassword}
-            onChange={(e) => setConfirmPassword(e.target.value)}
-            autoComplete="new-password"
-            minLength={9}
-            maxLength={128}
-            required
-            placeholder="Confirm new password"
-            className="w-full bg-transparent py-2.5 pl-10 pr-11 text-sm font-medium text-foreground outline-none placeholder:text-muted-foreground/50"
-          />
-          <button
-            type="button"
-            onClick={() => setShowConfirm((prev) => !prev)}
-            className="absolute right-2 flex size-8 items-center justify-center rounded-lg text-muted-foreground/70 transition-colors hover:bg-muted hover:text-foreground"
-            aria-label={showConfirm ? "Hide password" : "Show password"}
-          >
-            {showConfirm ? <EyeOff size={16} /> : <Eye size={16} />}
-          </button>
-        </div>
-      </div>
+      <PasswordField
+        id="confirmPassword"
+        label="Confirm new password"
+        value={confirmPassword}
+        onChange={setConfirmPassword}
+        visible={showConfirm}
+        onToggleVisibility={() => setShowConfirm((value) => !value)}
+        placeholder="Confirm new password"
+        autoComplete="new-password"
+        minLength={9}
+        maxLength={128}
+        disabled={pending}
+      />
 
-      {/* First Sign-in Notice */}
+      {/* First sign-in notice */}
       {initialPassword && (
-        <div className="flex items-start gap-2.5 rounded-2xl border border-primary/30 bg-primary/10 p-4 text-xs leading-relaxed text-foreground backdrop-blur-sm">
-          <LockKeyhole size={16} className="mt-0.5 shrink-0 text-primary" />
-          <span>This is your first sign-in. Set a new password before using the rest of QC.</span>
+        <div className="flex items-start gap-3 rounded-2xl border border-primary/25 bg-primary/10 p-3.5 sm:p-4">
+          <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-primary/10 text-primary">
+            <LockKeyhole size={17} aria-hidden="true" />
+          </span>
+
+          <div className="min-w-0">
+            <p className="text-sm font-semibold text-foreground">
+              First sign-in
+            </p>
+            <p className="mt-1 text-xs leading-5 text-muted-foreground sm:text-sm">
+              Set a new password before using the rest of QC.
+            </p>
+          </div>
         </div>
       )}
 
-      {/* Submit Button */}
+      {/* Password confirmation feedback */}
+      {confirmPassword.length > 0 && (
+        <p
+          className={
+            newPassword === confirmPassword
+              ? "flex items-center gap-2 text-xs font-medium text-success"
+              : "text-xs leading-5 text-muted-foreground"
+          }
+          aria-live="polite"
+        >
+          {newPassword === confirmPassword ? (
+            <>
+              <Check size={14} aria-hidden="true" />
+              Passwords match.
+            </>
+          ) : (
+            "Make sure both new password fields match."
+          )}
+        </p>
+      )}
+
       <Button
         type="submit"
         disabled={pending}
-        className="mt-2 w-full rounded-xl py-2.5 text-xs font-bold uppercase tracking-wider shadow-lg shadow-primary/20 transition-all duration-200 hover:scale-[1.01] active:scale-[0.99]"
+        className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl text-sm font-semibold shadow-lg shadow-primary/15 transition-[transform,box-shadow] duration-200 hover:shadow-primary/25 active:scale-[0.99] motion-reduce:transition-none"
       >
         {pending ? (
-          <span className="flex items-center gap-2">
-            <Loader2 size={16} className="animate-spin" /> Updating password...
-          </span>
+          <>
+            <Loader2
+              size={17}
+              className="animate-spin motion-reduce:animate-none"
+              aria-hidden="true"
+            />
+            <span>Updating password...</span>
+          </>
         ) : (
-          "Update password"
+          <>
+            <LockKeyhole size={16} aria-hidden="true" />
+            <span>Update password</span>
+          </>
         )}
       </Button>
     </form>

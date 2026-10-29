@@ -21,7 +21,6 @@ export function ConfirmSubmitButton({
       onClick={(event) => {
         if (!window.confirm(confirmMessage)) {
           event.preventDefault();
-          console.log("ASDFSAD")
         }else onClick?.(event)
       }}
     >

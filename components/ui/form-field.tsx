@@ -1,4 +1,4 @@
-import type { InputHTMLAttributes, ReactNode, TextareaHTMLAttributes } from "react";
+import type { InputHTMLAttributes, ReactNode  } from "react";
 
 export function FormField({ label, name, hint, children }: { label: string; name: string; hint?: string; children: ReactNode }) {
   return (
@@ -18,16 +18,6 @@ export function TextInput(props: InputHTMLAttributes<HTMLInputElement>) {
       {...props}
       id={props.id ?? props.name}
       className={`w-full rounded-xl border border-border/70 bg-background/50 px-4 py-2.5 text-[15px] font-medium text-foreground outline-none backdrop-blur-md transition-all duration-200 focus:border-primary focus:ring-2 focus:ring-primary/20 placeholder:text-muted-foreground/50 ${props.className ?? ""}`}
-    />
-  );
-}
-
-export function TextArea(props: TextareaHTMLAttributes<HTMLTextAreaElement>) {
-  return (
-    <textarea
-      {...props}
-      id={props.id ?? props.name}
-      className={`w-full rounded-xl border border-border/70 bg-background/50 px-4 py-3 text-[15px] font-medium text-foreground outline-none backdrop-blur-md transition-all duration-200 focus:border-primary focus:ring-2 focus:ring-primary/20 min-h-28 resize-y placeholder:text-muted-foreground/50 ${props.className ?? ""}`}
     />
   );
 }

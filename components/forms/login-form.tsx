@@ -1,120 +1,170 @@
+
 "use client";
 
-import { useState } from "react";
-import { Eye, EyeOff, LockKeyhole, UserRound, Loader2 } from "lucide-react";
+import { useState, type FormEvent } from "react";
+import { useRouter } from "next/navigation";
+import {
+  Eye,
+  EyeOff,
+  LockKeyhole,
+  UserRound,
+  Loader2,
+} from "lucide-react";
+
 import { loginAction } from "@/Interfaces/actions/auth.actions";
 import { Button } from "@/components/ui/button";
 import { notify } from "../notificationToaster";
-import { LoginPayload } from "@/shared/validation/user";
-import { useRouter } from "next/navigation";
-
+import type { LoginPayload } from "@/shared/validation/user";
 
 export function LoginForm() {
   const router = useRouter();
-  const [loginId, setLoginId] = useState<string>();
-  const [password, setPassword] = useState<string>();
-  const [showPassword, setShowPassword] = useState(false);
 
+  const [loginId, setLoginId] = useState("");
+  const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [pending, setPending] = useState(false);
 
-  const handleLogin=async ()=>{
-    if (!loginId){
+  const handleLogin = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    if (pending) return;
+
+    if (!loginId.trim()) {
       notify.system("Insert Your Login Id");
       return;
-    }else if (!password){
+    }
+
+    if (!password) {
       notify.system("Insert Your Password");
       return;
     }
+
+    let toastId: string | number | undefined;
+
     try {
       setPending(true);
-      const toastId= notify.loading("Logging in...");
-      const payload:LoginPayload={
-        loginId,password
-      }
+      toastId = notify.loading("Logging in...");
+
+      const payload: LoginPayload = {
+        loginId,
+        password,
+      };
+
       const loggedIn = await loginAction(payload);
-      notify.dismiss(toastId);
-      if ("error" in loggedIn){
-        notify.error("Error",loggedIn.error)
-      }else {
-        notify.success("Welcome Sir!");
-        router.replace(loggedIn.redirect);
+
+      if ("error" in loggedIn) {
+        notify.error("Error", loggedIn.error);
+        return;
       }
+
+      notify.success("Welcome Sir!");
+      router.replace(loggedIn.redirect);
     } catch (error) {
       notify.error("Network Error");
-      console.error(error)
-    }finally{
+      console.error(error);
+    } finally {
+      if (toastId !== undefined) {
+        notify.dismiss(toastId);
+      }
+
       setPending(false);
     }
-  }
+  };
 
   return (
-    <section  className="mt-6 space-y-4">
-      {/* Login ID Input */}
-      <div className="space-y-1.5">
-        <label htmlFor="loginId" className="font-mono text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+    <form
+      onSubmit={handleLogin}
+      aria-busy={pending}
+      className="space-y-5"
+    >
+      {/* Login ID */}
+      <div className="space-y-2">
+        <label
+          htmlFor="loginId"
+          className="block text-xs font-semibold tracking-wide text-foreground"
+        >
           Login ID
         </label>
-        <div className="relative flex items-center rounded-xl border border-border/70 bg-background/50 backdrop-blur-md transition-all duration-200 focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20">
-          <UserRound size={17} className="absolute left-3.5 text-muted-foreground/70" />
+
+        <div className="relative flex min-h-12 items-center rounded-xl border border-border bg-background transition-colors duration-200 focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20">
+          <UserRound
+            aria-hidden="true"
+            size={17}
+            className="pointer-events-none absolute start-3.5 shrink-0 text-muted-foreground"
+          />
+
           <input
             id="loginId"
             name="loginId"
-            value={loginId??""}
-            onChange={(e)=>setLoginId(e.target.value)}
+            value={loginId}
+            onChange={(event) => setLoginId(event.target.value)}
             type="text"
             autoComplete="username"
-            required
             autoFocus
+            required
+            disabled={pending}
             placeholder="Enter your login ID"
-            className="w-full bg-transparent py-2.5 pl-10 pr-4 text-sm font-medium text-foreground outline-none placeholder:text-muted-foreground/50"
+            className="min-w-0 w-full bg-transparent py-3 ps-10 pe-3 text-sm text-foreground outline-none placeholder:text-muted-foreground/60 disabled:cursor-not-allowed disabled:opacity-60"
           />
         </div>
       </div>
 
-      {/* Password Input */}
-      <div className="space-y-1.5">
-        <label htmlFor="password" className="font-mono text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+      {/* Password */}
+      <div className="space-y-2">
+        <label
+          htmlFor="password"
+          className="block text-xs font-semibold tracking-wide text-foreground"
+        >
           Password
         </label>
-        <div className="relative flex items-center rounded-xl border border-border/70 bg-background/50 backdrop-blur-md transition-all duration-200 focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20">
-          <LockKeyhole size={17} className="absolute left-3.5 text-muted-foreground/70" />
+
+        <div className="relative flex min-h-12 items-center rounded-xl border border-border bg-background transition-colors duration-200 focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20">
+          <LockKeyhole
+            aria-hidden="true"
+            size={17}
+            className="pointer-events-none absolute start-3.5 shrink-0 text-muted-foreground"
+          />
+
           <input
             id="password"
             name="password"
-            value={password??""}
-            onChange={(e)=>setPassword(e.target.value)}
+            value={password}
+            onChange={(event) => setPassword(event.target.value)}
             type={showPassword ? "text" : "password"}
             autoComplete="current-password"
             required
+            disabled={pending}
             placeholder="Enter your password"
-            className="w-full bg-transparent py-2.5 pl-10 pr-11 text-sm font-medium text-foreground outline-none placeholder:text-muted-foreground/50"
+            className="min-w-0 w-full bg-transparent py-3 ps-10 pe-12 text-sm text-foreground outline-none placeholder:text-muted-foreground/60 disabled:cursor-not-allowed disabled:opacity-60"
           />
+
           <button
             type="button"
-            onClick={() => setShowPassword((value) => !value)}
-            className="absolute right-2 flex size-8 items-center justify-center rounded-lg text-muted-foreground/70 transition-colors hover:bg-muted hover:text-foreground"
+            onClick={() => setShowPassword((visible) => !visible)}
+            disabled={pending}
             aria-label={showPassword ? "Hide password" : "Show password"}
+            aria-pressed={showPassword}
+            className="absolute end-2 grid size-8 place-items-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+            {showPassword ? <EyeOff size={17} /> : <Eye size={17} />}
           </button>
         </div>
       </div>
 
-      {/* Submit Button */}
       <Button
         type="submit"
         disabled={pending}
-        onClick={()=>handleLogin()}
-        className="mt-2 w-full rounded-xl py-2.5 text-xs font-bold uppercase tracking-wider shadow-lg shadow-primary/20 transition-all duration-200 hover:scale-[1.01] active:scale-[0.99]"
+        className="mt-1 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl text-sm font-semibold shadow-lg shadow-primary/15 transition-[transform,box-shadow] duration-200 hover:shadow-primary/25 active:scale-[0.99] motion-reduce:transition-none"
       >
         {pending ? (
-          <span className="flex items-center gap-2">
-            <Loader2 size={16} className="animate-spin" /> Signing in...
-          </span>
+          <>
+            <Loader2 size={17} className="animate-spin" />
+            <span>Signing in...</span>
+          </>
         ) : (
           "Sign in"
         )}
       </Button>
-    </section>
+    </form>
   );
 }

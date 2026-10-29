@@ -822,7 +822,7 @@ Before producing the PDF, verify that:
 
 
 
-const PROJECT_BRIEFING_PROMPT=`# Prompt: Prepare My Academic Project Brief for a University Project Catalogue
+export const PROJECT_BRIEFING_PROMPT=`# Prompt: Prepare My Academic Project Brief for a University Project Catalogue
 
 You are an academic project documentation analyst.
 

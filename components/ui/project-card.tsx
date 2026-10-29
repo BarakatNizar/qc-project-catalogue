@@ -1,84 +1,210 @@
+
 import Link from "next/link";
-import { ArrowUpRight, Image as ImageIcon, Layers3 } from "lucide-react";
+import {
+  ArrowUpRight,
+  Eye,
+  EyeOff,
+  Images,
+  Layers3,
+  Sparkles,
+  UserRound,
+} from "lucide-react";
+
 import { Badge } from "@/components/ui/badge";
-import { ProjectType, ProjectVisibility } from "@prisma/client";
+import type { ProjectType, ProjectVisibility } from "@prisma/client";
 
 type CardProject = {
   id: string;
   title: string;
   summary: string;
-  projectSupervisorName: string|null;
+  projectSupervisorName: string | null;
   projectType: ProjectType;
   visibility: ProjectVisibility;
   technologies: { name: string }[];
   images: { id: string; mimeType: string }[];
-  counts: { images: number; suggestions: number };
+  counts: {
+    images: number;
+    suggestions: number;
+  };
 };
 
-export function ProjectCard({ project, management = false }: { project: CardProject; management?: boolean }) {
+export function ProjectCard({
+  project,
+  management = false,
+}: {
+  project: CardProject;
+  management?: boolean;
+}) {
+  const isGraduationProject = project.projectType === "GRADUATION";
+  const isVisible = project.visibility === "VISIBLE";
+  const supervisorName =
+    project.projectSupervisorName?.trim() || "Supervisor not assigned";
+
+  const projectHref = management
+    ? `/supervisor/projects/${project.id}`
+    : `/projects/${project.id}`;
+
+  const image = project.images[0];
+
   return (
-    <article className="group relative flex h-full flex-col overflow-hidden rounded-[2rem] border border-white/10 bg-card/80 backdrop-blur-xl transition-all duration-300 hover:-translate-y-1 hover:border-primary/40 hover:shadow-2xl hover:shadow-primary/10">
-      {/* Thumbnail Header */}
-      <div className="relative flex h-40 items-center justify-center overflow-hidden bg-gradient-to-br from-secondary/40 via-muted/30 to-card">
-        {project.images[0] ? (
+    <article className="group relative flex h-full min-w-0 flex-col overflow-hidden rounded-2xl border border-border/70 bg-card shadow-sm transition-[border-color,box-shadow,transform] duration-200 hover:-translate-y-0.5 hover:border-primary/35 hover:shadow-lg hover:shadow-primary/5">
+      <div className="relative flex h-40 shrink-0 items-center justify-center overflow-hidden bg-gradient-to-br from-primary/10 via-muted/60 to-secondary/20 sm:h-44">
+        {image ? (
           <img
-            src={`/projects/${project.id}/images/${project.images[0].id}`}
+            src={`/projects/${project.id}/images/${image.id}`}
             alt=""
-            className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
             loading="lazy"
+            className="size-full object-cover transition-transform duration-500 group-hover:scale-[1.035]"
           />
         ) : (
-          <div className="grid size-14 place-items-center rounded-2xl border border-primary/20 bg-background/60 text-primary shadow-inner">
-            <Layers3 size={24} />
+          <div className="relative grid size-16 place-items-center rounded-2xl border border-primary/20 bg-background/75 text-primary shadow-sm">
+            <Layers3 size={27} aria-hidden="true" />
           </div>
         )}
-        <Badge variant="outline" className="absolute left-3.5 top-3.5 rounded-full border-border/60 bg-background/85 px-3 py-1 font-mono text-[12px] font-semibold backdrop-blur-md">
-          {project.projectType === "GRADUATION" ? "Graduation project" : "Pre-graduation"}
-        </Badge>
-        {management && (
-          <Badge className={`absolute right-3.5 top-3.5 rounded-full font-mono text-[12px] font-semibold uppercase tracking-wider ${project.visibility === "VISIBLE" ? "bg-primary-content/70 text-primary border border-primary/30" : "bg-muted text-muted-foreground"}`}>
-            {project.visibility.toLowerCase()}
+
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-black/[0.03]"
+        />
+
+        <div className="absolute inset-x-3 top-3 flex min-w-0 items-start justify-between gap-2">
+          <Badge
+            variant="outline"
+            className="max-w-[75%] rounded-full border-border/70 bg-background/95 px-3 py-1 text-[11px] font-semibold text-foreground shadow-sm backdrop-blur-sm"
+          >
+            {isGraduationProject ? "Graduation project" : "Pre-graduation"}
           </Badge>
-        )}
+
+          {management ? (
+            <Badge
+              variant="outline"
+              className={`shrink-0 gap-1 rounded-full border px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide shadow-sm backdrop-blur-sm ${
+                isVisible
+                  ? "border-emerald-500/30 bg-background/95 text-emerald-700 dark:text-emerald-300"
+                  : "border-border/70 bg-background/95 text-muted-foreground"
+              }`}
+            >
+              {isVisible ? (
+                <Eye size={12} aria-hidden="true" />
+              ) : (
+                <EyeOff size={12} aria-hidden="true" />
+              )}
+              {isVisible ? "Visible" : "Hidden"}
+            </Badge>
+          ) : null}
+        </div>
+
+        {management && !isVisible ? (
+          <div className="absolute bottom-3 left-3 inline-flex items-center gap-1.5 rounded-lg border border-border/70 bg-background/95 px-2.5 py-1.5 text-xs font-medium text-muted-foreground shadow-sm backdrop-blur-sm">
+            <EyeOff size={13} aria-hidden="true" />
+            <span>Not shown in student search</span>
+          </div>
+        ) : null}
       </div>
 
-      {/* Body Content */}
-      <div className="flex flex-1 flex-col p-6">
-        <p className="font-mono text-[12px] font-bold uppercase tracking-wider text-muted-foreground/70 mb-2">
-          Supervisor · {project.projectSupervisorName}
-        </p>
-        <h2 className="text-lg font-bold leading-snug tracking-tight">
-          <Link className="no-underline after:absolute after:inset-0 text-foreground transition-colors group-hover:text-primary" href={`${management ? "/supervisor/projects" : "/projects"}/${project.id}`}>
+      <div className="flex min-w-0 flex-1 flex-col p-4 sm:p-5">
+        <div className="mb-3 flex min-w-0 items-start gap-2 text-xs text-muted-foreground">
+          <UserRound
+            size={14}
+            className="mt-0.5 shrink-0"
+            aria-hidden="true"
+          />
+          <p className="min-w-0 break-words leading-5 [overflow-wrap:anywhere]">
+            <span className="font-medium text-muted-foreground">
+              Supervisor
+            </span>
+            <span aria-hidden="true"> · </span>
+            <span className="font-semibold text-foreground/80">
+              {supervisorName}
+            </span>
+          </p>
+        </div>
+
+        <h2 className="break-words text-base font-bold leading-snug tracking-tight text-foreground sm:text-lg [overflow-wrap:anywhere]">
+          <Link
+            href={projectHref}
+            className="no-underline outline-none after:absolute after:inset-0 after:z-0 focus-visible:rounded-xl focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+          >
             {project.title}
           </Link>
         </h2>
-        <p className="mt-2.5 line-clamp-3 flex-1 text-sm leading-relaxed text-muted-foreground">
+
+        <p className="mt-2.5 line-clamp-3 min-w-0 flex-1 break-words text-sm leading-6 text-muted-foreground [overflow-wrap:anywhere]">
           {project.summary}
         </p>
 
-        {project.technologies.length > 0 && (
-          <div className="mt-4 flex flex-wrap gap-1.5">
-            {project.technologies.slice(0, 3).map((technology) => (
-              <Badge key={technology.name} variant="secondary" className="rounded-lg bg-background/60 border border-border/50 text-[12px] font-medium">
-                {technology.name}
-              </Badge>
-            ))}
-            {project.technologies.length > 3 && (
-              <Badge variant="secondary" className="rounded-lg bg-background/60 border border-border/50 text-[12px] font-medium">
-                +{project.technologies.length - 3}
-              </Badge>
-            )}
-          </div>
-        )}
+        {project.technologies.length > 0 ? (
+          <div className="mt-4">
+            <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+              Technologies
+            </p>
+            <div className="flex flex-wrap gap-1.5">
+              {project.technologies.slice(0, 3).map((technology) => (
+                <Badge
+                  key={technology.name}
+                  variant="secondary"
+                  className="max-w-full rounded-lg border border-border/60 bg-muted/50 px-2.5 py-1 text-xs font-medium text-muted-foreground"
+                >
+                  <span className="break-words [overflow-wrap:anywhere]">
+                    {technology.name}
+                  </span>
+                </Badge>
+              ))}
 
-        <div className="mt-6 flex items-center justify-between border-t border-border/60 pt-4 text-sm text-muted-foreground font-medium">
-          <span className="flex items-center gap-1.5">
-            <ImageIcon size={14} className="text-primary/70" /> {project.counts.images} images
+              {project.technologies.length > 3 ? (
+                <Badge
+                  variant="secondary"
+                  className="rounded-lg border border-border/60 bg-muted/50 px-2.5 py-1 text-xs font-semibold text-muted-foreground"
+                  aria-label={`${project.technologies.length - 3} additional technologies`}
+                >
+                  +{project.technologies.length - 3}
+                </Badge>
+              ) : null}
+            </div>
+          </div>
+        ) : null}
+
+        <div className="mt-5 grid grid-cols-2 gap-2 border-t border-border/70 pt-4">
+          <div className="flex min-w-0 items-center gap-2 rounded-lg bg-muted/35 px-2.5 py-2">
+            <Images
+              size={15}
+              className="shrink-0 text-primary"
+              aria-hidden="true"
+            />
+            <div className="min-w-0">
+              <p className="text-sm font-bold tabular-nums text-foreground">
+                {project.counts.images}
+              </p>
+              <p className="text-[11px] leading-4 text-muted-foreground">
+                Images
+              </p>
+            </div>
+          </div>
+
+          <div className="flex min-w-0 items-center gap-2 rounded-lg bg-muted/35 px-2.5 py-2">
+            <Sparkles
+              size={15}
+              className="shrink-0 text-primary"
+              aria-hidden="true"
+            />
+            <div className="min-w-0">
+              <p className="text-sm font-bold tabular-nums text-foreground">
+                {project.counts.suggestions}
+              </p>
+              <p className="text-[11px] leading-4 text-muted-foreground">
+                Suggestions
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="pointer-events-none mt-4 flex items-center justify-between border-t border-border/60 pt-3">
+          <span className="text-xs font-medium text-muted-foreground">
+            View project details
           </span>
-          <span className="flex items-center gap-1.5">
-            {project.counts.suggestions} suggestions
+          <span className="grid size-8 place-items-center rounded-lg border border-border/70 bg-background text-muted-foreground transition-colors group-hover:border-primary/25 group-hover:bg-primary/5 group-hover:text-primary">
+            <ArrowUpRight size={16} aria-hidden="true" />
           </span>
-          <ArrowUpRight size={16} className="text-primary transition-transform duration-300 group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
         </div>
       </div>
     </article>

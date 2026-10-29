@@ -1,206 +1,196 @@
-// import Link from "next/link";
-// import { UserPlus, Users } from "lucide-react";
-// import { requireRole } from "@/core/auth/session";
-// import { userService } from "@/modules/user/services/user-service";
-// import { createSupervisorAction, deleteSupervisorAction } from "@/Interfaces/actions/users.actions";
-// import { ConfirmSubmitButton } from "@/components/forms/confirm-submit-button";
-// import { PageHeading } from "@/components/ui/page-heading";
-// import { Alert } from "@/components/ui/alert";
-// import { FormField, TextInput } from "@/components/ui/form-field";
-// import { EmptyState } from "@/components/ui/empty-state";
-// import { Button } from "@/components/ui/button";
 
-// export default async function SupervisorsPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
-//   const actor = await requireRole("ADMIN");
-//   const [supervisors, params] = await Promise.all([userService.listSupervisors(actor), searchParams]);
-//   const error = typeof params.error === "string" ? params.error : null;
-
-//   return (
-//     <div className="space-y-6">
-//       <PageHeading
-//         eyebrow="Access management"
-//         title="Supervisors"
-//         description="Create and maintain QC Supervisor accounts. Every Supervisor can manage all students and all project briefs."
-//       />
-
-//       {error && <Alert type="error">{error}</Alert>}
-//       {params.created && <Alert type="success">Supervisor account created.</Alert>}
-//       {params.deleted && <Alert type="success">Supervisor account removed. Students remain and their supervisor association is cleared.</Alert>}
-
-//       <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
-//         {/* Supervisor Directory Section */}
-//         <section className="rounded-[2rem] border border-white/10 bg-card/80 backdrop-blur-xl shadow-xl overflow-hidden flex flex-col">
-//           <div className="flex items-center justify-between border-b border-white/10 p-6">
-//             <div className="space-y-0.5">
-//               <h2 className="text-lg font-bold tracking-tight">Supervisor directory</h2>
-//               <p className="font-mono text-xs text-muted-foreground">
-//                 {supervisors.length} account{supervisors.length === 1 ? "" : "s"}
-//               </p>
-//             </div>
-//             <span className="grid size-10 place-items-center rounded-xl bg-primary/10 text-primary">
-//               <Users size={20} />
-//             </span>
-//           </div>
-
-//           {supervisors.length ? (
-//             <div className="divide-y divide-border/60">
-//               {supervisors.map((supervisor) => (
-//                 <div key={supervisor.id} className="flex flex-col justify-between gap-4 p-6 sm:flex-row sm:items-center">
-//                   <div className="flex items-center gap-3.5">
-//                     <span className="grid size-11 shrink-0 place-items-center rounded-full bg-primary/10 font-mono text-xs font-bold text-primary border border-primary/20">
-//                       {supervisor.name.split(/\s+/).slice(0, 2).map((s) => s[0]).join("").toUpperCase()}
-//                     </span>
-//                     <div className="space-y-0.5">
-//                       <p className="font-bold tracking-tight text-foreground">{supervisor.name}</p>
-//                       <p className="text-xs text-muted-foreground">{supervisor.loginId}{supervisor.email ? ` · ${supervisor.email}` : ""}</p>
-//                       <p className="font-mono text-[10px] text-muted-foreground/60">Created {supervisor.createdAt.toLocaleDateString()}</p>
-//                     </div>
-//                   </div>
-//                   <div className="flex items-center gap-2">
-//                     <Button  variant="outline" size="sm" className="rounded-xl border-border/80">
-//                       <Link href={`/admin/supervisors/${supervisor.id}`}>Edit</Link>
-//                     </Button>
-//                     <form action={deleteSupervisorAction}>
-//                       <input type="hidden" name="supervisorId" value={supervisor.id} />
-//                       <ConfirmSubmitButton
-//                         className="rounded-xl px-3 py-1.5 text-xs font-semibold text-destructive hover:bg-destructive/10 transition-colors"
-//                         confirmMessage="Permanently delete this Supervisor account? Associated students will remain."
-//                       >
-//                         Delete
-//                       </ConfirmSubmitButton>
-//                     </form>
-//                   </div>
-//                 </div>
-//               ))}
-//             </div>
-//           ) : (
-//             <div className="p-6">
-//               <EmptyState title="No Supervisors yet" description="Create the first Supervisor account to start managing student accounts and the project catalogue." />
-//             </div>
-//           )}
-//         </section>
-
-//         {/* Create Supervisor Form Card */}
-//         <section className="rounded-[2.5rem] border border-white/10 bg-card/80 p-6 sm:p-8 backdrop-blur-xl shadow-xl h-fit space-y-6">
-//           <div className="space-y-3">
-//             <span className="grid size-12 place-items-center rounded-2xl bg-primary/10 text-primary border border-primary/20">
-//               <UserPlus size={22} />
-//             </span>
-//             <div>
-//               <h2 className="text-xl font-extrabold tracking-tight">Create Supervisor</h2>
-//               <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-//                 Set a login ID and a temporary password. Share credentials securely with the Supervisor.
-//               </p>
-//             </div>
-//           </div>
-
-//           <form action={createSupervisorAction} className="space-y-4">
-//             <FormField label="Full name" name="name">
-//               <TextInput name="name" required minLength={2} maxLength={160} placeholder="Supervisor name" />
-//             </FormField>
-//             <FormField label="Login ID" name="loginId">
-//               <TextInput name="loginId" required minLength={3} maxLength={120} autoComplete="off" placeholder="e.g. dr.hassan" />
-//             </FormField>
-//             <FormField label="Email (optional)" name="email">
-//               <TextInput name="email" type="email" placeholder="name@university.edu" />
-//             </FormField>
-//             <FormField label="Temporary password" name="password" hint="At least 12 characters. QC does not generate or email passwords automatically.">
-//               <TextInput name="password" type="password" required minLength={12} maxLength={128} autoComplete="new-password" placeholder="••••••••••••" />
-//             </FormField>
-//             <Button type="submit" className="w-full rounded-xl font-semibold shadow-lg shadow-primary/20">
-//               Create account
-//             </Button>
-//           </form>
-//         </section>
-//       </div>
-//     </div>
-//   );
-// }
-// app/admin/supervisors/page.tsx (or your respective path)
 "use client";
 
-import { useState, useEffect, useTransition } from "react";
+import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import Link from "next/link";
-import { UserPlus, Users, Search, Loader2 } from "lucide-react";
-import { listSupervisorsAction, searchSupervisorsAction } from "@/Interfaces/getters/user.getters";
-import { createSupervisorAction, deleteSupervisorAction } from "@/Interfaces/actions/users.actions";
+import {
+  ArrowLeft,
+  ArrowRight,
+  CalendarDays,
+  Clock3,
+  Loader2,
+  Mail,
+  Plus,
+  Search,
+  ShieldCheck,
+  Trash2,
+  UserPlus,
+  Users,
+  X,
+} from "lucide-react";
+
+import {
+  listSupervisorsAction,
+  searchSupervisorsAction,
+} from "@/Interfaces/getters/user.getters";
+import {
+  createSupervisorAction,
+  deleteSupervisorAction,
+} from "@/Interfaces/actions/users.actions";
+import type { UserDto } from "@/modules/user/mappers/user-mapper";
+import type { PaginationMeta } from "@/shared/utils/pagincation-utils";
+import type { CreateSupervisorPayload } from "@/shared/validation/user";
 import { notify } from "@/components/notificationToaster";
 import ErrorState from "@/components/ErrorState";
 import { PageHeading } from "@/components/ui/page-heading";
 import { FormField, TextInput } from "@/components/ui/form-field";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Button } from "@/components/ui/button";
-import type { UserDto } from "@/modules/user/mappers/user-mapper";
-import { PaginationMeta } from "@/shared/utils/pagincation-utils";
-import { CreateSupervisorPayload } from "@/shared/validation/user";
 
+const PAGE_SIZE = 10;
+
+function getErrorMessage(error: unknown): string {
+  if (error instanceof Error && error.message.trim()) {
+    return error.message;
+  }
+
+  return "An unexpected error occurred. Please try again.";
+}
+
+function getInitials(name: string): string {
+  return name
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0])
+    .join("")
+    .toUpperCase();
+}
+
+function formatCreatedDate(value: string | Date): string {
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return "Date unavailable";
+  }
+
+  return new Intl.DateTimeFormat("en-GB", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  }).format(date);
+}
 
 export default function SupervisorsPage() {
   const [initialLoading, setInitialLoading] = useState(true);
   const [initialError, setInitialError] = useState<string | null>(null);
+
   const [supervisors, setSupervisors] = useState<UserDto[]>([]);
   const [pagination, setPagination] = useState<PaginationMeta | null>(null);
+
   const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedQuery, setDebouncedQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
-  const [isPending, startTransition] = useTransition();
 
-  // Load initial supervisors
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isMutating, setIsMutating] = useState(false);
+
+  const requestIdRef = useRef(0);
+  const hasStartedInitialLoadRef = useRef(false);
+
+  const totalCount = pagination?.totalCount ?? supervisors.length;
+
+  const loadDirectory = useCallback(
+    async (query: string, page: number, isInitial = false) => {
+      const requestId = ++requestIdRef.current;
+
+      if (isInitial) {
+        setInitialLoading(true);
+      } else {
+        setIsRefreshing(true);
+      }
+
+      try {
+        const result = query.trim()
+          ? await searchSupervisorsAction(query.trim(), page, PAGE_SIZE)
+          : await listSupervisorsAction(page, PAGE_SIZE);
+
+        // Do not let an older request overwrite more recent search results.
+        if (requestId !== requestIdRef.current) {
+          return;
+        }
+
+        if ("error" in result) {
+          if (isInitial) {
+            setInitialError(result.error);
+          } else {
+            notify.error("Unable to load supervisors", result.error);
+          }
+
+          return;
+        }
+
+        setSupervisors(result.data);
+        setPagination(result.pagination);
+        setInitialError(null);
+      } catch (error) {
+        if (requestId !== requestIdRef.current) {
+          return;
+        }
+
+        const message = getErrorMessage(error);
+
+        if (isInitial) {
+          setInitialError(message);
+        } else {
+          notify.error("Unable to load supervisors", message);
+        }
+      } finally {
+        if (requestId === requestIdRef.current) {
+          setInitialLoading(false);
+          setIsRefreshing(false);
+        }
+      }
+    },
+    [],
+  );
+
+  // Load the initial directory and fetch whenever the settled query or page changes.
   useEffect(() => {
-    async function loadInitialData() {
-      setInitialLoading(true);
-      const res = await listSupervisorsAction(1, 10);
-      if ("error" in res) {
-        setInitialError(res.error);
-      } else {
-        setSupervisors(res.data);
-        setPagination(res.pagination);
-      }
-      setInitialLoading(false);
-    }
-    loadInitialData();
-  }, []);
+    const isInitial = !hasStartedInitialLoadRef.current;
+    hasStartedInitialLoadRef.current = true;
 
-  // Handle Search Input Change
-  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const query = e.target.value;
-    setSearchQuery(query);
-    setCurrentPage(1);
+    void loadDirectory(debouncedQuery, currentPage, isInitial);
 
-    startTransition(async () => {
-      const res = query.trim()
-        ? await searchSupervisorsAction(query, 1, 10)
-        : await listSupervisorsAction(1, 10);
+    return () => {
+      // Invalidate the request if this effect is replaced or the page unmounts.
+      requestIdRef.current += 1;
+    };
+  }, [debouncedQuery, currentPage, loadDirectory]);
 
-      if ("error" in res) {
-        notify.error("Search failed", res.error);
-      } else {
-        setSupervisors(res.data);
-        setPagination(res.pagination);
-      }
-    });
-  };
+  // Debounce typing to avoid sending a request for every keystroke.
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedQuery(searchQuery.trim());
+      setCurrentPage(1);
+    }, 250);
 
-  // Handle Page Change
-  const handlePageChange = (page: number) => {
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  function handleSearchChange(value: string) {
+    setSearchQuery(value);
+  }
+
+  function handlePageChange(page: number) {
+    if (isRefreshing || isMutating) return;
+    if (page < 1) return;
+    if (pagination && page > pagination.totalPages) return;
+    if (page === currentPage) return;
+
     setCurrentPage(page);
-    startTransition(async () => {
-      const res = searchQuery.trim()
-        ? await searchSupervisorsAction(searchQuery, page, 10)
-        : await listSupervisorsAction(page, 10);
+  }
 
-      if ("error" in res) {
-        notify.error("Pagination failed", res.error);
-      } else {
-        setSupervisors(res.data);
-        setPagination(res.pagination);
-      }
-    });
-  };
+  async function handleCreateSupervisor(
+    event: FormEvent<HTMLFormElement>,
+  ) {
+    event.preventDefault();
 
-  // Handle Create Supervisor
-  const handleCreateSupervisor = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    const formData = new FormData(e.currentTarget);
+    if (isMutating) return;
+
+    const formData = new FormData(event.currentTarget);
+
     const payload: CreateSupervisorPayload = {
       loginId: String(formData.get("loginId") ?? ""),
       name: String(formData.get("name") ?? ""),
@@ -208,46 +198,82 @@ export default function SupervisorsPage() {
       password: String(formData.get("password") ?? ""),
     };
 
-    const res = await createSupervisorAction(payload);
-    if ("error" in res) {
-      notify.error("Failed to create supervisor", res.error);
-    } else {
-      notify.success("Supervisor account created", "Credentials have been successfully initialized.");
-      const updated = await (searchQuery.trim()
-        ? searchSupervisorsAction(searchQuery, currentPage, 10)
-        : listSupervisorsAction(currentPage, 10));
+    setIsMutating(true);
 
-      if (!("error" in updated)) {
-        setSupervisors(updated.data);
-        setPagination(updated.pagination);
+    try {
+      const result = await createSupervisorAction(payload);
+
+      if ("error" in result) {
+        notify.error("Failed to create supervisor", result.error);
+        return;
       }
+
+      notify.success(
+        "Supervisor account created",
+        "Credentials have been successfully initialized.",
+      );
+
+      event.currentTarget.reset();
+
+      await loadDirectory(searchQuery.trim(), currentPage);
+    } catch (error) {
+      notify.error("Failed to create supervisor", getErrorMessage(error));
+    } finally {
+      setIsMutating(false);
     }
-  };
+  }
 
-  // Handle Delete Supervisor
-  const handleDeleteSupervisor = async (supervisorId: string) => {
-    const res = await deleteSupervisorAction(supervisorId);
-    if ("error" in res) {
-      notify.error("Failed to delete supervisor", res.error);
-    } else {
-      notify.success("Supervisor account removed", "Students remain and their supervisor association is cleared.");
-      // Refresh list
-      const updated = await (searchQuery.trim()
-        ? searchSupervisorsAction(searchQuery, currentPage, 10)
-        : listSupervisorsAction(currentPage, 10));
+  async function handleDeleteSupervisor(supervisorId: string) {
+    if (isMutating) return;
 
-      if (!("error" in updated)) {
-        setSupervisors(updated.data);
-        setPagination(updated.pagination);
+    const confirmed = window.confirm(
+      "Permanently delete this Supervisor account? Associated students will remain.",
+    );
+
+    if (!confirmed) return;
+
+    setIsMutating(true);
+
+    try {
+      const result = await deleteSupervisorAction(supervisorId);
+
+      if ("error" in result) {
+        notify.error("Failed to delete supervisor", result.error);
+        return;
       }
+
+      notify.success(
+        "Supervisor account removed",
+        "Students remain and their supervisor association is cleared.",
+      );
+
+      await loadDirectory(searchQuery.trim(), currentPage);
+    } catch (error) {
+      notify.error("Failed to delete supervisor", getErrorMessage(error));
+    } finally {
+      setIsMutating(false);
     }
-  };
+  }
 
   if (initialLoading) {
     return (
-      <div className="flex h-96 items-center justify-center">
-        <Loader2 className="size-8 animate-spin text-primary" />
-      </div>
+      <main
+        className="flex min-h-80 items-center justify-center px-4 py-12"
+        aria-label="Loading supervisor directory"
+        aria-busy="true"
+      >
+        <div className="flex flex-col items-center gap-4 text-center">
+          <span className="flex size-14 items-center justify-center rounded-2xl border border-primary/20 bg-primary/10 text-primary">
+            <Loader2 className="size-7 animate-spin" aria-hidden="true" />
+          </span>
+          <div>
+            <p className="font-semibold">Loading supervisor directory</p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Retrieving supervisor accounts and pagination details.
+            </p>
+          </div>
+        </div>
+      </main>
     );
   }
 
@@ -256,145 +282,444 @@ export default function SupervisorsPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <main className="min-w-0 space-y-6 sm:space-y-8">
       <PageHeading
         eyebrow="Access management"
         title="Supervisors"
         description="Create and maintain QC Supervisor accounts. Every Supervisor can manage all students and all project briefs."
       />
 
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
-        {/* Supervisor Directory Section */}
-        <section className="rounded-[2rem] border border-white/10 bg-card/80 backdrop-blur-xl shadow-xl overflow-hidden flex flex-col">
-          <div className="flex flex-col gap-4 border-b border-white/10 p-6 sm:flex-row sm:items-center sm:justify-between">
-            <div className="space-y-0.5">
-              <h2 className="text-lg font-bold tracking-tight">Supervisor directory</h2>
-              <p className="font-mono text-xs text-muted-foreground">
-                {pagination?.totalCount ?? supervisors.length} account{(pagination?.totalCount ?? supervisors.length) === 1 ? "" : "s"}
-              </p>
+      {/* Page context */}
+      <section className="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-3">
+        <div className="flex min-w-0 items-center gap-3 rounded-2xl border border-border/70 bg-card p-4">
+          <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+            <Users className="size-5" aria-hidden="true" />
+          </span>
+          <div className="min-w-0">
+            <p className="text-xs text-muted-foreground">
+              Supervisor accounts
+            </p>
+            <p className="mt-1 text-xl font-semibold tabular-nums">
+              {totalCount}
+            </p>
+          </div>
+        </div>
+
+        <div className="flex min-w-0 items-center gap-3 rounded-2xl border border-border/70 bg-card p-4">
+          <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+            <ShieldCheck className="size-5" aria-hidden="true" />
+          </span>
+          <div className="min-w-0">
+            <p className="text-xs text-muted-foreground">Account management</p>
+            <p className="mt-1 text-sm font-semibold">Administrator controlled</p>
+          </div>
+        </div>
+
+        <div className="flex min-w-0 items-center gap-3 rounded-2xl border border-border/70 bg-card p-4">
+          <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+            <Search className="size-5" aria-hidden="true" />
+          </span>
+          <div className="min-w-0">
+            <p className="text-xs text-muted-foreground">Directory view</p>
+            <p className="mt-1 text-sm font-semibold">
+              {searchQuery.trim() ? "Search results" : "All supervisors"}
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <div className="grid min-w-0 grid-cols-1 items-start gap-5 xl:grid-cols-[minmax(0,1fr)_360px] xl:gap-6">
+        {/* Supervisor directory */}
+        <section
+          aria-labelledby="supervisor-directory-heading"
+          className="min-w-0 overflow-hidden rounded-3xl border border-border/70 bg-card shadow-sm"
+        >
+          <div className="space-y-4 border-b border-border/70 p-4 sm:p-6">
+            <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="min-w-0">
+                <div className="flex flex-wrap items-center gap-2">
+                  <h2
+                    id="supervisor-directory-heading"
+                    className="text-lg font-semibold tracking-tight"
+                  >
+                    Supervisor directory
+                  </h2>
+                  <span className="rounded-full border border-border bg-muted/50 px-2.5 py-1 text-xs font-medium tabular-nums text-muted-foreground">
+                    {totalCount} {totalCount === 1 ? "account" : "accounts"}
+                  </span>
+                </div>
+                <p className="mt-1 text-sm leading-5 text-muted-foreground">
+                  Search accounts by supervisor name or login ID, then manage
+                  individual records.
+                </p>
+              </div>
             </div>
 
-            {/* Search Bar */}
-            <div className="relative w-full sm:w-72">
-              <Search className="absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={handleSearchChange}
-                placeholder="Search by name or ID..."
-                className="w-full rounded-xl border border-border/80 bg-background/50 pl-10 pr-4 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-primary/50"
-              />
+            <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-center">
+              <label className="relative block min-w-0 flex-1">
+                <span className="sr-only">
+                  Search supervisors by name or login ID
+                </span>
+                <Search
+                  className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
+                  aria-hidden="true"
+                />
+                <input
+                  type="search"
+                  value={searchQuery}
+                  onChange={(event) => handleSearchChange(event.target.value)}
+                  placeholder="Search by name or login ID..."
+                  maxLength={160}
+                  className="h-11 w-full min-w-0 rounded-xl border border-border/80 bg-background pl-10 pr-10 text-sm outline-none transition placeholder:text-muted-foreground/80 focus:border-primary/60 focus:ring-2 focus:ring-primary/15"
+                />
+                {searchQuery ? (
+                  <button
+                    type="button"
+                    aria-label="Clear supervisor search"
+                    onClick={() => handleSearchChange("")}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 rounded-md p-1 text-muted-foreground transition hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                  >
+                    <X className="size-4" aria-hidden="true" />
+                  </button>
+                ) : null}
+              </label>
+
+              <span className="shrink-0 text-xs text-muted-foreground sm:text-right">
+                {PAGE_SIZE} accounts per page
+              </span>
             </div>
           </div>
 
-          {isPending && (
-            <div className="flex items-center justify-center p-4 bg-primary/5">
-              <Loader2 className="size-5 animate-spin text-primary" />
-              <span className="ml-2 text-xs text-muted-foreground">Updating directory...</span>
+          {isRefreshing ? (
+            <div
+              className="flex items-center gap-2 border-b border-primary/10 bg-primary/5 px-4 py-3 text-sm text-muted-foreground sm:px-6"
+              role="status"
+              aria-live="polite"
+            >
+              <Loader2
+                className="size-4 animate-spin text-primary"
+                aria-hidden="true"
+              />
+              Updating directory…
             </div>
-          )}
+          ) : null}
 
-          {supervisors.length ? (
-            <div className="divide-y divide-border/60">
-              {supervisors.map((supervisor) => (
-                <div key={supervisor.id} className="flex flex-col justify-between gap-4 p-6 sm:flex-row sm:items-center">
-                  <div className="flex items-center gap-3.5">
-                    <span className="grid size-11 shrink-0 place-items-center rounded-full bg-primary/10 font-mono text-xs font-bold text-primary border border-primary/20">
-                      {supervisor.name.split(/\s+/).slice(0, 2).map((s) => s[0]).join("").toUpperCase()}
-                    </span>
-                    <div className="space-y-0.5">
-                      <p className="font-bold tracking-tight text-foreground">{supervisor.name}</p>
-                      <p className="text-xs text-muted-foreground">{supervisor.loginId}{supervisor.email ? ` · ${supervisor.email}` : ""}</p>
-                      <p className="font-mono text-[10px] text-muted-foreground/60">Created {new Date(supervisor.createdAt).toLocaleDateString()}</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Button variant="outline" size="sm" className="rounded-xl border-border/80" >
-                      <Link href={`/admin/supervisors/${supervisor.id}`}>Edit</Link>
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => {
-                        if (window.confirm("Permanently delete this Supervisor account? Associated students will remain.")) {
-                          handleDeleteSupervisor(supervisor.id);
-                        }
-                      }}
-                      className="rounded-xl px-3 py-1.5 text-xs font-semibold text-destructive hover:bg-destructive/10 transition-colors"
-                    >
-                      Delete
-                    </Button>
-                  </div>
-                </div>
-              ))}
+          {supervisors.length > 0 ? (
+            <div
+              className={isRefreshing ? "opacity-70 transition-opacity" : ""}
+              aria-busy={isRefreshing}
+            >
+              <ul className="divide-y divide-border/60">
+                {supervisors.map((supervisor) => (
+                  <li key={supervisor.id} className="min-w-0">
+                    <article className="flex min-w-0 flex-col gap-4 p-4 transition-colors hover:bg-muted/20 sm:p-5 lg:flex-row lg:items-center lg:justify-between lg:gap-5">
+                      <div className="flex min-w-0 items-start gap-3.5">
+                        <span
+                          className="flex size-11 shrink-0 items-center justify-center rounded-2xl border border-primary/15 bg-primary/10 text-xs font-bold tracking-wide text-primary"
+                          aria-hidden="true"
+                        >
+                          {getInitials(supervisor.name) || "S"}
+                        </span>
+
+                        <div className="min-w-0 flex-1 space-y-2">
+                          <div className="min-w-0">
+                            <h3 className="break-words text-sm font-semibold leading-5">
+                              {supervisor.name}
+                            </h3>
+                            <p className="mt-1 break-words text-xs leading-5 text-muted-foreground">
+                              Login ID:{" "}
+                              <span className="font-medium text-foreground/80">
+                                {supervisor.loginId}
+                              </span>
+                            </p>
+                          </div>
+
+                          {supervisor.email ? (
+                            <p className="flex min-w-0 items-start gap-1.5 break-words text-xs leading-5 text-muted-foreground">
+                              <Mail
+                                className="mt-0.5 size-3.5 shrink-0"
+                                aria-hidden="true"
+                              />
+                              <span className="min-w-0 break-all">
+                                {supervisor.email}
+                              </span>
+                            </p>
+                          ) : (
+                            <p className="text-xs text-muted-foreground/70">
+                              No email address provided
+                            </p>
+                          )}
+
+                          <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                            <CalendarDays
+                              className="size-3.5 shrink-0"
+                              aria-hidden="true"
+                            />
+                            Created {formatCreatedDate(supervisor.createdAt)}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex w-full shrink-0 flex-wrap gap-2 border-t border-border/60 pt-3 sm:justify-end lg:w-auto lg:border-t-0 lg:pt-0">
+                        <Link
+                          href={`/admin/supervisors/${supervisor.id}`}
+                          aria-label={`Edit ${supervisor.name}`}
+                          className="inline-flex min-h-9 flex-1 items-center justify-center rounded-xl border border-border bg-background px-3 py-2 text-xs font-semibold transition hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary sm:flex-none"
+                        >
+                          Edit details
+                        </Link>
+
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          disabled={isMutating}
+                          onClick={() =>
+                            void handleDeleteSupervisor(supervisor.id)
+                          }
+                          className="min-h-9 flex-1 rounded-xl px-3 text-xs font-semibold text-destructive transition-colors hover:bg-destructive/10 hover:text-destructive sm:flex-none"
+                        >
+                          {isMutating ? (
+                            <Loader2
+                              className="size-4 animate-spin"
+                              aria-hidden="true"
+                            />
+                          ) : (
+                            <Trash2
+                              className="size-4"
+                              aria-hidden="true"
+                            />
+                          )}
+                          Delete
+                        </Button>
+                      </div>
+                    </article>
+                  </li>
+                ))}
+              </ul>
             </div>
           ) : (
-            <div className="p-6">
-              <EmptyState title="No Supervisors found" description="Try adjusting your search criteria or create a new Supervisor account." />
+            <div className="p-4 sm:p-6">
+              <EmptyState
+                title={
+                  searchQuery.trim()
+                    ? "No supervisors match your search"
+                    : "No supervisors found"
+                }
+                description={
+                  searchQuery.trim()
+                    ? "Try a different name or login ID, or clear your search to view the full directory."
+                    : "Create a supervisor account using the form to get started."
+                }
+              />
+              {searchQuery.trim() ? (
+                <div className="mt-3 flex justify-center">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleSearchChange("")}
+                    className="rounded-xl"
+                  >
+                    <X className="size-4" aria-hidden="true" />
+                    Clear search
+                  </Button>
+                </div>
+              ) : null}
             </div>
           )}
 
-          {/* Pagination Controls */}
-          {pagination && pagination.totalPages > 1 && (
-            <div className="flex items-center justify-between border-t border-white/10 p-4 bg-muted/20">
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={!pagination.hasPreviousPage}
-                onClick={() => handlePageChange(pagination.currentPage - 1)}
-                className="rounded-xl"
-              >
-                Previous
-              </Button>
-              <span className="font-mono text-xs text-muted-foreground">
-                Page {pagination.currentPage} of {pagination.totalPages}
-              </span>
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={!pagination.hasNextPage}
-                onClick={() => handlePageChange(pagination.currentPage + 1)}
-                className="rounded-xl"
-              >
-                Next
-              </Button>
-            </div>
-          )}
-        </section>
-
-        {/* Create Supervisor Form Card */}
-        <section className="rounded-[2.5rem] border border-white/10 bg-card/80 p-6 sm:p-8 backdrop-blur-xl shadow-xl h-fit space-y-6">
-          <div className="space-y-3">
-            <span className="grid size-12 place-items-center rounded-2xl bg-primary/10 text-primary border border-primary/20">
-              <UserPlus size={22} />
-            </span>
-            <div>
-              <h2 className="text-xl font-extrabold tracking-tight">Create Supervisor</h2>
-              <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-                Set a login ID and a temporary password. Share credentials securely with the Supervisor.
+          {/* Pagination */}
+          {pagination && pagination.totalPages > 1 ? (
+            <nav
+              aria-label="Supervisor directory pagination"
+              className="flex flex-col gap-3 border-t border-border/70 bg-muted/20 p-4 sm:flex-row sm:items-center sm:justify-between sm:px-5"
+            >
+              <p className="text-center text-xs text-muted-foreground sm:text-left">
+                Page{" "}
+                <span className="font-semibold text-foreground">
+                  {pagination.currentPage}
+                </span>{" "}
+                of{" "}
+                <span className="font-semibold text-foreground">
+                  {pagination.totalPages}
+                </span>
               </p>
-            </div>
-          </div>
 
-          <form onSubmit={handleCreateSupervisor} className="space-y-4">
-            <FormField label="Full name" name="name">
-              <TextInput name="name" required minLength={2} maxLength={160} placeholder="Supervisor name" />
-            </FormField>
-            <FormField label="Login ID" name="loginId">
-              <TextInput name="loginId" required minLength={3} maxLength={120} autoComplete="off" placeholder="e.g. 202110878" />
-            </FormField>
-            <FormField label="Email (optional)" name="email">
-              <TextInput name="email" type="email" placeholder="name@university.edu" />
-            </FormField>
-            <FormField label="Temporary password" name="password" hint="At least 9 characters. QC does not generate or email passwords automatically.">
-              <TextInput name="password" type="password" required minLength={9} maxLength={128} autoComplete="new-password" placeholder="••••••••••••" />
-            </FormField>
-            <Button type="submit" className="w-full rounded-xl font-semibold shadow-lg shadow-primary/20">
-              Create account
-            </Button>
-          </form>
+              <div className="flex items-center justify-between gap-2 sm:justify-end">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={!pagination.hasPreviousPage || isRefreshing || isMutating}
+                  onClick={() =>
+                    handlePageChange(pagination.currentPage - 1)
+                  }
+                  className="min-w-24 flex-1 rounded-xl sm:flex-none"
+                >
+                  <ArrowLeft className="size-4" aria-hidden="true" />
+                  Previous
+                </Button>
+
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={!pagination.hasNextPage || isRefreshing || isMutating}
+                  onClick={() =>
+                    handlePageChange(pagination.currentPage + 1)
+                  }
+                  className="min-w-24 flex-1 rounded-xl sm:flex-none"
+                >
+                  Next
+                  <ArrowRight className="size-4" aria-hidden="true" />
+                </Button>
+              </div>
+            </nav>
+          ) : null}
         </section>
+
+        {/* Create supervisor */}
+        <aside className="min-w-0 xl:sticky xl:top-6">
+          <section
+            aria-labelledby="create-supervisor-heading"
+            className="min-w-0 overflow-hidden rounded-3xl border border-border/70 bg-card shadow-sm"
+          >
+            <div className="border-b border-border/70 bg-primary/[0.04] p-5 sm:p-6">
+              <div className="flex items-start gap-3">
+                <span className="flex size-11 shrink-0 items-center justify-center rounded-2xl border border-primary/15 bg-primary/10 text-primary">
+                  <UserPlus className="size-5" aria-hidden="true" />
+                </span>
+                <div className="min-w-0">
+                  <h2
+                    id="create-supervisor-heading"
+                    className="text-lg font-semibold tracking-tight"
+                  >
+                    Create supervisor
+                  </h2>
+                  <p className="mt-1 text-sm leading-5 text-muted-foreground">
+                    Set up a new supervisor account with its own login
+                    credentials.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="p-5 sm:p-6">
+              <div className="mb-5 flex items-start gap-2.5 rounded-xl border border-border/70 bg-muted/30 p-3.5">
+                <ShieldCheck
+                  className="mt-0.5 size-4 shrink-0 text-primary"
+                  aria-hidden="true"
+                />
+                <p className="text-xs leading-5 text-muted-foreground">
+                  Supervisors can manage all students and all project briefs.
+                  Share initial credentials securely with the intended
+                  account holder.
+                </p>
+              </div>
+
+              <form
+                onSubmit={handleCreateSupervisor}
+                className="min-w-0 space-y-4"
+              >
+                <fieldset
+                  disabled={isMutating}
+                  className="min-w-0 space-y-4"
+                >
+                  <legend className="sr-only">
+                    New supervisor account details
+                  </legend>
+
+                  <FormField
+                    label="Full name"
+                    name="name"
+                  >
+                    <TextInput
+                      name="name"
+                      required
+                      minLength={2}
+                      maxLength={160}
+                      autoComplete="name"
+                      placeholder="Supervisor name"
+                    />
+                  </FormField>
+
+                  <FormField
+                    label="Login ID"
+                    name="loginId"
+                    hint="The identifier the supervisor will use to sign in."
+                  >
+                    <TextInput
+                      name="loginId"
+                      required
+                      minLength={3}
+                      maxLength={120}
+                      autoComplete="off"
+                      placeholder="e.g. 202110878"
+                    />
+                  </FormField>
+
+                  <FormField
+                    label="Email address"
+                    name="email"
+                    hint="Optional. No email delivery is implied by entering an address."
+                  >
+                    <TextInput
+                      name="email"
+                      type="email"
+                      autoComplete="email"
+                      placeholder="name@university.edu"
+                    />
+                  </FormField>
+
+                  <FormField
+                    label="Temporary password"
+                    name="password"
+                    hint="Use at least 9 characters. QC does not automatically generate or email passwords."
+                  >
+                    <TextInput
+                      name="password"
+                      type="password"
+                      required
+                      minLength={9}
+                      maxLength={128}
+                      autoComplete="new-password"
+                      placeholder="Enter a temporary password"
+                    />
+                  </FormField>
+                </fieldset>
+
+                <div className="flex items-start gap-2 border-t border-border/70 pt-4 text-xs leading-5 text-muted-foreground">
+                  <Clock3
+                    className="mt-0.5 size-3.5 shrink-0"
+                    aria-hidden="true"
+                  />
+                  <p>
+                    Verify the login ID and share the initial password
+                    securely after the account has been created.
+                  </p>
+                </div>
+
+                <Button
+                  type="submit"
+                  disabled={isMutating}
+                  className="w-full rounded-xl font-semibold"
+                >
+                  {isMutating ? (
+                    <Loader2
+                      className="size-4 animate-spin"
+                      aria-hidden="true"
+                    />
+                  ) : (
+                    <Plus className="size-4" aria-hidden="true" />
+                  )}
+                  {isMutating ? "Processing…" : "Create supervisor account"}
+                </Button>
+              </form>
+            </div>
+          </section>
+        </aside>
       </div>
-    </div>
+    </main>
   );
 }

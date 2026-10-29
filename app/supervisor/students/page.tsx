@@ -1,142 +1,294 @@
-// app/supervisor/students/page.tsx (or your respective path)
+
 "use client";
 
-import { useState, useEffect, useTransition } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
+import type { FormEvent, ChangeEvent } from "react";
 import Link from "next/link";
-import { UserPlus, Trash2, Search, Loader2 } from "lucide-react";
+import {
+  ArrowRight,
+  ChevronLeft,
+  ChevronRight,
+  Fingerprint,
+  Loader2,
+  Mail,
+  Search,
+  ShieldCheck,
+  Trash2,
+  UserPlus,
+  Users,
+  X,
+} from "lucide-react";
+
 import { notify } from "@/components/notificationToaster";
 import ErrorState from "@/components/ErrorState";
 import { PageHeading } from "@/components/ui/page-heading";
 import { FormField, TextInput } from "@/components/ui/form-field";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Button } from "@/components/ui/button";
-import { UserDto } from "@/modules/user/mappers/user-mapper";
-import { PaginationMeta } from "@/shared/utils/pagincation-utils";
-import { listStudentsAction, searchStudentsAction } from "@/Interfaces/getters/user.getters";
-import { CreateStudentPayload } from "@/shared/validation/user";
-import { createStudentAction, deleteStudentAction } from "@/Interfaces/actions/users.actions";
+
+import type { UserDto } from "@/modules/user/mappers/user-mapper";
+import type { PaginationMeta } from "@/shared/utils/pagincation-utils";
+import type { CreateStudentPayload } from "@/shared/validation/user";
+import {
+  createStudentAction,
+  deleteStudentAction,
+} from "@/Interfaces/actions/users.actions";
+import {
+  listStudentsAction,
+  searchStudentsAction,
+} from "@/Interfaces/getters/user.getters";
+
+const PAGE_SIZE = 10;
 
 export default function StudentsPage() {
   const [initialLoading, setInitialLoading] = useState(true);
   const [initialError, setInitialError] = useState<string | null>(null);
+
   const [students, setStudents] = useState<UserDto[]>([]);
   const [pagination, setPagination] = useState<PaginationMeta | null>(null);
+
   const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedQuery, setDebouncedQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
-  const [isPending, startTransition] = useTransition();
 
-  // Load initial students on mount
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isCreating, setIsCreating] = useState(false);
+  const [deletingIds, setDeletingIds] = useState<Set<string>>(
+    () => new Set(),
+  );
+
+  const requestIdRef = useRef(0);
+  const hasLoadedRef = useRef(false);
+
+  // Debounce search input to avoid a server request on every keystroke.
   useEffect(() => {
-    async function loadInitialData() {
-      setInitialLoading(true);
-      const res = await listStudentsAction(1, 10);
-      if ("error" in res) {
-        setInitialError(res.error);
-      } else {
+    const timeoutId = window.setTimeout(() => {
+      setDebouncedQuery(searchQuery.trim());
+    }, 300);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [searchQuery]);
+
+  // Load a page of students and ignore results from superseded requests.
+  const loadStudents = useCallback(
+    async (query: string, page: number) => {
+      const requestId = ++requestIdRef.current;
+
+      setIsRefreshing(true);
+
+      try {
+        const res = query
+          ? await searchStudentsAction(query, page, PAGE_SIZE)
+          : await listStudentsAction(page, PAGE_SIZE);
+
+        if (requestId !== requestIdRef.current) return;
+
+        if ("error" in res) {
+          if (!hasLoadedRef.current) {
+            setInitialError(res.error);
+          } else {
+            notify.error("Unable to load students", res.error);
+          }
+
+          return;
+        }
+
         setStudents(res.data);
         setPagination(res.pagination);
-      }
-      setInitialLoading(false);
-    }
-    loadInitialData();
-  }, []);
+        setInitialError(null);
+        hasLoadedRef.current = true;
+      } catch {
+        if (requestId !== requestIdRef.current) return;
 
-  // Handle Search Input Change
-  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const query = e.target.value;
-    setSearchQuery(query);
+        if (!hasLoadedRef.current) {
+          setInitialError(
+            "Unable to load student accounts. Please try again.",
+          );
+        } else {
+          notify.error(
+            "Unable to load students",
+            "An unexpected error occurred. Please try again.",
+          );
+        }
+      } finally {
+        if (requestId === requestIdRef.current) {
+          setIsRefreshing(false);
+          setInitialLoading(false);
+        }
+      }
+    },
+    [],
+  );
+
+  // Refresh when the settled search query or current page changes.
+  useEffect(() => {
+    void loadStudents(debouncedQuery, currentPage);
+
+    return () => {
+      requestIdRef.current += 1;
+    };
+  }, [debouncedQuery, currentPage, loadStudents]);
+
+  const handleSearchChange = (event: ChangeEvent<HTMLInputElement>) => {
+    setSearchQuery(event.target.value);
     setCurrentPage(1);
-
-    startTransition(async () => {
-      const res = query.trim()
-        ? await searchStudentsAction(query, 1, 10)
-        : await listStudentsAction(1, 10);
-
-      if ("error" in res) {
-        notify.error("Search failed", res.error);
-      } else {
-        setStudents(res.data);
-        setPagination(res.pagination);
-      }
-    });
   };
 
-  // Handle Page Change
   const handlePageChange = (page: number) => {
-    setCurrentPage(page);
-    startTransition(async () => {
-      const res = searchQuery.trim()
-        ? await searchStudentsAction(searchQuery, page, 10)
-        : await listStudentsAction(page, 10);
+    if (isRefreshing || !pagination) return;
+    if (page < 1 || page > pagination.totalPages) return;
 
-      if ("error" in res) {
-        notify.error("Pagination failed", res.error);
-      } else {
-        setStudents(res.data);
-        setPagination(res.pagination);
-      }
-    });
+    setCurrentPage(page);
   };
 
-  // Handle Create Student
-  const handleCreateStudent = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    const formData = new FormData(e.currentTarget);
-    const emailValue = formData.get("email");
+  const handleCreateStudent = async (
+    event: FormEvent<HTMLFormElement>,
+  ) => {
+    event.preventDefault();
+
+    if (isCreating) return;
+
+    const form = event.currentTarget;
+    const formData = new FormData(form);
+    const emailValue = String(formData.get("email") ?? "").trim();
+
     const payload: CreateStudentPayload = {
-      collegeId: String(formData.get("collegeId") ?? ""),
-      name: String(formData.get("name") ?? ""),
-      email: emailValue ? String(emailValue) : undefined,
+      collegeId: String(formData.get("collegeId") ?? "").trim(),
+      name: String(formData.get("name") ?? "").trim(),
+      email: emailValue || undefined,
     };
 
-    const res = await createStudentAction(payload);
-    if ("error" in res) {
-      notify.error("Failed to create student", res.error);
-    } else {
+    setIsCreating(true);
+
+    try {
+      const res = await createStudentAction(payload);
+
+      if ("error" in res) {
+        notify.error("Failed to create student", res.error);
+        return;
+      }
+
       notify.success(
         "Student account created",
-        "Share the college ID as the login ID and initial password using a secure channel."
+        "Share the college ID as the login ID and initial password using a secure channel.",
       );
 
-      // Refresh list
-      const updated = await (searchQuery.trim()
-        ? searchStudentsAction(searchQuery, currentPage, 10)
-        : listStudentsAction(currentPage, 10));
+      form.reset();
 
-      if (!("error" in updated)) {
-        setStudents(updated.data);
-        setPagination(updated.pagination);
-      }
+      // Refresh using the currently settled directory query.
+      await loadStudents(debouncedQuery, currentPage);
+    } catch {
+      notify.error(
+        "Failed to create student",
+        "An unexpected error occurred. Please try again.",
+      );
+    } finally {
+      setIsCreating(false);
     }
   };
 
-  // Handle Delete Student
   const handleDeleteStudent = async (studentId: string) => {
-    const res = await deleteStudentAction(studentId);
-    if ("error" in res) {
-      notify.error("Failed to delete student", res.error);
-    } else {
+    if (deletingIds.has(studentId)) return;
+
+    setDeletingIds((previous) => {
+      const next = new Set(previous);
+      next.add(studentId);
+      return next;
+    });
+
+    try {
+      const res = await deleteStudentAction(studentId);
+
+      if ("error" in res) {
+        notify.error("Failed to delete student", res.error);
+        return;
+      }
+
       notify.success(
         "Student account deleted",
-        "Historical AI provenance is preserved with the triggering-user reference cleared."
+        "Historical AI provenance is preserved with the triggering-user reference cleared.",
       );
 
-      // Refresh list
-      const updated = await (searchQuery.trim()
-        ? searchStudentsAction(searchQuery, currentPage, 10)
-        : listStudentsAction(currentPage, 10));
+      // If deletion empties the current page, move back one page.
+      const query = debouncedQuery;
 
-      if (!("error" in updated)) {
-        setStudents(updated.data);
-        setPagination(updated.pagination);
+      const updated = query
+        ? await searchStudentsAction(query, currentPage, PAGE_SIZE)
+        : await listStudentsAction(currentPage, PAGE_SIZE);
+
+      if ("error" in updated) {
+        notify.error(
+          "Student deleted",
+          "The account was deleted, but the directory could not be refreshed.",
+        );
+        return;
       }
+
+      if (
+        updated.data.length === 0 &&
+        currentPage > 1
+      ) {
+        setCurrentPage((page) => Math.max(1, page - 1));
+        return;
+      }
+
+      setStudents(updated.data);
+      setPagination(updated.pagination);
+    } catch {
+      notify.error(
+        "Failed to delete student",
+        "An unexpected error occurred. Please try again.",
+      );
+    } finally {
+      setDeletingIds((previous) => {
+        const next = new Set(previous);
+        next.delete(studentId);
+        return next;
+      });
     }
   };
 
   if (initialLoading) {
     return (
-      <div className="flex h-96 items-center justify-center">
-        <Loader2 className="size-8 animate-spin text-primary" />
+      <div
+        className="mx-auto w-full max-w-7xl space-y-6"
+        role="status"
+        aria-label="Loading student accounts"
+      >
+        <div className="space-y-3">
+          <div className="h-3 w-32 animate-pulse rounded bg-muted" />
+          <div className="h-8 w-56 max-w-full animate-pulse rounded bg-muted" />
+          <div className="h-4 w-96 max-w-full animate-pulse rounded bg-muted" />
+        </div>
+
+        <div className="grid grid-cols-1 gap-5 xl:grid-cols-[minmax(0,1fr)_380px]">
+          <div className="space-y-5 rounded-3xl border border-border/70 bg-card p-5 sm:p-6">
+            <div className="h-10 animate-pulse rounded-xl bg-muted" />
+            {Array.from({ length: 4 }).map((_, index) => (
+              <div
+                key={index}
+                className="flex items-center gap-3 border-b border-border/50 py-4"
+              >
+                <div className="size-11 animate-pulse rounded-2xl bg-muted" />
+                <div className="min-w-0 flex-1 space-y-2">
+                  <div className="h-4 w-40 max-w-full animate-pulse rounded bg-muted" />
+                  <div className="h-3 w-56 max-w-full animate-pulse rounded bg-muted" />
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="h-fit space-y-5 rounded-3xl border border-border/70 bg-card p-5 sm:p-6">
+            <div className="h-6 w-40 animate-pulse rounded bg-muted" />
+            <div className="h-3 w-56 max-w-full animate-pulse rounded bg-muted" />
+            <div className="h-11 animate-pulse rounded-xl bg-muted" />
+            <div className="h-11 animate-pulse rounded-xl bg-muted" />
+            <div className="h-11 animate-pulse rounded-xl bg-muted" />
+            <div className="h-11 animate-pulse rounded-xl bg-muted" />
+          </div>
+        </div>
+
+        <span className="sr-only">Loading student directory...</span>
       </div>
     );
   }
@@ -145,147 +297,450 @@ export default function StudentsPage() {
     return <ErrorState message={initialError} />;
   }
 
+  const totalCount = pagination?.totalCount ?? students.length;
+
   return (
-    <div className="space-y-6">
+    <div className="mx-auto w-full  space-y-6 pb-8 sm:space-y-8">
       <PageHeading
         eyebrow="Student accounts"
-        title="Students"
-        description="Create student accounts using each student's college ID. The college ID becomes the login ID and initial password; the student must change it at first sign-in."
+        title="Student directory"
+        description="Create and manage student accounts, find existing students, and review their account details. Each student uses their college ID as their login ID and initial password, with a password change required at first sign-in."
       />
 
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_460px]">
-        {/* Student Directory Section */}
-        <section className="rounded-[2rem] border border-white/10 bg-card/80 backdrop-blur-xl shadow-xl overflow-hidden flex flex-col">
-          <div className="flex flex-col gap-4 border-b border-white/10 p-6 sm:flex-row sm:items-center sm:justify-between">
-            <div className="space-y-0.5">
-              <h2 className="text-lg font-bold tracking-tight">Student directory</h2>
-              <p className="font-mono text-xs text-muted-foreground">
-                {pagination?.totalCount ?? students.length} account{(pagination?.totalCount ?? students.length) === 1 ? "" : "s"}
-              </p>
+      <div className="grid min-w-0 grid-cols-1 items-start gap-5 xl:grid-cols-[minmax(0,1fr)_380px] xl:gap-6">
+        {/* Student directory */}
+        <section
+          aria-labelledby="student-directory-title"
+          className="flex min-w-0 flex-col overflow-hidden rounded-3xl border border-border/70 bg-card shadow-sm"
+        >
+          <div className="space-y-4 border-b border-border/70 p-5 sm:p-6">
+            <div className="flex items-start gap-3">
+              <div className="grid size-11 shrink-0 place-items-center rounded-2xl border border-primary/15 bg-primary/10 text-primary">
+                <Users size={20} aria-hidden="true" />
+              </div>
+
+              <div className="min-w-0 flex-1 space-y-1">
+                <h2
+                  id="student-directory-title"
+                  className="text-lg font-bold tracking-tight"
+                >
+                  All students
+                </h2>
+                <p className="text-sm leading-relaxed text-muted-foreground">
+                  Search the directory, open a student profile, or remove an
+                  account that is no longer needed.
+                </p>
+              </div>
             </div>
 
-            {/* Search Bar */}
-            <div className="relative w-full sm:w-72">
-              <Search className="absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={handleSearchChange}
-                placeholder="Search by name, ID..."
-                className="w-full rounded-xl border border-border/80 bg-background/50 pl-10 pr-4 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-primary/50"
-              />
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div
+                className="text-sm text-muted-foreground"
+                aria-live="polite"
+              >
+                <span className="font-semibold tabular-nums text-foreground">
+                  {totalCount}
+                </span>{" "}
+                student {totalCount === 1 ? "account" : "accounts"}
+                {searchQuery.trim() && (
+                  <span className="break-words">
+                    {" "}
+                    matching &ldquo;{searchQuery.trim()}&rdquo;
+                  </span>
+                )}
+              </div>
+
+              <div className="relative w-full sm:max-w-xs">
+                <Search
+                  size={16}
+                  className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground"
+                  aria-hidden="true"
+                />
+
+                <input
+                  type="search"
+                  value={searchQuery}
+                  onChange={handleSearchChange}
+                  placeholder="Search by name or college ID"
+                  aria-label="Search students by name or college ID"
+                  autoComplete="off"
+                  className="min-h-11 w-full rounded-xl border border-border bg-background pl-10 pr-10 text-sm outline-none transition-shadow placeholder:text-muted-foreground/80 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1"
+                />
+
+                {searchQuery && (
+                  <button
+                    type="button"
+                    onClick={() => setSearchQuery("")}
+                    aria-label="Clear student search"
+                    className="absolute right-2 top-1/2 grid size-7 -translate-y-1/2 place-items-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  >
+                    <X size={15} aria-hidden="true" />
+                  </button>
+                )}
+              </div>
             </div>
           </div>
 
-          {isPending && (
-            <div className="flex items-center justify-center p-4 bg-primary/5">
-              <Loader2 className="size-5 animate-spin text-primary" />
-              <span className="ml-2 text-xs text-muted-foreground">Updating directory...</span>
+          {isRefreshing && (
+            <div
+              className="flex items-center gap-2 border-b border-primary/10 bg-primary/5 px-5 py-3 sm:px-6"
+              role="status"
+            >
+              <Loader2
+                size={15}
+                className="animate-spin text-primary"
+                aria-hidden="true"
+              />
+              <span className="text-xs font-medium text-muted-foreground">
+                Updating student directory...
+              </span>
             </div>
           )}
 
-          {students.length ? (
-            <div className="divide-y divide-border/60">
-              {students.map((student) => (
-                <div key={student.id} className="flex flex-col justify-between gap-4 p-6 sm:flex-row sm:items-center">
-                  <div className="space-y-1">
-                    <Link
-                      href={`/supervisor/students/${student.id}`}
-                      className="font-bold tracking-tight text-foreground transition-colors hover:text-primary no-underline"
-                    >
-                      {student.name}
-                    </Link>
-                    <p className="text-xs text-muted-foreground">
-                      College ID: <span className="font-mono font-semibold text-foreground">{student.collegeId}</span>
-                    </p>
-                    <p className="font-mono text-[10px] text-muted-foreground/70">
-                      {student.email ?? "No email provided"} · {student.mustChangePassword ? "Password change required" : "Active password"}
-                    </p>
-                  </div>
+          {students.length > 0 ? (
+            <div
+              className={`divide-y divide-border/60 transition-opacity ${
+                isRefreshing ? "opacity-60" : "opacity-100"
+              }`}
+              aria-busy={isRefreshing}
+            >
+              {students.map((student) => {
+                const isDeleting = deletingIds.has(student.id);
 
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => {
-                      if (window.confirm("Permanently delete this student account? Shared AI suggestions will remain.")) {
-                        handleDeleteStudent(student.id);
-                      }
-                    }}
-                    className="flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-xs font-semibold text-destructive hover:bg-destructive/10 transition-colors"
+                return (
+                  <article
+                    key={student.id}
+                    className="flex min-w-0 flex-col gap-4 p-5 transition-colors hover:bg-muted/20 sm:p-6 md:flex-row md:items-center md:justify-between"
                   >
-                    <Trash2 size={15} /> Delete
-                  </Button>
-                </div>
-              ))}
+                    <div className="flex min-w-0 items-start gap-3">
+                      <div className="grid size-11 shrink-0 place-items-center rounded-2xl border border-border/70 bg-muted/50 text-muted-foreground">
+                        <Users size={19} aria-hidden="true" />
+                      </div>
+
+                      <div className="min-w-0 flex-1 space-y-2">
+                        <Link
+                          href={`/supervisor/students/${student.id}`}
+                          className="block break-words text-sm font-bold tracking-tight text-foreground transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:text-base"
+                        >
+                          {student.name}
+                        </Link>
+
+                        <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1.5 text-xs text-muted-foreground">
+                          <span className="inline-flex min-w-0 items-center gap-1.5">
+                            <Fingerprint
+                              size={14}
+                              className="shrink-0"
+                              aria-hidden="true"
+                            />
+                            <span>College ID:</span>
+                            <span className="break-all font-mono font-semibold text-foreground">
+                              {student.collegeId}
+                            </span>
+                          </span>
+                        </div>
+
+                        <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-2">
+                          {student.email ? (
+                            <span className="inline-flex min-w-0 items-start gap-1.5 text-xs text-muted-foreground">
+                              <Mail
+                                size={13}
+                                className="mt-0.5 shrink-0"
+                                aria-hidden="true"
+                              />
+                              <span className="break-all">{student.email}</span>
+                            </span>
+                          ) : (
+                            <span className="text-xs text-muted-foreground">
+                              No email provided
+                            </span>
+                          )}
+
+                          <span
+                            className={`inline-flex w-fit max-w-full items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-medium ${
+                              student.mustChangePassword
+                                ? "border-amber-500/20 bg-amber-500/10 text-amber-700 dark:text-amber-400"
+                                : "border-emerald-500/20 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400"
+                            }`}
+                          >
+                            <ShieldCheck
+                              size={12}
+                              className="shrink-0"
+                              aria-hidden="true"
+                            />
+                            <span className="break-words">
+                              {student.mustChangePassword
+                                ? "Password change required"
+                                : "Password change not required"}
+                            </span>
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex shrink-0 items-center gap-2 md:pl-3">
+                      <Link
+                        href={`/supervisor/students/${student.id}`}
+                        className="inline-flex min-h-10 flex-1 items-center justify-center gap-1.5 rounded-xl border border-border bg-background px-3 py-2 text-xs font-semibold text-foreground transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:flex-none"
+                      >
+                        View details
+                        <ArrowRight size={14} aria-hidden="true" />
+                      </Link>
+
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        disabled={isDeleting || isRefreshing}
+                        onClick={() => {
+                          if (
+                            window.confirm(
+                              "Permanently delete this student account? Shared AI suggestions will remain.",
+                            )
+                          ) {
+                            void handleDeleteStudent(student.id);
+                          }
+                        }}
+                        aria-label={`Delete student ${student.name}`}
+                        className="inline-flex min-h-10 shrink-0 items-center justify-center gap-1.5 rounded-xl px-3 text-xs font-semibold text-destructive transition-colors hover:bg-destructive/10 disabled:opacity-50"
+                      >
+                        {isDeleting ? (
+                          <Loader2
+                            size={15}
+                            className="animate-spin"
+                            aria-hidden="true"
+                          />
+                        ) : (
+                          <Trash2 size={15} aria-hidden="true" />
+                        )}
+                        <span className="hidden sm:inline">
+                          {isDeleting ? "Deleting..." : "Delete"}
+                        </span>
+                      </Button>
+                    </div>
+                  </article>
+                );
+              })}
             </div>
           ) : (
-            <div className="p-6">
+            <div className="p-5 sm:p-8">
               <EmptyState
-                title="No student accounts found"
-                description="Try adjusting your search criteria or create a new student account to allow access to visible project briefs and AI feature suggestions."
+                title={
+                  debouncedQuery
+                    ? "No matching students"
+                    : "No student accounts yet"
+                }
+                description={
+                  debouncedQuery
+                    ? "Try a different name or college ID. You can also clear the search to see the full directory."
+                    : "Create a student account to provide access to the platform and its visible project briefs and AI feature suggestions."
+                }
               />
+
+              {debouncedQuery && (
+                <div className="mt-4 flex justify-center">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setSearchQuery("")}
+                    className="rounded-xl"
+                  >
+                    Clear search
+                  </Button>
+                </div>
+              )}
             </div>
           )}
 
-          {/* Pagination Controls */}
+          {/* Pagination */}
           {pagination && pagination.totalPages > 1 && (
-            <div className="flex items-center justify-between border-t border-white/10 p-4 bg-muted/20">
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={!pagination.hasPreviousPage}
-                onClick={() => handlePageChange(pagination.currentPage - 1)}
-                className="rounded-xl"
-              >
-                Previous
-              </Button>
-              <span className="font-mono text-xs text-muted-foreground">
-                Page {pagination.currentPage} of {pagination.totalPages}
-              </span>
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={!pagination.hasNextPage}
-                onClick={() => handlePageChange(pagination.currentPage + 1)}
-                className="rounded-xl"
-              >
-                Next
-              </Button>
+            <div className="mt-auto flex flex-col gap-3 border-t border-border/70 bg-muted/20 p-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+              <p className="text-center text-xs text-muted-foreground sm:text-left">
+                Page{" "}
+                <span className="font-semibold tabular-nums text-foreground">
+                  {pagination.currentPage}
+                </span>{" "}
+                of{" "}
+                <span className="font-semibold tabular-nums text-foreground">
+                  {pagination.totalPages}
+                </span>
+              </p>
+
+              <div className="flex items-center justify-between gap-2 sm:justify-end">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={
+                    !pagination.hasPreviousPage ||
+                    isRefreshing
+                  }
+                  onClick={() =>
+                    handlePageChange(pagination.currentPage - 1)
+                  }
+                  className="min-h-9 rounded-xl"
+                >
+                  <ChevronLeft size={15} aria-hidden="true" />
+                  Previous
+                </Button>
+
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={
+                    !pagination.hasNextPage ||
+                    isRefreshing
+                  }
+                  onClick={() =>
+                    handlePageChange(pagination.currentPage + 1)
+                  }
+                  className="min-h-9 rounded-xl"
+                >
+                  Next
+                  <ChevronRight size={15} aria-hidden="true" />
+                </Button>
+              </div>
             </div>
           )}
         </section>
 
-        {/* Create Student Form Card */}
-        <section className="rounded-[2.5rem] border border-white/10 bg-card/80 p-6 sm:p-8 backdrop-blur-xl shadow-xl h-fit space-y-6">
-          <div className="space-y-3">
-            <span className="grid size-12 place-items-center rounded-2xl bg-primary/10 text-primary border border-primary/20">
-              <UserPlus size={22} />
-            </span>
-            <div>
-              <h2 className="text-xl font-extrabold tracking-tight">Create student</h2>
-              <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-                A student's college ID is unique and cannot be edited by the student later.
+        {/* Create student account */}
+        <section
+          aria-labelledby="create-student-title"
+          className="min-w-0 space-y-6 rounded-3xl border border-border/70 bg-card p-5 shadow-sm sm:p-7 xl:sticky xl:top-6"
+        >
+          <div className="flex items-start gap-3">
+            <div className="grid size-12 shrink-0 place-items-center rounded-2xl border border-primary/15 bg-primary/10 text-primary">
+              <UserPlus size={22} aria-hidden="true" />
+            </div>
+
+            <div className="min-w-0 space-y-1">
+              <h2
+                id="create-student-title"
+                className="text-lg font-bold tracking-tight sm:text-xl"
+              >
+                Create student account
+              </h2>
+              <p className="text-sm leading-relaxed text-muted-foreground">
+                Register a student and initialize their sign-in credentials.
               </p>
             </div>
           </div>
 
-          <form onSubmit={handleCreateStudent} className="space-y-4">
-            <FormField label="Student full name*" name="name">
-              <TextInput name="name" minLength={2} maxLength={160} placeholder="Student name" />
-            </FormField>
-            <FormField label="College ID*" name="collegeId" hint="Used as login ID and temporary password. at least 9 numbers">
-              <TextInput name="collegeId" required minLength={2} maxLength={80} autoComplete="off" placeholder="e.g. 20231045" />
-            </FormField>
-            <FormField label="Email (optional)" name="email">
-              <TextInput name="email" type="email" placeholder="student@university.edu" />
+          <div className="space-y-3 rounded-2xl border border-primary/15 bg-primary/[0.04] p-4">
+            <p className="text-sm font-semibold text-foreground">
+              How initial sign-in works
+            </p>
+
+            <ol className="space-y-2.5 text-xs leading-relaxed text-muted-foreground">
+              <li className="flex items-start gap-2.5">
+                <span className="grid size-5 shrink-0 place-items-center rounded-full bg-primary/10 text-[10px] font-bold text-primary">
+                  1
+                </span>
+                <span>
+                  The college ID becomes the student&apos;s login ID and initial
+                  password.
+                </span>
+              </li>
+              <li className="flex items-start gap-2.5">
+                <span className="grid size-5 shrink-0 place-items-center rounded-full bg-primary/10 text-[10px] font-bold text-primary">
+                  2
+                </span>
+                <span>
+                  The student must change the initial password at first
+                  sign-in.
+                </span>
+              </li>
+              <li className="flex items-start gap-2.5">
+                <span className="grid size-5 shrink-0 place-items-center rounded-full bg-primary/10 text-[10px] font-bold text-primary">
+                  3
+                </span>
+                <span>
+                  Share initial credentials only through a secure channel.
+                </span>
+              </li>
+            </ol>
+          </div>
+
+          <form onSubmit={handleCreateStudent} className="space-y-5">
+            <FormField
+              label="Student full name"
+              name="name"
+              hint="Enter the name that should appear in the student directory."
+            >
+              <TextInput
+                name="name"
+                required
+                minLength={2}
+                maxLength={160}
+                autoComplete="name"
+                placeholder="e.g. Alex Morgan"
+              />
             </FormField>
 
-            <div className="rounded-2xl border border-border/60 bg-background/50 p-3.5 text-[11px] leading-relaxed text-muted-foreground backdrop-blur-sm">
-              The temporary password is hashed before it is stored. The student must set a new password at first login.
+            <FormField
+              label="College ID"
+              name="collegeId"
+              hint="Used as the login ID and initial password. Follow your institution's existing ID format."
+            >
+              <TextInput
+                name="collegeId"
+                required
+                minLength={2}
+                maxLength={80}
+                autoComplete="off"
+                placeholder="Enter college ID"
+              />
+            </FormField>
+
+            <FormField
+              label="Email address"
+              name="email"
+              hint="Optional contact information."
+            >
+              <TextInput
+                name="email"
+                type="email"
+                autoComplete="email"
+                placeholder="student@university.edu"
+              />
+            </FormField>
+
+            <div className="flex items-start gap-2.5 rounded-2xl border border-border/70 bg-muted/30 p-3.5">
+              <ShieldCheck
+                size={16}
+                className="mt-0.5 shrink-0 text-muted-foreground"
+                aria-hidden="true"
+              />
+              <p className="text-xs leading-relaxed text-muted-foreground">
+                The initial password is derived from the college ID. The
+                application is responsible for securely hashing credentials
+                before storage and enforcing the required first-login password
+                change.
+              </p>
             </div>
 
-            <Button type="submit" className="w-full rounded-xl font-semibold shadow-lg shadow-primary/20">
-              Create student account
+            <Button
+              type="submit"
+              disabled={isCreating}
+              className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl font-semibold shadow-sm"
+            >
+              {isCreating ? (
+                <>
+                  <Loader2
+                    size={17}
+                    className="animate-spin"
+                    aria-hidden="true"
+                  />
+                  Creating account...
+                </>
+              ) : (
+                <>
+                  <UserPlus size={17} aria-hidden="true" />
+                  Create student account
+                  <ArrowRight size={15} aria-hidden="true" />
+                </>
+              )}
             </Button>
           </form>
         </section>

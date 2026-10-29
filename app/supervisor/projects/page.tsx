@@ -1,93 +1,254 @@
-// app/supervisor/projects/page.tsx (or your respective path)
+
 "use client";
 
-import { useState, useEffect, useTransition } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import type { FormEvent } from "react";
 import Link from "next/link";
-import { Plus, Search, Loader2 } from "lucide-react";
+import {
+  Check,
+  ChevronLeft,
+  ChevronRight,
+  Filter,
+  FolderKanban,
+  Loader2,
+  Plus,
+  RotateCcw,
+  Search,
+  SlidersHorizontal,
+  UserRound,
+  X,
+} from "lucide-react";
+
 import { ProjectCard } from "@/components/ui/project-card";
-import { PageHeading } from "@/components/ui/page-heading";
-import { EmptyState } from "@/components/ui/empty-state";
 import { Button } from "@/components/ui/button";
 import ErrorState from "@/components/ErrorState";
 import { notify } from "@/components/notificationToaster";
-import { ProjectDto } from "@/modules/project/types";
-import { PaginationMeta } from "@/shared/utils/pagincation-utils";
-import { ProjectSearchPayload } from "@/shared/validation/project";
+import type { ProjectDto } from "@/modules/project/types";
+import type { PaginationMeta } from "@/shared/utils/pagincation-utils";
+import type { ProjectSearchPayload } from "@/shared/validation/project";
 import { listProjectAction } from "@/Interfaces/getters/project.getters";
+
+type ProjectTypeFilter = "GRADUATION" | "PRE_GRADUATION" | "ALL";
+
+const PAGE_SIZE = 10;
+
+function buildSearchPayload(
+  query: string,
+  supervisorName: string,
+  projectType: ProjectTypeFilter,
+): ProjectSearchPayload {
+  return {
+    query: query.trim() || undefined,
+    supervisorName: supervisorName.trim() || undefined,
+    projectType: projectType === "ALL" ? undefined : projectType,
+  };
+}
+
+function LoadingSkeleton() {
+  return (
+    <main
+      className="w-full min-w-0 space-y-6 px-3 pb-8 pt-3 sm:px-5 lg:px-8 2xl:px-10"
+      role="status"
+      aria-live="polite"
+    >
+      <span className="sr-only">Loading project catalogue...</span>
+
+      <div className="animate-pulse rounded-2xl border border-border/70 bg-card p-5 sm:p-8">
+        <div className="h-3 w-36 rounded bg-muted" />
+        <div className="mt-4 h-8 w-72 max-w-full rounded-lg bg-muted" />
+        <div className="mt-3 h-4 w-full max-w-2xl rounded bg-muted" />
+        <div className="mt-2 h-4 w-3/4 max-w-xl rounded bg-muted" />
+        <div className="mt-6 h-11 w-36 rounded-xl bg-muted" />
+      </div>
+
+      <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
+        {Array.from({ length: 4 }).map((_, index) => (
+          <div
+            key={index}
+            className="h-24 animate-pulse rounded-xl border border-border/70 bg-card"
+          />
+        ))}
+      </div>
+
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+        {Array.from({ length: 8 }).map((_, index) => (
+          <div
+            key={index}
+            className="overflow-hidden rounded-2xl border border-border/70 bg-card"
+          >
+            <div className="h-40 animate-pulse bg-muted/70" />
+            <div className="space-y-3 p-5">
+              <div className="h-3 w-28 animate-pulse rounded bg-muted" />
+              <div className="h-5 w-4/5 animate-pulse rounded bg-muted" />
+              <div className="h-3 w-full animate-pulse rounded bg-muted" />
+              <div className="h-3 w-2/3 animate-pulse rounded bg-muted" />
+            </div>
+          </div>
+        ))}
+      </div>
+    </main>
+  );
+}
 
 export default function ManageProjectsPage() {
   const [initialLoading, setInitialLoading] = useState(true);
   const [initialError, setInitialError] = useState<string | null>(null);
+  const [isPending, setIsPending] = useState(false);
 
   const [projects, setProjects] = useState<ProjectDto[]>([]);
   const [pagination, setPagination] = useState<PaginationMeta | null>(null);
 
-  // Filter states
   const [queryInput, setQueryInput] = useState("");
   const [supervisorInput, setSupervisorInput] = useState("");
-  const [typeInput, setTypeInput] = useState<"GRADUATION" | "PRE_GRADUATION" | "ALL">("ALL");
+  const [typeInput, setTypeInput] = useState<ProjectTypeFilter>("ALL");
 
+  const [appliedFilters, setAppliedFilters] =
+    useState<ProjectSearchPayload>({});
   const [currentPage, setCurrentPage] = useState(1);
-  const [isPending, startTransition] = useTransition();
 
-  // Fetch projects helper
-  const fetchProjects = (page: number, searchPayload: ProjectSearchPayload) => {
-    startTransition(async () => {
-      const res = await listProjectAction(searchPayload, page, 10);
-      if ("error" in res) {
-        notify.error("Failed to load projects", res.error);
+  // Prevent older requests from overwriting newer results.
+  const requestIdRef = useRef(0);
+
+  const loadProjects = useCallback(
+    async (
+      page: number,
+      searchPayload: ProjectSearchPayload,
+      isInitialRequest = false,
+    ) => {
+      const requestId = ++requestIdRef.current;
+
+      if (isInitialRequest) {
+        setInitialLoading(true);
+        setInitialError(null);
       } else {
-        setProjects(res.data);
-        setPagination(res.pagination);
+        setIsPending(true);
       }
-    });
-  };
 
-  // Initial load on mount
+      try {
+        const result = await listProjectAction(
+          searchPayload,
+          page,
+          PAGE_SIZE,
+        );
+
+        if (requestId !== requestIdRef.current) return;
+
+        if ("error" in result) {
+          if (isInitialRequest) {
+            setInitialError(result.error);
+          } else {
+            notify.error("Failed to load projects", result.error);
+          }
+          return;
+        }
+
+        setProjects(result.data);
+        setPagination(result.pagination);
+        setInitialError(null);
+      } catch {
+        if (requestId !== requestIdRef.current) return;
+
+        const message =
+          "An unexpected error occurred while loading projects.";
+
+        if (isInitialRequest) {
+          setInitialError(message);
+        } else {
+          notify.error("Failed to load projects", message);
+        }
+      } finally {
+        if (requestId === requestIdRef.current) {
+          setInitialLoading(false);
+          setIsPending(false);
+        }
+      }
+    },
+    [],
+  );
+
   useEffect(() => {
-    async function loadInitial() {
-      setInitialLoading(true);
-      const res = await listProjectAction({}, 1, 10);
-      if ("error" in res) {
-        setInitialError(res.error);
-      } else {
-        setProjects(res.data);
-        setPagination(res.pagination);
-      }
-      setInitialLoading(false);
-    }
-    loadInitial();
-  }, []);
+    void loadProjects(1, {}, true);
 
-  // Handle Filter Form Submit
-  const handleFilterSubmit = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
+    return () => {
+      requestIdRef.current += 1;
+    };
+  }, [loadProjects]);
+
+  const handleFilterSubmit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    const filters = buildSearchPayload(
+      queryInput,
+      supervisorInput,
+      typeInput,
+    );
+
+    setAppliedFilters(filters);
     setCurrentPage(1);
-    const searchPayload: ProjectSearchPayload = {
-      query: queryInput.trim() || undefined,
-      supervisorName: supervisorInput.trim() || undefined,
-      projectType: typeInput === "ALL" ? undefined : typeInput,
-    };
-    fetchProjects(1, searchPayload);
+    void loadProjects(1, filters);
   };
 
-  // Handle Page Change
-  const handlePageChange = (page: number) => {
-    setCurrentPage(page);
-    const searchPayload: ProjectSearchPayload = {
-      query: queryInput.trim() || undefined,
-      supervisorName: supervisorInput.trim() || undefined,
-      projectType: typeInput === "ALL" ? undefined : typeInput,
-    };
-    fetchProjects(page, searchPayload);
+  const handleClearFilters = () => {
+    setQueryInput("");
+    setSupervisorInput("");
+    setTypeInput("ALL");
+
+    const filters: ProjectSearchPayload = {};
+    setAppliedFilters(filters);
+    setCurrentPage(1);
+    void loadProjects(1, filters);
   };
+
+  const handlePageChange = (page: number) => {
+    if (
+      isPending ||
+      !pagination ||
+      page < 1 ||
+      page > pagination.totalPages ||
+      page === currentPage
+    ) {
+      return;
+    }
+
+    setCurrentPage(page);
+    void loadProjects(page, appliedFilters);
+  };
+
+  const activeFilterCount = [
+    appliedFilters.query,
+    appliedFilters.supervisorName,
+    appliedFilters.projectType,
+  ].filter(Boolean).length;
+
+  const hasActiveFilters = activeFilterCount > 0;
+  const totalCount = pagination?.totalCount ?? projects.length;
+  const pageStart =
+    totalCount === 0 ? 0 : (currentPage - 1) * PAGE_SIZE + 1;
+  const pageEnd = Math.min(currentPage * PAGE_SIZE, totalCount);
+
+  const appliedFilterLabels = [
+    appliedFilters.query
+      ? { label: `Search: ${appliedFilters.query}`, key: "query" }
+      : null,
+    appliedFilters.supervisorName
+      ? {
+          label: `Supervisor: ${appliedFilters.supervisorName}`,
+          key: "supervisor",
+        }
+      : null,
+    appliedFilters.projectType
+      ? {
+          label:
+            appliedFilters.projectType === "GRADUATION"
+              ? "Graduation"
+              : "Pre-graduation",
+          key: "type",
+        }
+      : null,
+  ].filter((item) => item !== null);
 
   if (initialLoading) {
-    return (
-      <div className="flex h-96 items-center justify-center">
-        <Loader2 className="size-8 animate-spin text-primary" />
-      </div>
-    );
+    return <LoadingSkeleton />;
   }
 
   if (initialError) {
@@ -95,127 +256,387 @@ export default function ManageProjectsPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <PageHeading
-        eyebrow="Project management"
-        title="Project catalogue"
-        description="Create and maintain structured briefs. Hidden projects remain available to Supervisors but do not appear in student search."
-        action={
-          <Button className="rounded-xl font-semibold shadow-lg shadow-primary/20" >
-            <Link href="/supervisor/projects/new" className="flex gap-2 items-center">
-              <Plus size={18} /> New project
-            </Link>
-          </Button>
-        }
-      />
+    <main className="w-full min-w-0 space-y-6 px-3 pb-10 pt-3 sm:space-y-7 sm:px-5 lg:px-8 2xl:px-10">
+      {/* Page header */}
+      <header className="relative isolate overflow-hidden rounded-2xl border border-primary/25 bg-gradient-to-br from-primary/[0.12] via-card to-card">
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute -right-20 -top-24 -z-10 size-80 rounded-full bg-primary/10 blur-3xl"
+        />
 
-      {/* Filter Panel */}
-      <form
-        onSubmit={handleFilterSubmit}
-        className="rounded-[2rem] border border-white/10 bg-card/80 p-5 backdrop-blur-xl shadow-xl grid gap-4 md:grid-cols-[minmax(0,1fr)_minmax(170px,.5fr)_180px_auto] md:items-end"
-      >
-        <div className="space-y-1.5">
-          <label className="font-mono text-[11px] font-bold uppercase tracking-wider text-muted-foreground" htmlFor="q">
-            Search title or description
-          </label>
-          <div className="relative flex items-center">
-            <Search size={16} className="absolute left-3.5 text-muted-foreground/70" />
-            <input
-              id="q"
-              value={queryInput}
-              onChange={(e) => setQueryInput(e.target.value)}
-              placeholder="Search catalogue"
-              className="w-full rounded-xl border border-border/70 bg-background/50 py-2 pl-9 pr-4 text-sm font-medium text-foreground outline-none backdrop-blur-md transition-all duration-200 focus:border-primary focus:ring-2 focus:ring-primary/20 placeholder:text-muted-foreground/50"
-            />
+        <div className="flex min-w-0 flex-col gap-6 p-5 sm:p-7 lg:flex-row lg:items-end lg:justify-between lg:p-9">
+          <div className="min-w-0">
+            <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.16em] text-primary">
+              <FolderKanban size={13} />
+              Supervisor workspace
+            </div>
+
+            <h1 className="break-words text-2xl font-black tracking-tight sm:text-3xl lg:text-4xl">
+              Project catalogue
+            </h1>
+
+            <p className="mt-3 max-w-3xl text-sm leading-7 text-muted-foreground sm:text-base">
+              Create, review, and maintain academic project briefs. Manage
+              catalogue visibility and help students discover graduation
+              and pre-graduation ideas.
+            </p>
+          </div>
+
+          <Link
+            href="/supervisor/projects/new"
+            className="inline-flex min-h-11 w-full shrink-0 items-center justify-center gap-2 rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground shadow-sm transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 sm:w-auto"
+          >
+            <Plus size={17} />
+            Create project
+          </Link>
+        </div>
+
+        <div className="grid grid-cols-2 border-t border-border/60 bg-background/20 sm:grid-cols-4">
+          <div className="border-r border-border/60 p-4 sm:px-5 sm:py-4">
+            <p className="text-xs text-muted-foreground">Matching projects</p>
+            <p className="mt-1 text-2xl font-black tabular-nums">
+              {totalCount.toLocaleString()}
+            </p>
+          </div>
+
+          <div className="p-4 sm:border-r sm:border-border/60 sm:px-5 sm:py-4">
+            <p className="text-xs text-muted-foreground">Current page</p>
+            <p className="mt-1 text-2xl font-black tabular-nums">
+              {pagination?.currentPage ?? 1}
+            </p>
+          </div>
+
+          <div className="border-r border-t border-border/60 p-4 sm:border-t-0 sm:px-5 sm:py-4">
+            <p className="text-xs text-muted-foreground">Page size</p>
+            <p className="mt-1 text-2xl font-black tabular-nums">
+              {PAGE_SIZE}
+            </p>
+          </div>
+
+          <div className="border-t border-border/60 p-4 sm:border-t-0 sm:px-5 sm:py-4">
+            <p className="text-xs text-muted-foreground">Active filters</p>
+            <p className="mt-1 text-2xl font-black tabular-nums">
+              {activeFilterCount}
+            </p>
           </div>
         </div>
+      </header>
 
-        <div className="space-y-1.5">
-          <label htmlFor="supervisor" className="font-mono text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
-            Project supervisor
-          </label>
-          <input
-            id="supervisor"
-            value={supervisorInput}
-            onChange={(e) => setSupervisorInput(e.target.value)}
-            placeholder="Name"
-            className="w-full rounded-xl border border-border/70 bg-background/50 px-4 py-2 text-sm font-medium text-foreground outline-none backdrop-blur-md transition-all duration-200 focus:border-primary focus:ring-2 focus:ring-primary/20 placeholder:text-muted-foreground/50"
-          />
-        </div>
-
-        <div className="space-y-1.5">
-          <label htmlFor="type" className="font-mono text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
-            Project type
-          </label>
-          <select
-            id="type"
-            value={typeInput}
-            onChange={(e) => setTypeInput(e.target.value as any)}
-            className="w-full rounded-xl border border-border/70 bg-background/50 px-4 py-2 text-sm font-medium text-foreground outline-none backdrop-blur-md transition-all duration-200 focus:border-primary focus:ring-2 focus:ring-primary/20"
-          >
-            <option value="ALL" className="bg-card text-foreground">All types</option>
-            <option value="GRADUATION" className="bg-card text-foreground">Graduation</option>
-            <option value="PRE_GRADUATION" className="bg-card text-foreground">Pre-graduation</option>
-          </select>
-        </div>
-
-        <Button type="submit" variant="outline" className="rounded-xl border-border/80 font-semibold">
-          Filter
-        </Button>
-      </form>
-
-      {isPending && (
-        <div className="flex items-center justify-center p-4 bg-primary/5 rounded-xl">
-          <Loader2 className="size-5 animate-spin text-primary" />
-          <span className="ml-2 text-xs text-muted-foreground">Filtering catalogue...</span>
-        </div>
-      )}
-
-      {/* Projects Grid */}
-      {projects.length ? (
-        <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
-          {projects.map((project) => (
-            <ProjectCard key={project.id} project={project} management />
-          ))}
-        </div>
-      ) : (
-        <EmptyState
-          title="No project briefs found"
-          description="Start by creating a structured brief or widen your search filters."
-          action={
-            <Button className="rounded-xl font-semibold shadow-lg shadow-primary/20" >
-              <Link href="/supervisor/projects/new">Create project</Link>
-            </Button>
-          }
-        />
-      )}
-
-      {/* Pagination Controls */}
-      {pagination && pagination.totalPages > 1 && (
-        <div className="flex items-center justify-between border-t border-white/10 p-4 bg-muted/20 rounded-2xl">
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={!pagination.hasPreviousPage}
-            onClick={() => handlePageChange(pagination.currentPage - 1)}
-            className="rounded-xl"
-          >
-            Previous
-          </Button>
-          <span className="font-mono text-xs text-muted-foreground">
-            Page {pagination.currentPage} of {pagination.totalPages} ({pagination.totalCount} total)
+      {/* Search and filters */}
+      <section className="overflow-hidden rounded-2xl border border-border/70 bg-card">
+        <div className="flex min-w-0 items-start gap-3 border-b border-border/60 p-4 sm:p-5">
+          <span className="grid size-10 shrink-0 place-items-center rounded-xl border border-border/70 bg-background text-primary">
+            <SlidersHorizontal size={18} />
           </span>
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={!pagination.hasNextPage}
-            onClick={() => handlePageChange(pagination.currentPage + 1)}
-            className="rounded-xl"
-          >
-            Next
-          </Button>
+
+          <div className="min-w-0 flex-1">
+            <h2 className="font-bold tracking-tight">Find a project</h2>
+            <p className="mt-1 text-sm leading-6 text-muted-foreground">
+              Search by keyword, supervisor, or academic project type.
+              Results update when you apply your filters.
+            </p>
+          </div>
+
+          {hasActiveFilters && (
+            <BadgeFallback count={activeFilterCount} />
+          )}
         </div>
-      )}
-    </div>
+
+        <form onSubmit={handleFilterSubmit} className="p-4 sm:p-5">
+          <div className="grid min-w-0 grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_minmax(200px,0.7fr)]">
+            <div className="min-w-0 space-y-2">
+              <label
+                htmlFor="project-query"
+                className="text-sm font-semibold"
+              >
+                Search projects
+              </label>
+
+              <div className="relative">
+                <Search
+                  size={17}
+                  className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground"
+                />
+                <input
+                  id="project-query"
+                  name="query"
+                  type="search"
+                  value={queryInput}
+                  onChange={(event) => setQueryInput(event.target.value)}
+                  placeholder="Title, summary, or keyword"
+                  className="min-h-11 w-full min-w-0 rounded-xl border border-border bg-background pl-10 pr-3.5 text-sm outline-none transition-shadow placeholder:text-muted-foreground/70 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1"
+                />
+              </div>
+            </div>
+
+            <div className="min-w-0 space-y-2">
+              <label
+                htmlFor="project-supervisor"
+                className="text-sm font-semibold"
+              >
+                Project supervisor
+              </label>
+
+              <div className="relative">
+                <UserRound
+                  size={17}
+                  className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground"
+                />
+                <input
+                  id="project-supervisor"
+                  name="supervisor"
+                  type="text"
+                  value={supervisorInput}
+                  onChange={(event) =>
+                    setSupervisorInput(event.target.value)
+                  }
+                  placeholder="Supervisor name"
+                  className="min-h-11 w-full min-w-0 rounded-xl border border-border bg-background pl-10 pr-3.5 text-sm outline-none transition-shadow placeholder:text-muted-foreground/70 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1"
+                />
+              </div>
+            </div>
+
+            <div className="min-w-0 space-y-2">
+              <label
+                htmlFor="project-type"
+                className="text-sm font-semibold"
+              >
+                Project type
+              </label>
+
+              <select
+                id="project-type"
+                name="projectType"
+                value={typeInput}
+                onChange={(event) =>
+                  setTypeInput(event.target.value as ProjectTypeFilter)
+                }
+                className="min-h-11 w-full min-w-0 rounded-xl border border-border bg-background px-3.5 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1"
+              >
+                <option value="ALL">All project types</option>
+                <option value="GRADUATION">Graduation</option>
+                <option value="PRE_GRADUATION">Pre-graduation</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="mt-5 flex flex-col gap-3 border-t border-border/60 pt-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex min-w-0 flex-wrap items-center gap-2">
+              {hasActiveFilters ? (
+                <>
+                  <span className="text-xs text-muted-foreground">
+                    Applied:
+                  </span>
+                  {appliedFilterLabels.map((item) =>
+                    item ? (
+                      <span
+                        key={item.key}
+                        className="inline-flex max-w-full items-center rounded-lg border border-primary/20 bg-primary/[0.06] px-2.5 py-1 text-xs font-medium text-foreground"
+                      >
+                        <span className="break-words">{item.label}</span>
+                      </span>
+                    ) : null,
+                  )}
+                </>
+              ) : (
+                <p className="text-xs text-muted-foreground">
+                  No filters applied. Browse the full catalogue.
+                </p>
+              )}
+            </div>
+
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+              {hasActiveFilters && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={handleClearFilters}
+                  disabled={isPending}
+                  className="min-h-10 gap-2 rounded-xl"
+                >
+                  <RotateCcw size={14} />
+                  Reset
+                </Button>
+              )}
+
+              <Button
+                type="submit"
+                disabled={isPending}
+                className="min-h-11 w-full gap-2 rounded-xl px-5 sm:w-auto"
+              >
+                {isPending ? (
+                  <Loader2 size={16} className="animate-spin" />
+                ) : (
+                  <Filter size={16} />
+                )}
+                {isPending ? "Updating..." : "Apply filters"}
+              </Button>
+            </div>
+          </div>
+        </form>
+      </section>
+
+      {/* Results */}
+      <section
+        aria-labelledby="project-results-heading"
+        className="min-w-0 space-y-5"
+      >
+        <div className="flex min-w-0 flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
+              <h2
+                id="project-results-heading"
+                className="text-xl font-black tracking-tight sm:text-2xl"
+              >
+                Project briefs
+              </h2>
+
+              {hasActiveFilters && (
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/20 bg-primary/5 px-2.5 py-1 text-xs font-semibold text-primary">
+                  <Check size={12} />
+                  Filtered results
+                </span>
+              )}
+            </div>
+
+            <p className="mt-1 text-sm leading-6 text-muted-foreground">
+              {totalCount === 0
+                ? "No matching projects found."
+                : `Showing ${pageStart.toLocaleString()}–${pageEnd.toLocaleString()} of ${totalCount.toLocaleString()} projects`}
+            </p>
+          </div>
+
+          <p className="shrink-0 text-xs text-muted-foreground">
+            {pagination && pagination.totalPages > 0
+              ? `Page ${pagination.currentPage} of ${pagination.totalPages}`
+              : "Catalogue overview"}
+          </p>
+        </div>
+
+        {isPending && (
+          <div
+            className="flex items-center gap-2.5 rounded-xl border border-primary/20 bg-primary/[0.06] px-4 py-3 text-sm text-muted-foreground"
+            role="status"
+            aria-live="polite"
+          >
+            <Loader2
+              size={16}
+              className="shrink-0 animate-spin text-primary"
+            />
+            Updating the catalogue...
+          </div>
+        )}
+
+        {projects.length > 0 ? (
+          <div
+            className={`grid min-w-0 grid-cols-1 gap-4 transition-opacity sm:grid-cols-2 sm:gap-5 xl:grid-cols-3 2xl:grid-cols-4 ${
+              isPending ? "opacity-60" : "opacity-100"
+            }`}
+            aria-busy={isPending}
+          >
+            {projects.map((project) => (
+              <ProjectCard
+                key={project.id}
+                project={project}
+                management
+              />
+            ))}
+          </div>
+        ) : (
+          <div className="flex min-w-0 flex-col items-center justify-center rounded-2xl border border-dashed border-border bg-card/50 px-5 py-12 text-center sm:py-16">
+            <span className="grid size-14 place-items-center rounded-2xl border border-primary/20 bg-primary/10 text-primary">
+              <FolderKanban size={25} />
+            </span>
+
+            <h3 className="mt-5 text-lg font-bold">
+              {hasActiveFilters
+                ? "No matching project briefs"
+                : "Your catalogue is empty"}
+            </h3>
+
+            <p className="mt-2 max-w-md text-sm leading-6 text-muted-foreground">
+              {hasActiveFilters
+                ? "Try broader search terms, change the supervisor name, or clear the filters to view more projects."
+                : "Create your first academic project brief to start building a catalogue for students."}
+            </p>
+
+            <div className="mt-5 flex w-full flex-col justify-center gap-2 sm:w-auto sm:flex-row">
+              {hasActiveFilters ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleClearFilters}
+                  className="min-h-10 gap-2 rounded-xl"
+                >
+                  <X size={15} />
+                  Clear filters
+                </Button>
+              ) : null}
+
+              {!hasActiveFilters && (
+                <Button  className="min-h-10 gap-2 rounded-xl">
+                  <Link href="/supervisor/projects/new">
+                    <Plus size={16} />
+                    Create project
+                  </Link>
+                </Button>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Pagination */}
+        {pagination && pagination.totalPages > 1 && (
+          <nav
+            aria-label="Project catalogue pagination"
+            className="flex min-w-0 flex-col gap-4 rounded-2xl border border-border/70 bg-card p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5"
+          >
+            <p className="text-sm text-muted-foreground">
+              Page{" "}
+              <span className="font-bold text-foreground">
+                {pagination.currentPage}
+              </span>{" "}
+              of{" "}
+              <span className="font-bold text-foreground">
+                {pagination.totalPages}
+              </span>
+            </p>
+
+            <div className="grid grid-cols-2 gap-2 sm:flex sm:items-center">
+              <Button
+                type="button"
+                variant="outline"
+                disabled={!pagination.hasPreviousPage || isPending}
+                onClick={() => handlePageChange(currentPage - 1)}
+                className="min-h-10 gap-2 rounded-xl px-4"
+              >
+                <ChevronLeft size={16} />
+                Previous
+              </Button>
+
+              <Button
+                type="button"
+                variant="outline"
+                disabled={!pagination.hasNextPage || isPending}
+                onClick={() => handlePageChange(currentPage + 1)}
+                className="min-h-10 gap-2 rounded-xl px-4"
+              >
+                Next
+                <ChevronRight size={16} />
+              </Button>
+            </div>
+          </nav>
+        )}
+      </section>
+    </main>
+  );
+}
+
+function BadgeFallback({ count }: { count: number }) {
+  return (
+    <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-primary/20 bg-primary/10 px-2.5 py-1 text-xs font-semibold text-primary">
+      <Filter size={12} />
+      {count}
+    </span>
   );
 }

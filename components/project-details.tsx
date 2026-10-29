@@ -1,22 +1,28 @@
+
 import Link from "next/link";
-import { 
-  ArrowLeft, 
-  CalendarDays, 
-  CheckCircle2, 
-  CircleOff, 
-  Code2, 
-  FileText, 
-  Target, 
-  Users, 
-  Wrench, 
-  ShieldAlert, 
-  Calendar,
-  Layers,
-  Sparkles,
+import type { ReactNode } from "react";
+import {
+  ArrowLeft,
+  CalendarDays,
+  Check,
+  CheckCircle2,
+  ChevronDown,
+  CircleOff,
+  Code2,
   ExternalLink,
+  Eye,
+  FileText,
+  GraduationCap,
+  Layers3,
+  Lightbulb,
+  ShieldAlert,
+  Sparkles,
+  Target,
+  Users,
   UserCheck,
-  Eye
+  Wrench,
 } from "lucide-react";
+
 import type { ProjectDto } from "@/modules/project/types";
 import { AiSuggestionsPanel } from "@/components/ai-suggestions-panel";
 import { SuggestionAdminList } from "@/components/suggestion-admin-list";
@@ -26,360 +32,254 @@ import { Button } from "@/components/ui/button";
 import ChangeProjectVisibility from "./changeProjectVisibility";
 import DeleteProjectButton from "./deleteProjectButton";
 
-type Suggestion = { id: string; projectId: string; responseId: string; title: string; content: string; createdAt: Date };
+type Suggestion = {
+  id: string;
+  projectId: string;
+  responseId: string;
+  title: string;
+  content: string;
+  createdAt: Date;
+};
 
-export function ProjectDetails({ project, suggestions, canRequestAi = false, aiEnabled = true, supervisorView = false }: {
-  project: ProjectDto; suggestions: Suggestion[]; canRequestAi?: boolean; aiEnabled?: boolean; supervisorView?: boolean;
-}) {
-  const inScope = project.features.filter((feature) => feature.scope === "IN_SCOPE");
-  const outScope = project.features.filter((feature) => feature.scope === "OUT_OF_SCOPE");
-  const backHref = supervisorView ? "/supervisor/projects" : "/projects";
-
-  return (
-    <div className="page-shell space-y-8 relative">
-      <div className="pointer-events-none absolute -top-12 left-1/2 -z-10 h-96 w-full -translate-x-1/2 max-w-7xl bg-gradient-to-r from-primary/10 via-primary/5 to-transparent blur-3xl opacity-70" />
-
-      {/* Actions Toolbar */}
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-white/10 bg-card/40 p-2.5 backdrop-blur-2xl shadow-2xl transition-all hover:border-white/20">
-        <Button variant="ghost" size="sm" className="rounded-xl gap-2 font-semibold hover:bg-white/5">
-          <Link href={backHref} className="flex items-center gap-2">
-            <ArrowLeft size={18} className="text-primary transition-transform group-hover:-translate-x-1" /> Back to {supervisorView ? "project management" : "catalogue"}
-          </Link>
-        </Button>
-        {supervisorView && (
-          <div className="flex flex-wrap items-center gap-3">
-            <ChangeProjectVisibility projectId={project.id} currentVisibility={project.visibility} />
-            <DeleteProjectButton projectId={project.id} />
-          </div>
-        )}
-      </div>
-
-      {/* Header Info Banner */}
-      <div className="relative overflow-hidden rounded-[2.5rem] border border-white/10 bg-gradient-to-br from-card/90 via-card/50 to-background/80 p-8 sm:p-10 backdrop-blur-2xl shadow-2xl">
-        <div className="absolute -right-20 -top-20 -z-10 size-80 rounded-full bg-primary/15 blur-3xl" />
-        
-        <div className="flex flex-col justify-between gap-8 lg:flex-row lg:items-start">
-          <div className="max-w-6xl space-y-5">
-            <div className="flex flex-wrap items-center gap-2.5">
-              <Badge variant="outline" className="rounded-full border-primary/40 bg-primary/15 px-4 text-xs py-4 text-center font-bold text-primary shadow-sm shadow-primary/20 backdrop-blur-md">
-                <Sparkles size={13} className="mr-1.5 inline animate-pulse" />
-                {project.projectType === "GRADUATION" ? "Graduation project" : "Pre-graduation project"}
-              </Badge>
-              {project.yearPresentation && (
-                <Badge variant="outline" className="rounded-full border-white/10 bg-white/5 px-4 text-xs py-4 text-center font-medium opacity-90 backdrop-blur-md">
-                  <Calendar size={13} className="mr-1.5 inline text-primary" /> {project.yearPresentation}
-                </Badge>
-              )}
-              {supervisorView && (
-                <Badge className={`rounded-full text-xs py-4 px-4 text-center font-semibold uppercase tracking-wider backdrop-blur-md ${project.visibility === "VISIBLE" ? "bg-primary/20 text-primary border border-primary/30" : "bg-warning/20 text-warning border border-warning/30 opacity-90"}`}>
-                  <Eye size={13} className="mr-1.5 inline" />
-                  {project.visibility.toLowerCase()}
-                </Badge>
-              )}
-            </div>
-
-            <h1 className="text-3xl font-black tracking-tight sm:text-4xl lg:text-5xl bg-gradient-to-r from-foreground via-foreground to-foreground/70 bg-clip-text text-transparent">
-              {project.title}
-            </h1>
-
-            <p className="max-w-4xl text-base leading-relaxed opacity-90 text-muted-foreground/90 font-normal">
-              {project.summary}
-            </p>
-
-            <div className="inline-flex items-center gap-2.5 rounded-full border border-white/10 bg-white/5 px-4 py-2 backdrop-blur-md">
-              <UserCheck size={16} className="text-primary" />
-              <p className="text-lg font-medium opacity-90">
-                Supervisor: <span className="font-bold text-foreground">{project.projectSupervisorName}</span>
-              </p>
-            </div>
-          </div>
-
-          {supervisorView && (
-            <Button className="rounded-2xl shadow-xl shadow-primary/25 bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] font-bold">
-              <Link href={`/supervisor/projects/${project.id}/edit`}>Edit Project Brief</Link>
-            </Button>
-          )}
-        </div>
-      </div>
-
-      {/* Main Grid Content */}
-      <div className="grid gap-8 lg:grid-cols-[minmax(0,1.35fr)_minmax(280px,.65fr)]">
-        <div className="space-y-8">
-          
-          {/* Description & Core Concepts Section */}
-          <section className="group relative overflow-hidden rounded-[2.5rem] border border-white/10 bg-card/60 p-6 sm:p-8 backdrop-blur-xl shadow-2xl transition-all duration-300 hover:border-white/20">
-            <div className="flex items-center gap-3 border-b border-white/10 pb-5 mb-6">
-              <span className="grid size-12 place-items-center rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 text-primary ring-1 ring-primary/20 shadow-inner">
-                <FileText size={22} />
-              </span>
-              <h2 className="text-xl font-extrabold tracking-tight">Project description</h2>
-            </div>
-
-            <p className="text-lg leading-relaxed opacity-90 whitespace-pre-line text-muted-foreground/90">{project.description}</p>
-
-            {project.problemStatement && (
-              <div className="mt-8 rounded-2xl border border-white/10 bg-background/30 p-6 backdrop-blur-md space-y-2">
-                <h3 className="font-bold tracking-tight text-foreground flex items-center gap-2">
-                  <span className="size-2 rounded-full bg-destructive" /> Problem statement
-                </h3>
-                <p className="text-lg leading-relaxed opacity-90/90 whitespace-pre-line text-muted-foreground/90">{project.problemStatement}</p>
-              </div>
-            )}
-
-            {project.proposedSolution && (
-              <div className="mt-6 rounded-2xl border border-white/10 bg-background/30 p-6 backdrop-blur-md space-y-2">
-                <h3 className="font-bold tracking-tight text-foreground flex items-center gap-2">
-                  <span className="size-2 rounded-full bg-primary" /> Proposed solution
-                </h3>
-                <p className="text-lg leading-relaxed opacity-90/90 whitespace-pre-line text-muted-foreground/90">{project.proposedSolution}</p>
-              </div>
-            )}
-
-            {project.objectives && (
-              <div className="mt-6 rounded-2xl border border-white/10 bg-background/30 p-6 backdrop-blur-md space-y-2">
-                <h3 className="flex items-center gap-2 font-bold tracking-tight text-foreground">
-                  <Target size={18} className="text-primary" /> Objectives
-                </h3>
-                <p className="text-lg leading-relaxed opacity-90/90 whitespace-pre-line text-muted-foreground/90">{project.objectives}</p>
-              </div>
-            )}
-          </section>
-
-          {/* Operational Context & Parameters */}
-          {(project.targetUsers || project.availableResources || project.constraints) && (
-            <section className="rounded-[2.5rem] border border-white/10 bg-card/60 p-6 sm:p-8 backdrop-blur-xl shadow-2xl space-y-6">
-              <div className="flex items-center gap-3 border-b border-white/10 pb-5">
-                <span className="grid size-12 place-items-center rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 text-primary ring-1 ring-primary/20 shadow-inner">
-                  <Layers size={22} />
-                </span>
-                <h2 className="text-xl font-extrabold tracking-tight">Operational parameters & context</h2>
-              </div>
-
-              <div className="grid gap-5 sm:grid-cols-3">
-                {project.targetUsers && (
-                  <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-b from-background/60 to-background/20 p-5 space-y-2 backdrop-blur-md">
-                    <div className="flex items-center gap-2 text-lg font-bold text-primary">
-                      <Users size={18} /> Target Users
-                    </div>
-                    <p className="text-lg leading-relaxed opacity-90 text-muted-foreground">{project.targetUsers}</p>
-                  </div>
-                )}
-                {project.availableResources && (
-                  <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-b from-background/60 to-background/20 p-5 space-y-2 backdrop-blur-md">
-                    <div className="flex items-center gap-2 text-lg font-bold text-primary">
-                      <Wrench size={18} /> Resources
-                    </div>
-                    <p className="text-lg leading-relaxed opacity-90 text-muted-foreground">{project.availableResources}</p>
-                  </div>
-                )}
-                {project.constraints && (
-                  <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-b from-background/60 to-background/20 p-5 space-y-2 backdrop-blur-md">
-                    <div className="flex items-center gap-2 text-lg font-bold text-primary">
-                      <ShieldAlert size={18} /> Constraints
-                    </div>
-                    <p className="text-lg leading-relaxed opacity-90 text-muted-foreground">{project.constraints}</p>
-                  </div>
-                )}
-              </div>
-            </section>
-          )}
-
-          {/* Scope Section */}
-          <section className="rounded-[2.5rem] border border-white/10 bg-card/60 p-6 sm:p-8 backdrop-blur-xl shadow-2xl space-y-6">
-            <div className="flex items-center gap-3 border-b border-white/10 pb-5">
-              <span className="grid size-12 place-items-center rounded-2xl bg-gradient-to-br from-emerald-500/20 to-emerald-500/5 text-emerald-400 ring-1 ring-emerald-500/20 shadow-inner">
-                <CheckCircle2 size={22} />
-              </span>
-              <h2 className="text-xl font-extrabold tracking-tight">Features in scope</h2>
-            </div>
-
-            {inScope.length ? (
-              <div className="grid gap-3">
-                {inScope.map((feature) => (
-                  <div key={feature.id} className="flex gap-3.5 items-start rounded-xl border border-white/5 bg-white/[0.02] p-4 text-lg leading-relaxed opacity-90 backdrop-blur-sm transition-colors hover:bg-white/[0.04]">
-                    <CheckCircle2 size={18} className="mt-1 shrink-0 text-emerald-400" />
-                    <span className="text-muted-foreground/90">{feature.content}</span>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className="text-lg opacity-90/60 italic">No in-scope features specified.</p>
-            )}
-
-            <div className="border-t border-white/10 pt-6 space-y-4">
-              <h3 className="flex items-center gap-2 font-bold tracking-tight opacity-90 text-muted-foreground">
-                <CircleOff size={18} className="text-muted-foreground/50" /> Out of scope
-              </h3>
-              {outScope.length ? (
-                <div className="grid gap-3">
-                  {outScope.map((feature) => (
-                    <div key={feature.id} className="flex gap-3.5 items-start rounded-xl border border-white/5 bg-white/[0.01] p-3.5 text-lg leading-relaxed opacity-90/80">
-                      <span className="mt-2.5 size-1.5 shrink-0 rounded-full bg-muted-foreground/40" />
-                      <span className="text-muted-foreground/80">{feature.content}</span>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-lg opacity-90/60 italic">No out-of-scope items specified.</p>
-              )}
-            </div>
-          </section>
-
-          {/* Technologies Section */}
-          <section className="rounded-[2.5rem] border border-white/10 bg-card/60 p-6 sm:p-8 backdrop-blur-xl shadow-2xl space-y-6">
-            <div className="flex items-center gap-3 border-b border-white/10 pb-5">
-              <span className="grid size-12 place-items-center rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 text-primary ring-1 ring-primary/20 shadow-inner">
-                <Code2 size={22} />
-              </span>
-              <h2 className="text-xl font-extrabold tracking-tight">Technologies</h2>
-            </div>
-            {project.technologies.length ? (
-              <div className="flex flex-wrap gap-2.5">
-                {project.technologies.map((technology) => (
-                  <Badge key={technology.id} variant="secondary" className="rounded-xl px-4 py-2 text-lg font-medium bg-background/80 border border-white/10 shadow-md backdrop-blur-md hover:border-primary/50 transition-colors">
-                    {technology.name}
-                  </Badge>
-                ))}
-              </div>
-            ) : (
-              <p className="text-lg opacity-90/60 italic">No technologies specified.</p>
-            )}
-          </section>
-
-          {/* Images Gallery */}
-          {project.images.length > 0 && (
-            <section className="rounded-[2.5rem] border border-white/10 bg-card/60 p-6 sm:p-8 backdrop-blur-xl shadow-2xl space-y-6">
-              <div className="flex items-center justify-between border-b border-white/10 pb-5">
-                <h2 className="text-xl font-extrabold tracking-tight">Project images</h2>
-                <Badge variant="outline" className="text-lg font-mono rounded-full border-primary/30 bg-primary/10 text-primary px-3 py-1">
-                  {project.counts.images} attached
-                </Badge>
-              </div>
-              <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
-                {project.images.map((image) => (
-                  <a key={image.id} href={`/projects/${project.id}/images/${image.id}`} target="_blank" rel="noreferrer" className="group relative overflow-hidden rounded-2xl border border-white/10 bg-background/40 shadow-lg transition-all duration-300 hover:border-primary/50 hover:shadow-primary/10">
-                    <img loading="lazy" src={`/projects/${project.id}/images/${image.id}`} alt={image.fileName ?? `Project screenshot ${image.sortOrder + 1}`} className="aspect-[4/3] w-full object-cover transition-transform duration-500 group-hover:scale-105" />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 transition-opacity group-hover:opacity-100 flex items-end p-3">
-                      <span className="flex items-center gap-1.5 truncate text-[13px] font-medium text-white">
-                        <ExternalLink size={13} /> {image.fileName ?? "View Image"}
-                      </span>
-                    </div>
-                  </a>
-                ))}
-              </div>
-            </section>
-          )}
-        </div>
-
-        {/* Sidebar Info & AI Panel */}
-        <aside className="space-y-8">
-          <section className="rounded-[2.5rem] border border-white/10 bg-card/60 p-6 backdrop-blur-xl shadow-2xl space-y-6">
-            <p className="font-mono text-lg font-bold uppercase tracking-widest text-primary flex items-center gap-2 border-b border-white/10 pb-4">
-              <Sparkles size={18} /> Brief Details
-            </p>
-            <div className="space-y-5 text-lg">
-              <div className="rounded-xl bg-white/[0.02] p-3.5 border border-white/5">
-                <p className="text-muted-foreground text-sm">Project type</p>
-                <p className="mt-1 font-semibold text-foreground text-lg">{project.projectType === "GRADUATION" ? "Graduation" : "Pre-graduation / semester"}</p>
-              </div>
-              {project.yearPresentation && (
-                <div className="rounded-xl bg-white/[0.02] p-3.5 border border-white/5">
-                  <p className="text-muted-foreground text-sm">Year & Presentation Term</p>
-                  <p className="mt-1 font-semibold text-foreground text-lg">{project.yearPresentation}</p>
-                </div>
-              )}
-              <div className="rounded-xl bg-white/[0.02] p-3.5 border border-white/5">
-                <p className="text-muted-foreground text-sm">Project supervisor</p>
-                <p className="mt-1 font-semibold text-foreground text-lg">{project.projectSupervisorName}</p>
-                <p className="mt-1 text-xs leading-relaxed opacity-90/70 text-muted-foreground">Project metadata only; independent of QC account permissions.</p>
-              </div>
-              <div className="rounded-xl bg-white/[0.02] p-3.5 border border-white/5">
-                <p className="flex items-center gap-1.5 text-muted-foreground text-sm"><CalendarDays size={15} className="text-primary" /> Created at</p>
-                <p className="mt-1 font-semibold text-foreground text-lg">{formatDate(project.createdAt)}</p>
-              </div>
-              <div className="rounded-xl bg-white/[0.02] p-3.5 border border-white/5">
-                <p className="flex items-center gap-1.5 text-muted-foreground text-sm"><CalendarDays size={15} className="text-primary" /> Last updated</p>
-                <p className="mt-1 font-semibold text-foreground text-lg">{formatDate(project.updatedAt)}</p>
-              </div>
-              <div className="rounded-xl bg-white/[0.02] p-3.5 border border-white/5">
-                <p className="text-muted-foreground text-sm">Catalogue visibility</p>
-                <p className="mt-1 font-semibold text-foreground text-lg">{project.visibility === "VISIBLE" ? "Visible to students" : "Hidden from students"}</p>
-              </div>
-              <div className="border-t border-white/10 pt-4 flex justify-between items-center px-1">
-                <span className="text-muted-foreground text-sm">Suggestions count:</span>
-                <span className="font-mono font-bold text-foreground bg-primary/10 border border-primary/20 px-3 py-0.5 rounded-full text-lg text-primary">{project.counts.suggestions}</span>
-              </div>
-            </div>
-          </section>
-
-          {supervisorView ? (
-            <section className="rounded-[2.5rem] border border-white/10 bg-card/60 p-6 backdrop-blur-xl shadow-2xl space-y-4">
-              <h2 className="text-lg font-bold tracking-tight">Manage shared suggestions</h2>
-              <p className="text-lg leading-relaxed opacity-90 text-muted-foreground">Removing a suggestion deletes it permanently from the shared list and future AI context. Its parent AI response remains for history.</p>
-              <SuggestionAdminList projectId={project.id} suggestions={suggestions} />
-            </section>
-          ) : (
-            <AiSuggestionsPanel projectId={project.id} initialSuggestions={suggestions} canRequest={canRequestAi} aiEnabled={aiEnabled} />
-          )}
-        </aside>
-      </div>
-    </div>
-  );
-}
-
-
-
-
-const panelClass =
-  "group relative isolate rounded-[2rem] border border-border/60 " +
-  "bg-gradient-to-br from-card via-card/95 to-primary/[0.035] " +
-  "shadow-lg shadow-foreground/[0.025] " +
-  "transition-all duration-300 " +
-  "hover:-translate-y-0.5 hover:border-primary/25 " +
-  "hover:shadow-xl hover:shadow-primary/10 " +
-  "before:pointer-events-none before:absolute before:inset-x-10 " +
-  "before:top-0 before:h-px before:content-[''] " +
-  "before:bg-gradient-to-r before:from-transparent " +
-  "before:via-primary/60 before:to-transparent";
-
-const sectionIconClass =
-  "grid size-10 shrink-0 place-items-center rounded-2xl " +
-  "border border-primary/15 " +
-  "bg-gradient-to-br from-primary/15 via-primary/[0.06] to-transparent " +
-  "text-primary shadow-inner shadow-primary/10 " +
-  "transition-transform duration-300 " +
-  "group-hover:rotate-3 group-hover:scale-105";
-
-const detailBlockClass =
-  "rounded-2xl border border-border/50 border-l-2 border-l-primary/35 " +
-  "bg-gradient-to-r from-primary/[0.045] via-background/20 to-transparent " +
-  "px-4 py-4 transition-colors duration-300 hover:border-l-primary/70";
-
-const miniCardClass =
-  "group/mini relative rounded-2xl border border-border/60 " +
-  "bg-gradient-to-br from-background/70 via-background/40 to-primary/[0.035] " +
-  "p-4 space-y-2 transition-all duration-300 " +
-  "hover:-translate-y-1 hover:border-primary/25 " +
-  "hover:shadow-lg hover:shadow-primary/5";
-
-const metadataItemClass =
-  "rounded-xl border border-border/40 bg-background/25 px-3 py-2.5 " +
-  "transition-all duration-200 hover:border-primary/20 " +
-  "hover:bg-primary/[0.035]";
-
-export function ProjectDetailsV2({
-  project,
-  suggestions,
-  canRequestAi = false,
-  aiEnabled = true,
-  supervisorView = false,
-}: {
+type ProjectDetailsProps = {
   project: ProjectDto;
   suggestions: Suggestion[];
   canRequestAi?: boolean;
   aiEnabled?: boolean;
   supervisorView?: boolean;
+};
+
+const panelClass =
+  "min-w-0 rounded-2xl border border-border/70 bg-card/70";
+
+function SectionHeading({
+  icon,
+  eyebrow,
+  title,
+  description,
+  trailing,
+}: {
+  icon: ReactNode;
+  eyebrow?: string;
+  title: string;
+  description?: string;
+  trailing?: ReactNode;
 }) {
+  return (
+    <div className="flex min-w-0 items-start gap-3">
+      <span className="grid size-10 shrink-0 place-items-center rounded-xl border border-primary/20 bg-primary/10 text-primary">
+        {icon}
+      </span>
+
+      <div className="min-w-0 flex-1">
+        {eyebrow && (
+          <p className="mb-1 text-[10px] font-bold uppercase tracking-[0.16em] text-primary">
+            {eyebrow}
+          </p>
+        )}
+
+        <h2 className="break-words text-base font-bold tracking-tight sm:text-lg">
+          {title}
+        </h2>
+
+        {description && (
+          <p className="mt-1 max-w-3xl text-sm leading-6 text-muted-foreground">
+            {description}
+          </p>
+        )}
+      </div>
+
+      {trailing && <div className="shrink-0">{trailing}</div>}
+    </div>
+  );
+}
+
+function Panel({
+  children,
+  className = "",
+}: {
+  children: ReactNode;
+  className?: string;
+}) {
+  return (
+    <section
+      className={`${panelClass} p-4 sm:p-5 lg:p-6 ${className}`}
+    >
+      {children}
+    </section>
+  );
+}
+
+/**
+ * Native, keyboard-accessible accordion.
+ *
+ * The full text is rendered only in the details body, not in the summary.
+ * It remains collapsed until the user opens the section.
+ */
+function ExpandableSection({
+  title,
+  content,
+  icon,
+  index,
+}: {
+  title: string;
+  content: string | null | undefined;
+  icon: ReactNode;
+  index?: string;
+}) {
+  if (!content?.trim()) return null;
+
+  return (
+    <details className="group min-w-0 overflow-hidden rounded-xl border border-border/70 bg-background/25 transition-colors open:border-primary/30 open:bg-background/50">
+      <summary className="flex cursor-pointer list-none items-center gap-3 p-4 [&::-webkit-details-marker]:hidden">
+        <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-primary/[0.09] text-primary">
+          {icon}
+        </span>
+
+        <span className="min-w-0 flex-1">
+          <span className="flex min-w-0 items-center gap-2">
+            {index && (
+              <span className="shrink-0 font-mono text-xs text-primary/80">
+                {index}
+              </span>
+            )}
+            <span className="break-words text-sm font-semibold text-foreground sm:text-base">
+              {title}
+            </span>
+          </span>
+
+          <span className="mt-1 block text-xs text-muted-foreground">
+            Open to read full section
+          </span>
+        </span>
+
+        <ChevronDown
+          aria-hidden="true"
+          size={18}
+          className="shrink-0 text-muted-foreground transition-transform duration-200 group-open:rotate-180"
+        />
+      </summary>
+
+      <div className="border-t border-border/60 px-4 py-4 sm:px-5 sm:py-5">
+        <p className="whitespace-pre-line break-words text-sm leading-7 text-foreground/85 [overflow-wrap:anywhere]">
+          {content}
+        </p>
+      </div>
+    </details>
+  );
+}
+
+function Metric({
+  label,
+  value,
+  icon,
+}: {
+  label: string;
+  value: ReactNode;
+  icon: ReactNode;
+}) {
+  return (
+    <div className="flex min-w-0 items-start gap-3 rounded-xl border border-border/60 bg-card/65 p-3 sm:p-4">
+      <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-primary/[0.09] text-primary">
+        {icon}
+      </span>
+
+      <div className="min-w-0">
+        <p className="text-xs text-muted-foreground">{label}</p>
+        <div className="mt-1 break-words text-sm font-bold leading-5">
+          {value}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function MetadataRow({
+  label,
+  children,
+}: {
+  label: string;
+  children: ReactNode;
+}) {
+  return (
+    <div className="flex min-w-0 items-start justify-between gap-4 border-b border-border/50 py-3 last:border-0 last:pb-0">
+      <span className="shrink-0 text-xs text-muted-foreground">
+        {label}
+      </span>
+      <div className="min-w-0 text-right text-sm font-medium">
+        {children}
+      </div>
+    </div>
+  );
+}
+
+function FeatureList({
+  title,
+  features,
+  included,
+  emptyMessage,
+}: {
+  title: string;
+  features: ProjectDto["features"];
+  included: boolean;
+  emptyMessage: string;
+}) {
+  return (
+    <section className="min-w-0">
+      <div className="flex min-w-0 items-center gap-2">
+        {included ? (
+          <CheckCircle2 size={17} className="shrink-0 text-success" />
+        ) : (
+          <CircleOff size={17} className="shrink-0 text-muted-foreground" />
+        )}
+
+        <h3 className="min-w-0 break-words text-sm font-bold sm:text-base">
+          {title}
+        </h3>
+
+        <Badge variant="secondary" className="ml-auto shrink-0">
+          {features.length}
+        </Badge>
+      </div>
+
+      {features.length > 0 ? (
+        <ul className="mt-3 space-y-2 overflow-y-auto max-h-[500px]">
+          {features.map((feature) => (
+            <li
+              key={feature.id}
+              className="flex min-w-0 items-start gap-3 rounded-xl border border-border/50 bg-background/35 p-3"
+            >
+              {included ? (
+                <Check
+                  size={15}
+                  className="mt-1 shrink-0 text-success"
+                />
+              ) : (
+                <span className="mt-2 size-1.5 shrink-0 rounded-full bg-muted-foreground/50" />
+              )}
+
+              <span className="min-w-0 whitespace-pre-line break-words text-sm leading-6 text-foreground/80 [overflow-wrap:anywhere]">
+                {feature.content}
+              </span>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="mt-3 rounded-xl border border-dashed border-border/70 p-4 text-sm leading-6 text-muted-foreground">
+          {emptyMessage}
+        </p>
+      )}
+    </section>
+  );
+}
+
+export function ProjectDetails({
+  project,
+  suggestions,
+  canRequestAi = false,
+  aiEnabled = true,
+  supervisorView = false,
+}: ProjectDetailsProps) {
   const inScope = project.features.filter(
     (feature) => feature.scope === "IN_SCOPE"
   );
@@ -388,556 +288,463 @@ export function ProjectDetailsV2({
     (feature) => feature.scope === "OUT_OF_SCOPE"
   );
 
-  const backHref = supervisorView ? "/supervisor/projects" : "/projects";
+  const backHref = supervisorView
+    ? "/supervisor/projects"
+    : "/projects";
+
+  const projectType =
+    project.projectType === "GRADUATION"
+      ? "Graduation project"
+      : "Pre-graduation project";
 
   return (
-    <div className="page-shell space-y-6">
-      <div className="relative flex flex-wrap items-center justify-between gap-3 overflow-hidden rounded-2xl border border-border/60 bg-gradient-to-r from-card/95 via-card/75 to-primary/[0.06] px-4 py-3 shadow-md shadow-foreground/[0.02] backdrop-blur-xl sm:px-5">
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute inset-y-0 right-1/4 w-32 bg-primary/[0.035] blur-2xl"
-        />
-
+    <main className="w-full min-w-0 space-y-5 px-3 pb-10 pt-3 sm:space-y-6 sm:px-5 lg:px-8 xl:px-10 2xl:px-12">
+      {/* Top navigation */}
+      <nav className="flex min-w-0 flex-col gap-3 border-b border-border/60 pb-4 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
         <Button
+          
           variant="ghost"
           size="sm"
-          className="relative gap-2 rounded-xl font-semibold transition-all duration-200 hover:bg-primary/10 hover:text-primary"
+          className="w-full justify-start gap-2 sm:w-auto"
         >
-          <Link href={backHref} className="flex items-center gap-2">
-            <ArrowLeft
-              size={18}
-              className="transition-transform duration-200 group-hover:-translate-x-1"
-            />
+          <Link href={backHref} className="flex items-center gap-2 duration-200 hover:gap-5">
+            <ArrowLeft size={16} />
             Back to {supervisorView ? "project management" : "catalogue"}
           </Link>
         </Button>
 
         {supervisorView && (
-          <div className="relative flex flex-wrap items-center gap-3">
+          <div className="flex min-w-0 gap-2 sm:flex-wrap sm:items-center">
             <ChangeProjectVisibility
               projectId={project.id}
               currentVisibility={project.visibility}
             />
-
             <DeleteProjectButton projectId={project.id} />
           </div>
         )}
-      </div>
+      </nav>
 
-      <header className="relative isolate overflow-hidden rounded-[2rem] border border-primary/15 bg-gradient-to-br from-primary/[0.10] via-card/90 to-card/55 p-6 shadow-xl shadow-primary/[0.045] sm:p-8">
+      {/* Full-width project header */}
+      <header className="relative isolate min-w-0 overflow-hidden rounded-2xl border border-primary/25 bg-gradient-to-br from-primary/[0.13] via-card to-card">
         <div
           aria-hidden="true"
-          className="pointer-events-none absolute -right-20 -top-24 size-72 rounded-full bg-primary/10 blur-3xl"
+          className="pointer-events-none absolute -right-20 -top-24 -z-10 size-80 rounded-full bg-primary/10 blur-3xl"
         />
 
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute -bottom-28 left-1/3 size-64 rounded-full bg-primary/[0.065] blur-3xl"
-        />
-
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute inset-y-8 left-0 w-1 rounded-r-full bg-gradient-to-b from-primary via-primary/40 to-transparent"
-        />
-
-        <div className="relative flex flex-col justify-between gap-6 lg:flex-row lg:items-start">
-          <div className="max-w-6xl space-y-4">
-            <div className="flex flex-wrap items-center gap-2">
-              <Badge
-                variant="outline"
-                className="rounded-full border-primary/30 bg-gradient-to-r from-primary/15 to-primary/[0.05] px-3 py-2.5 text-center text-xs font-bold text-primary shadow-sm shadow-primary/5"
-              >
-                {project.projectType === "GRADUATION"
-                  ? "Graduation project"
-                  : "Pre-graduation project"}
+        <div className="grid min-w-0 lg:grid-cols-[minmax(0,1fr)_240px]">
+          <div className="min-w-0 p-5 sm:p-7 lg:p-9">
+            <div className="flex min-w-0 flex-wrap items-center gap-2">
+              <Badge className="gap-1.5 border border-primary/20 bg-primary/10 text-primary hover:bg-primary/15">
+                <GraduationCap size={13} />
+                {projectType}
               </Badge>
 
               {project.yearPresentation && (
-                <Badge
-                  variant="outline"
-                  className="rounded-full border-border/60 bg-background/45 px-3 py-2.5 text-center text-xs font-medium opacity-90 backdrop-blur-md"
-                >
-                  <Calendar size={12} className="mr-1 inline" />
+                <Badge variant="outline" className="gap-1.5">
+                  <CalendarDays size={12} />
                   {project.yearPresentation}
                 </Badge>
               )}
 
               {supervisorView && (
                 <Badge
-                  className={`rounded-full border px-3 py-2.5 text-center text-xs font-semibold uppercase tracking-wider shadow-sm ${project.visibility === "VISIBLE"
-                      ? "border-primary/30 bg-primary/10 text-primary"
-                      : "border-warning/30 bg-warning/10 text-warning"
-                    }`}
+                  variant="outline"
+                  className={
+                    project.visibility === "VISIBLE"
+                      ? "border-success/30 bg-success/10 text-success"
+                      : "border-muted-foreground/30 bg-muted text-muted-foreground"
+                  }
                 >
-                  {project.visibility.toLowerCase()}
+                  <Eye size={12} className="mr-1" />
+                  {project.visibility === "VISIBLE" ? "Published" : "Hidden"}
                 </Badge>
               )}
             </div>
 
-            <div className="space-y-3">
-              <h1 className="text-3xl font-black tracking-tight [text-wrap:balance] sm:text-4xl lg:text-5xl">
-                {project.title}
-              </h1>
+            <h1 className="mt-5 max-w-5xl break-words text-2xl font-black leading-tight tracking-tight [overflow-wrap:anywhere] sm:text-3xl lg:text-4xl xl:text-5xl">
+              {project.title}
+            </h1>
 
-              <div
-                aria-hidden="true"
-                className="h-1 w-20 rounded-full bg-gradient-to-r from-primary via-primary/50 to-transparent"
-              />
+            <div className="mt-4 h-1 w-16 rounded-full bg-primary" />
 
-              <p className="max-w-4xl text-base leading-relaxed opacity-90">
+            {project.summary && (
+              <p className="mt-5 max-w-4xl whitespace-pre-line break-words text-sm leading-7 text-muted-foreground sm:text-base">
                 {project.summary}
               </p>
-            </div>
+            )}
 
-            <div className="inline-flex flex-wrap items-center gap-x-2 gap-y-1 rounded-xl border border-border/40 bg-background/25 px-3 py-2 backdrop-blur-sm">
-              <span className="text-lg font-medium opacity-90">
-                Project supervisor:
-              </span>
+            <div className="mt-6 flex min-w-0 flex-col gap-4 border-t border-border/60 pt-5 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+              <div className="flex min-w-0 items-start gap-2.5">
+                <UserCheck
+                  size={16}
+                  className="mt-0.5 shrink-0 text-primary"
+                />
+                <div className="min-w-0">
+                  <p className="text-xs text-muted-foreground">
+                    Project supervisor
+                  </p>
+                  <p className="mt-1 break-words text-sm font-semibold">
+                    {project.projectSupervisorName || "Not specified"}
+                  </p>
+                </div>
+              </div>
 
-              <span className="text-lg font-bold text-foreground">
-                {project.projectSupervisorName}
-              </span>
+              {supervisorView && (
+                <Button  className="w-full sm:w-auto">
+                  <Link href={`/supervisor/projects/${project.id}/edit`}>
+                    Edit project brief
+                  </Link>
+                </Button>
+              )}
             </div>
           </div>
 
-          {supervisorView && (
-            <div className="relative shrink-0">
-              <Button className="rounded-xl border border-primary/30 bg-gradient-to-r from-primary to-primary/85 shadow-lg shadow-primary/20 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-xl hover:shadow-primary/25">
-                <Link href={`/supervisor/projects/${project.id}/edit`}>
-                  Edit Project Brief
-                </Link>
-              </Button>
+          {/* Header side information */}
+          <div className="grid content-start grid-cols-2 gap-3 border-t border-border/60 bg-background/20 p-4 sm:p-5 lg:grid-cols-1 lg:border-l lg:border-t-0 lg:p-6">
+            <div className="col-span-2 lg:col-span-1">
+              <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-muted-foreground">
+                Catalogue status
+              </p>
+              <div className="mt-2 flex items-center gap-2">
+                <span
+                  className={`size-2 shrink-0 rounded-full ${
+                    project.visibility === "VISIBLE"
+                      ? "bg-success"
+                      : "bg-muted-foreground/50"
+                  }`}
+                />
+                <span className="text-sm font-semibold">
+                  {project.visibility === "VISIBLE"
+                    ? "Visible to students"
+                    : "Hidden from students"}
+                </span>
+              </div>
             </div>
-          )}
+
+            <div className="rounded-xl border border-border/60 bg-card/60 p-3">
+              <p className="text-xs text-muted-foreground">Created</p>
+              <p className="mt-1 break-words text-sm font-semibold">
+                {formatDate(project.createdAt)}
+              </p>
+            </div>
+
+            <div className="rounded-xl border border-border/60 bg-card/60 p-3">
+              <p className="text-xs text-muted-foreground">Last updated</p>
+              <p className="mt-1 break-words text-sm font-semibold">
+                {formatDate(project.updatedAt)}
+              </p>
+            </div>
+          </div>
         </div>
       </header>
 
-      <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1.35fr)_minmax(280px,.65fr)]">
-        <div className="min-w-0 space-y-6">
-          <section className={`${panelClass} space-y-6 p-6 sm:p-8`}>
-            <div className="flex items-center gap-3">
-              <span className={sectionIconClass}>
-                <FileText size={20} />
-              </span>
+      {/* Project metrics */}
+      <div className="grid min-w-0 grid-cols-2 gap-3 lg:grid-cols-4">
+        <Metric
+          label="Included features"
+          value={inScope.length}
+          icon={<CheckCircle2 size={18} />}
+        />
+        <Metric
+          label="Excluded features"
+          value={outScope.length}
+          icon={<ShieldAlert size={18} />}
+        />
+        <Metric
+          label="Technologies"
+          value={project.technologies.length}
+          icon={<Code2 size={18} />}
+        />
+        <Metric
+          label="AI suggestions"
+          value={project.counts.suggestions}
+          icon={<Sparkles size={18} />}
+        />
+      </div>
 
-              <div className="min-w-0">
-                <h2 className="text-xl font-extrabold tracking-tight">
-                  Project description
-                </h2>
+      {/* Full-width responsive content grid */}
+      <div className="grid min-w-0 grid-cols-1 items-start gap-5 xl:grid-cols-12 xl:gap-6">
+        {/* Main project content */}
+        <div className="min-w-0 space-y-5 xl:col-span-8">
+          <Panel>
+            <SectionHeading
+              icon={<FileText size={19} />}
+              eyebrow="Project documentation"
+              title="Academic brief"
+              description="Each section opens independently, so you can focus on the information you need."
+              trailing={
+                <Badge variant="outline" className="hidden sm:inline-flex">
+                  {[
+                    project.description,
+                    project.problemStatement,
+                    project.proposedSolution,
+                    project.objectives,
+                  ].filter((value) => Boolean(value?.trim())).length}{" "}
+                  sections
+                </Badge>
+              }
+            />
 
-                <div className="mt-1 h-0.5 w-12 rounded-full bg-gradient-to-r from-primary/60 to-transparent" />
-              </div>
+            <div className="mt-5 space-y-3">
+              <ExpandableSection
+                index="01"
+                title="Project description"
+                content={project.description}
+                icon={<FileText size={15} />}
+              />
+
+              <ExpandableSection
+                index="02"
+                title="Problem statement"
+                content={project.problemStatement}
+                icon={<ShieldAlert size={15} />}
+              />
+
+              <ExpandableSection
+                index="03"
+                title="Proposed solution"
+                content={project.proposedSolution}
+                icon={<Lightbulb size={15} />}
+              />
+
+              <ExpandableSection
+                index="04"
+                title="Project objectives"
+                content={project.objectives}
+                icon={<Target size={15} />}
+              />
             </div>
+          </Panel>
 
-            <p className="whitespace-pre-line text-lg leading-relaxed opacity-90">
-              {project.description}
-            </p>
-
-            {project.problemStatement && (
-              <div className={detailBlockClass}>
-                <h3 className="mb-2 font-bold tracking-tight text-foreground">
-                  Problem statement
-                </h3>
-
-                <p className="whitespace-pre-line text-lg leading-relaxed opacity-90">
-                  {project.problemStatement}
-                </p>
-              </div>
-            )}
-
-            {project.proposedSolution && (
-              <div className={detailBlockClass}>
-                <h3 className="mb-2 font-bold tracking-tight text-foreground">
-                  Proposed solution
-                </h3>
-
-                <p className="whitespace-pre-line text-lg leading-relaxed opacity-90">
-                  {project.proposedSolution}
-                </p>
-              </div>
-            )}
-
-            {project.objectives && (
-              <div className={detailBlockClass}>
-                <h3 className="mb-2 flex items-center gap-2 font-bold tracking-tight text-foreground">
-                  <Target size={17} className="shrink-0 text-primary" />
-                  Objectives
-                </h3>
-
-                <p className="whitespace-pre-line text-lg leading-relaxed opacity-90">
-                  {project.objectives}
-                </p>
-              </div>
-            )}
-          </section>
-
+          {/* Context */}
           {(project.targetUsers ||
             project.availableResources ||
             project.constraints) && (
-              <section className={`${panelClass} space-y-6 p-6 sm:p-8`}>
-                <div className="flex items-center gap-3">
-                  <span className={sectionIconClass}>
-                    <Layers size={20} />
-                  </span>
+            <Panel>
+              <SectionHeading
+                icon={<Layers3 size={19} />}
+                eyebrow="Planning context"
+                title="Operational parameters"
+                description="Additional information that defines the environment and limits of the project."
+              />
 
-                  <div className="min-w-0">
-                    <h2 className="text-xl font-extrabold tracking-tight">
-                      Operational parameters & context
-                    </h2>
+              <div className="mt-5 space-y-3">
+                <ExpandableSection
+                  title="Target users"
+                  content={project.targetUsers}
+                  icon={<Users size={15} />}
+                />
 
-                    <div className="mt-1 h-0.5 w-12 rounded-full bg-gradient-to-r from-primary/60 to-transparent" />
-                  </div>
-                </div>
+                <ExpandableSection
+                  title="Available resources"
+                  content={project.availableResources}
+                  icon={<Wrench size={15} />}
+                />
 
-                <div className="grid gap-4 sm:grid-cols-3">
-                  {project.targetUsers && (
-                    <div className={miniCardClass}>
-                      <div
-                        aria-hidden="true"
-                        className="pointer-events-none absolute right-0 top-0 size-20 rounded-full bg-primary/[0.06] blur-2xl"
-                      />
+                <ExpandableSection
+                  title="Constraints"
+                  content={project.constraints}
+                  icon={<ShieldAlert size={15} />}
+                />
+              </div>
+            </Panel>
+          )}
 
-                      <div className="relative flex items-center gap-2 text-lg font-bold text-primary">
-                        <Users size={15} />
-                        Target Users
-                      </div>
+          {/* Scope */}
+          <Panel>
+            <SectionHeading
+              icon={<Target size={19} />}
+              eyebrow="Feature boundaries"
+              title="Project scope"
+              description="Separate what the project intends to deliver from what is explicitly excluded."
+            />
 
-                      <p className="relative text-lg leading-relaxed opacity-90">
-                        {project.targetUsers}
-                      </p>
-                    </div>
-                  )}
+            <div className="mt-5 grid min-w-0 grid-cols-1 gap-6 lg:grid-cols-2 lg:gap-5">
+              <FeatureList
+                title="In scope"
+                features={inScope}
+                included
+                emptyMessage="No included features have been specified."
+              />
 
-                  {project.availableResources && (
-                    <div className={miniCardClass}>
-                      <div
-                        aria-hidden="true"
-                        className="pointer-events-none absolute right-0 top-0 size-20 rounded-full bg-primary/[0.06] blur-2xl"
-                      />
-
-                      <div className="relative flex items-center gap-2 text-lg font-bold text-primary">
-                        <Wrench size={15} />
-                        Available Resources
-                      </div>
-
-                      <p className="relative text-lg leading-relaxed opacity-90">
-                        {project.availableResources}
-                      </p>
-                    </div>
-                  )}
-
-                  {project.constraints && (
-                    <div className={miniCardClass}>
-                      <div
-                        aria-hidden="true"
-                        className="pointer-events-none absolute right-0 top-0 size-20 rounded-full bg-primary/[0.06] blur-2xl"
-                      />
-
-                      <div className="relative flex items-center gap-2 text-lg font-bold text-primary">
-                        <ShieldAlert size={15} />
-                        Constraints
-                      </div>
-
-                      <p className="relative text-lg leading-relaxed opacity-90">
-                        {project.constraints}
-                      </p>
-                    </div>
-                  )}
-                </div>
-              </section>
-            )}
-
-          <section className={`${panelClass} space-y-6 p-6 sm:p-8`}>
-            <div className="flex items-center gap-3">
-              <span className="grid size-10 shrink-0 place-items-center rounded-2xl border border-success/20 bg-gradient-to-br from-success/15 to-success/[0.035] text-success shadow-inner shadow-success/5 transition-transform duration-300 group-hover:rotate-3 group-hover:scale-105">
-                <CheckCircle2 size={20} />
-              </span>
-
-              <div className="min-w-0">
-                <h2 className="text-xl font-extrabold tracking-tight">
-                  Features in scope
-                </h2>
-
-                <div className="mt-1 h-0.5 w-12 rounded-full bg-gradient-to-r from-success/70 to-transparent" />
+              <div className="min-w-0 border-t border-border/60 pt-5 lg:border-l lg:border-t-0 lg:pl-5 lg:pt-0">
+                <FeatureList
+                  title="Out of scope"
+                  features={outScope}
+                  included={false}
+                  emptyMessage="No excluded features have been specified."
+                />
               </div>
             </div>
+          </Panel>
 
-            {inScope.length ? (
-              <ul className="space-y-2">
-                {inScope.map((feature) => (
-                  <li
-                    key={feature.id}
-                    className="flex gap-3 rounded-xl border border-transparent px-3 py-2 text-lg leading-relaxed opacity-90 transition-all duration-200 hover:border-success/15 hover:bg-success/[0.035]"
-                  >
-                    <CheckCircle2
-                      size={16}
-                      className="mt-1 shrink-0 text-success"
-                    />
+          {/* Technologies */}
+          <Panel>
+            <SectionHeading
+              icon={<Code2 size={19} />}
+              eyebrow="Implementation"
+              title="Technology stack"
+              description="Tools and technologies identified in the project brief."
+            />
 
-                    <span>{feature.content}</span>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="text-lg opacity-60">
-                No in-scope features have been listed.
-              </p>
-            )}
-
-            <div className="relative space-y-3 border-t border-border/60 pt-6 before:pointer-events-none before:absolute before:-top-px before:left-0 before:h-px before:w-1/3 before:bg-gradient-to-r before:from-muted-foreground/30 before:to-transparent">
-              <h3 className="flex items-center gap-2 font-bold tracking-tight opacity-90">
-                <CircleOff size={17} className="opacity-50" />
-                Out of scope
-              </h3>
-
-              {outScope.length ? (
-                <ul className="space-y-2">
-                  {outScope.map((feature) => (
-                    <li
-                      key={feature.id}
-                      className="flex gap-3 rounded-xl border border-transparent px-3 py-2 text-lg leading-relaxed opacity-80 transition-all duration-200 hover:border-border/60 hover:bg-background/35"
+            {project.technologies.length > 0 ? (
+              <div className="mt-5 flex min-w-0 flex-wrap gap-2">
+                {project.technologies
+                  .slice()
+                  .sort((a, b) => a.sortOrder - b.sortOrder)
+                  .map((technology) => (
+                    <Badge
+                      key={technology.id}
+                      variant="secondary"
+                      className="max-w-full break-words rounded-lg border border-border/60 px-3 py-1.5 text-xs"
                     >
-                      <span className="mt-2.5 size-1.5 shrink-0 rounded-full bg-muted-foreground/50" />
-
-                      <span>{feature.content}</span>
-                    </li>
+                      {technology.name}
+                    </Badge>
                   ))}
-                </ul>
-              ) : (
-                <p className="text-lg opacity-60">
-                  No out-of-scope items have been specified.
-                </p>
-              )}
-            </div>
-          </section>
-
-          <section className={`${panelClass} space-y-4 p-6 sm:p-8`}>
-            <div className="flex items-center gap-3">
-              <span className={sectionIconClass}>
-                <Code2 size={20} />
-              </span>
-
-              <div className="min-w-0">
-                <h2 className="text-xl font-extrabold tracking-tight">
-                  Technologies
-                </h2>
-
-                <div className="mt-1 h-0.5 w-12 rounded-full bg-gradient-to-r from-primary/60 to-transparent" />
-              </div>
-            </div>
-
-            {project.technologies.length ? (
-              <div className="flex flex-wrap gap-2.5">
-                {project.technologies.map((technology) => (
-                  <Badge
-                    key={technology.id}
-                    variant="secondary"
-                    className="rounded-xl border border-border/60 bg-gradient-to-br from-background/80 to-primary/[0.045] px-3.5 py-1.5 text-lg font-semibold shadow-sm shadow-foreground/[0.02] transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/30 hover:bg-primary/10 hover:shadow-md hover:shadow-primary/5"
-                  >
-                    {technology.name}
-                  </Badge>
-                ))}
               </div>
             ) : (
-              <p className="text-lg opacity-60">
-                No technologies specified.
+              <p className="mt-4 rounded-xl border border-dashed border-border/60 p-4 text-sm text-muted-foreground">
+                No technologies have been specified.
               </p>
             )}
-          </section>
+          </Panel>
 
+          {/* Images */}
           {project.images.length > 0 && (
-            <section className={`${panelClass} space-y-4 p-6 sm:p-8`}>
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <div>
-                  <h2 className="text-xl font-extrabold tracking-tight">
-                    Project images
-                  </h2>
+            <Panel>
+              <SectionHeading
+                icon={<ExternalLink size={19} />}
+                eyebrow="Visual material"
+                title="Project gallery"
+                description="Open an image to view it separately."
+                trailing={
+                  <Badge variant="secondary">
+                    {project.counts.images}
+                  </Badge>
+                }
+              />
 
-                  <div className="mt-1 h-0.5 w-12 rounded-full bg-gradient-to-r from-primary/60 to-transparent" />
-                </div>
-
-                <Badge
-                  variant="outline"
-                  className="rounded-xl border-border/60 bg-background/50 px-3 py-1.5 text-lg font-mono"
-                >
-                  {project.counts.images} attached
-                </Badge>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-                {project.images.map((image) => (
-                  <a
-                    key={image.id}
-                    href={`/projects/${project.id}/images/${image.id}`}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="group/image relative isolate overflow-hidden rounded-2xl border border-border/60 bg-background/40 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-primary/30 hover:shadow-xl hover:shadow-primary/10"
-                  >
-                    <div className="relative overflow-hidden">
+              <div className="mt-5 grid min-w-0 grid-cols-1 gap-3 min-[400px]:grid-cols-2 lg:grid-cols-3">
+                {project.images
+                  .slice()
+                  .sort((a, b) => a.sortOrder - b.sortOrder)
+                  .map((image) => (
+                    <a
+                      key={image.id}
+                      href={`/projects/${project.id}/images/${image.id}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      aria-label={`Open ${image.fileName ?? `project image ${image.sortOrder + 1}`}`}
+                      className="group min-w-0 overflow-hidden rounded-xl border border-border/70 bg-background/30 transition-colors hover:border-primary/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                    >
                       <img
                         loading="lazy"
                         src={`/projects/${project.id}/images/${image.id}`}
                         alt={
                           image.fileName ??
-                          `Project screenshot ${image.sortOrder + 1}`
+                          `Project image ${image.sortOrder + 1}`
                         }
-                        className="aspect-[4/3] w-full object-cover transition-transform duration-700 group-hover/image:scale-110"
+                        className="aspect-[4/3] w-full object-cover transition-transform duration-300 group-hover:scale-[1.03]"
                       />
 
-                      <span
-                        aria-hidden="true"
-                        className="pointer-events-none absolute inset-0 bg-gradient-to-t from-background/50 via-transparent to-transparent opacity-60 transition-opacity duration-300 group-hover/image:opacity-30"
-                      />
-
-                      <span
-                        aria-hidden="true"
-                        className="pointer-events-none absolute inset-0 rounded-t-2xl ring-1 ring-inset ring-white/10"
-                      />
-                    </div>
-
-                    <span className="block truncate border-t border-border/40 bg-gradient-to-r from-background/80 to-background/40 p-2.5 text-[13px] font-medium opacity-90 transition-colors duration-200 group-hover/image:text-primary">
-                      {image.fileName ?? "Project image"}
-                    </span>
-                  </a>
-                ))}
+                      <div className="flex min-w-0 items-center gap-2 border-t border-border/60 px-3 py-2.5">
+                        <span className="min-w-0 flex-1 truncate text-xs text-muted-foreground">
+                          {image.fileName ?? "Project image"}
+                        </span>
+                        <ExternalLink
+                          size={13}
+                          className="shrink-0 text-primary"
+                        />
+                      </div>
+                    </a>
+                  ))}
               </div>
-            </section>
+            </Panel>
           )}
         </div>
 
-        <aside className="min-w-0 space-y-6">
-          <section className={`${panelClass} space-y-4 p-6`}>
-            <div className="flex items-center gap-3">
-              <span className="grid size-9 shrink-0 place-items-center rounded-xl border border-primary/15 bg-primary/[0.08] text-primary">
-                <Layers size={18} />
-              </span>
+        {/* Information and suggestions sidebar */}
+        <aside className="grid min-w-0 grid-cols-1 items-start gap-5 xl:col-span-4 xl:grid-cols-1">
+          <Panel>
+            <SectionHeading
+              icon={<GraduationCap size={19} />}
+              eyebrow="At a glance"
+              title="Project information"
+            />
 
-              <div>
-                <p className="font-mono text-lg font-bold uppercase tracking-widest text-primary">
-                  Brief information
-                </p>
+            <div className="mt-4">
+              <MetadataRow label="Project type">
+                {projectType}
+              </MetadataRow>
 
-                <div className="mt-1 h-px w-full bg-gradient-to-r from-primary/40 to-transparent" />
-              </div>
-            </div>
+              <MetadataRow label="Presentation year">
+                {project.yearPresentation || "Not specified"}
+              </MetadataRow>
 
-            <div className="space-y-2 text-lg">
-              <div className={metadataItemClass}>
-                <p className="opacity-70">Project type</p>
+              <MetadataRow label="Supervisor">
+                {project.projectSupervisorName || "Not specified"}
+              </MetadataRow>
 
-                <p className="mt-1 font-semibold text-foreground text-lg">
-                  {project.projectType === "GRADUATION"
-                    ? "Graduation"
-                    : "Pre-graduation / semester"}
-                </p>
-              </div>
+              <MetadataRow label="Created">
+                {formatDate(project.createdAt)}
+              </MetadataRow>
 
-              {project.yearPresentation && (
-                <div className={metadataItemClass}>
-                  <p className="opacity-70">Year & Presentation Term</p>
+              <MetadataRow label="Last updated">
+                {formatDate(project.updatedAt)}
+              </MetadataRow>
 
-                  <p className="mt-1 font-semibold text-foreground text-lg">
-                    {project.yearPresentation}
-                  </p>
-                </div>
-              )}
-
-              <div className={metadataItemClass}>
-                <p className="opacity-70">Project supervisor</p>
-
-                <p className="mt-1 font-semibold text-foreground text-lg">
-                  {project.projectSupervisorName}
-                </p>
-
-                <p className="mt-1 leading-relaxed opacity-70">
-                  Project metadata only; independent of QC account permissions.
-                </p>
-              </div>
-
-              <div className={metadataItemClass}>
-                <p className="flex items-center gap-1.5 opacity-70">
-                  <CalendarDays size={13} />
-                  Created at
-                </p>
-
-                <p className="mt-1 font-semibold text-foreground text-lg">
-                  {formatDate(project.createdAt)}
-                </p>
-              </div>
-
-              <div className={metadataItemClass}>
-                <p className="flex items-center gap-1.5 opacity-70">
-                  <CalendarDays size={13} />
-                  Last updated
-                </p>
-
-                <p className="mt-1 font-semibold text-foreground text-lg">
-                  {formatDate(project.updatedAt)}
-                </p>
-              </div>
-
-              <div className={metadataItemClass}>
-                <p className="opacity-70">Catalogue visibility</p>
-
-                <p className="mt-1 flex items-center gap-2 font-semibold text-foreground text-lg">
-                  <span
-                    className={`size-2 shrink-0 rounded-full ${project.visibility === "VISIBLE"
-                        ? "bg-success shadow-[0_0_10px_var(--color-success)]"
-                        : "bg-muted-foreground/50"
-                      }`}
-                  />
-
+              <MetadataRow label="Visibility">
+                <span
+                  className={
+                    project.visibility === "VISIBLE"
+                      ? "text-success"
+                      : "text-muted-foreground"
+                  }
+                >
                   {project.visibility === "VISIBLE"
-                    ? "Visible to students"
-                    : "Hidden from students"}
-                </p>
-              </div>
-
-              <div className="flex items-center justify-between gap-3 rounded-xl border border-primary/15 bg-gradient-to-r from-primary/[0.08] to-transparent px-3 py-3">
-                <span className="opacity-80">Suggestions count:</span>
-
-                <span className="rounded-lg border border-primary/20 bg-primary/10 px-3 py-1 font-bold text-foreground">
-                  {project.counts.suggestions}
+                    ? "Visible"
+                    : "Hidden"}
                 </span>
-              </div>
+              </MetadataRow>
             </div>
-          </section>
+          </Panel>
 
+          {/* Suggestions retain their existing interactions */}
           {supervisorView ? (
-            <section className={`${panelClass} space-y-4 p-6`}>
-              <div className="flex items-center gap-3">
-                <span className={sectionIconClass}>
-                  <Layers size={20} />
-                </span>
+            <Panel>
+              <SectionHeading
+                icon={<Sparkles size={19} />}
+                eyebrow="AI-assisted discovery"
+                title="Manage suggestions"
+                description="Review and manage ideas shared with this project."
+              />
 
-                <h2 className="text-lg font-bold tracking-tight">
-                  Manage shared suggestions
-                </h2>
-              </div>
-
-              <p className="text-lg leading-relaxed opacity-80">
-                Removing a suggestion deletes it permanently from the shared
-                list and future AI context. Its parent AI response remains for
-                history.
+              <p className="mt-4 text-sm leading-6 text-muted-foreground">
+                Removing a suggestion permanently deletes it from the shared
+                list and future AI context. Its parent AI response remains
+                available for history.
               </p>
 
-              <div className="border-t border-border/50 pt-4">
+              <div className="mt-4 min-w-0 border-t border-border/60 pt-4">
                 <SuggestionAdminList
                   projectId={project.id}
                   suggestions={suggestions}
                 />
               </div>
-            </section>
+            </Panel>
           ) : (
-            <AiSuggestionsPanel
-              projectId={project.id}
-              initialSuggestions={suggestions}
-              canRequest={canRequestAi}
-              aiEnabled={aiEnabled}
-            />
+            <div className="min-w-0">
+              <AiSuggestionsPanel
+                projectId={project.id}
+                initialSuggestions={suggestions}
+                canRequest={canRequestAi}
+                aiEnabled={aiEnabled}
+              />
+            </div>
           )}
         </aside>
       </div>
-    </div>
+
+    </main>
   );
 }
