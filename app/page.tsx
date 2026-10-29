@@ -18,6 +18,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { DialogContent } from "@/components/ui/dialog";
 
 const pillars = [
   {
@@ -63,6 +64,7 @@ export default async function HomePage() {
 
         <div className="absolute inset-0 bg-[linear-gradient(to_right,hsl(var(--border))_1px,transparent_1px),linear-gradient(to_bottom,hsl(var(--border))_1px,transparent_1px)] bg-[size:40px_40px] opacity-[0.12] [mask-image:linear-gradient(to_bottom,black,transparent_80%)]" />
       </div>
+      
 
       {/* Hero */}
       <section className="relative border-b border-border/60">

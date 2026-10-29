@@ -15,6 +15,7 @@ import { loginAction } from "@/Interfaces/actions/auth.actions";
 import { Button } from "@/components/ui/button";
 import { notify } from "../notificationToaster";
 import type { LoginPayload } from "@/shared/validation/user";
+import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 
 export function LoginForm() {
   const router = useRouter();
@@ -77,6 +78,35 @@ export function LoginForm() {
       aria-busy={pending}
       className="space-y-5"
     >
+      <Card>
+        <CardHeader>
+          <CardTitle>Quick Fill-In</CardTitle>
+        </CardHeader>
+        <CardContent className="space-x-4">
+          <button className="btn btn-sm btn-primary"
+          onClick={()=>{
+            setLoginId("admin");
+            setPassword("adminadmin12")
+          }}>
+            Admin
+            </button>
+          <button className="btn btn-sm btn-primary"
+          onClick={()=>{
+            setLoginId("123456789");
+            setPassword("123456789")
+          }}>
+            Supervisor
+          </button>
+          <button className="btn btn-sm btn-primary"
+          onClick={()=>{
+            setLoginId("987654321");
+            setPassword("987654321")
+          }}>
+            Student
+          </button>
+        </CardContent>
+      </Card>
+
       {/* Login ID */}
       <div className="space-y-2">
         <label
