@@ -21,6 +21,6 @@ export default async function StudentProjectDetailsPage({
   const settings = await aiService.getPublicSettings();
 
   return <div className="py-6">
-    <ProjectDetails project={data} suggestions={suggestions} canRequestAi aiEnabled={settings.enabled} />;
+    <ProjectDetails project={data} suggestions={suggestions} canRequestAi aiEnabled={settings.enabled} />
   </div>
 }

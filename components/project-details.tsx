@@ -746,5 +746,5 @@ export function ProjectDetails({
       </div>
 
     </main>
-  );
+  )
 }
