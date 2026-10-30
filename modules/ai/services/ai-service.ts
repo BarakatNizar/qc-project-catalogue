@@ -33,7 +33,7 @@ const MAX_EXTRACTED_TEXT_CHARACTERS = 150_000;
 
 type ValidationResult<T> =
   | { success: true; data: T }
-  | { success: false; issueCount: number };
+  | { success: false; issueCount: number ; issues?:any};
 
 function makeInput(project: NonNullable<Awaited<ReturnType<typeof projectRepository.findAiContextById>>>) {
   return {
@@ -67,7 +67,14 @@ function validateSuggestionPayload(payload: unknown): ValidationResult<AiSuggest
 function validateExtractionPayload(payload: unknown): ValidationResult<ExtractedProject> {
   console.log(payload);
   const parsed = extractedProjectResponseSchema.safeParse(payload);
-  return parsed.success ? { success: true, data: parsed.data } : { success: false, issueCount: parsed.error.issues.length };
+  return parsed.success ? { success: true, data: parsed.data } : { success: false, issueCount: parsed.error.issues.length , issues: parsed.error.issues.map((issue) => ({
+    path: issue.path,
+    code: issue.code,
+    message: issue.message,
+    expected: "expected" in issue ? issue.expected : undefined,
+    received: "received" in issue ? issue.received : undefined,
+  }))
+};
 }
 
 async function parseFileToText(file: File): Promise<string> {

@@ -37,6 +37,7 @@ import {
   passwordResetSupervisorAction,
   updateSupervisorAction,
 } from "@/Interfaces/actions/users.actions";
+import { ConfirmDialog } from "@/components/confirm-dialog";
 
 type SupervisorAccountPageProps = {
   params: Promise<{ supervisorId: string }>;
@@ -50,6 +51,7 @@ export default function SupervisorAccountPage({
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [password, setPassword] = useState<string>();
   const [supervisor, setSupervisor] = useState<UserDto | null>(null);
 
   const [isUpdating, setIsUpdating] = useState(false);
@@ -148,20 +150,17 @@ export default function SupervisorAccountPage({
     }
   };
 
-  const handlePasswordReset = async (
-    event: FormEvent<HTMLFormElement>,
-  ) => {
-    event.preventDefault();
+  const handlePasswordReset = async () => {
 
+    if(!password){
+      notify.system("Set New Password !");return;
+
+    }
     if (!supervisor || isResetting) return;
-
-    const formData = new FormData(event.currentTarget);
 
     const payload: ResetSupervisorPasswordPayload = {
       supervisorId: supervisor.id,
-      data: {
-        password: String(formData.get("password") ?? ""),
-      },
+      data: { password },
     };
 
     setIsResetting(true);
@@ -465,16 +464,17 @@ export default function SupervisorAccountPage({
             </div>
           </div>
 
-          <form onSubmit={handlePasswordReset} className="space-y-5">
+          <section className="space-y-5">
             <FormField
               label="New temporary password"
               name="password"
               hint="Required. Use at least 9 characters; the maximum is 128."
             >
               <TextInput
-                name="password"
                 type="password"
                 required
+                value={password}
+                onChange={(e)=>setPassword(e.target.value)}
                 minLength={9}
                 maxLength={128}
                 autoComplete="new-password"
@@ -495,30 +495,25 @@ export default function SupervisorAccountPage({
             </div>
 
             <div className="border-t border-border/60 pt-5">
-              <ConfirmSubmitButton
-                type="submit"
-                disabled={isResetting || isUpdating || isDeleting}
-                className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-destructive/25 bg-destructive/10 px-5 py-2.5 text-sm font-semibold text-destructive transition-colors hover:bg-destructive/15 disabled:pointer-events-none disabled:opacity-60"
-                confirmMessage="Are you sure you want to reset this supervisor's password?"
-              >
-                {isResetting ? (
-                  <>
-                    <Loader2
-                      size={16}
-                      className="animate-spin"
-                      aria-hidden="true"
-                    />
-                    Resetting password...
-                  </>
-                ) : (
-                  <>
-                    <KeyRound size={16} aria-hidden="true" />
-                    Reset password
-                  </>
-                )}
-              </ConfirmSubmitButton>
+            <ConfirmDialog
+              title="Are you sure you want to reset this supervisor's password?" style="warn" onCertain={() => handlePasswordReset()}
+              triggerChildren={isResetting ? (
+                <>
+                  <Loader2
+                    size={16}
+                    className="animate-spin"
+                    aria-hidden="true"
+                  />
+                  Resetting password...
+                </>
+              ) : (
+                <div className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-destructive/25 bg-destructive/10 px-5 py-2.5 text-sm font-semibold text-destructive transition-colors hover:bg-destructive/15 disabled:pointer-events-none disabled:opacity-60">
+                  <KeyRound size={16} aria-hidden="true" />
+                  Reset password
+                </div>
+              )} />
             </div>
-          </form>
+          </section>
         </section>
       </div>
 
@@ -562,13 +557,9 @@ export default function SupervisorAccountPage({
           </div>
 
           <div className="w-full shrink-0 md:w-auto">
-            <ConfirmSubmitButton
-              onClick={handleDeleteSupervisor}
-              disabled={isDeleting || isUpdating || isResetting}
-              className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-destructive/30 bg-destructive px-5 py-2.5 text-sm font-semibold text-destructive-foreground shadow-sm transition-colors hover:bg-destructive/90 disabled:pointer-events-none disabled:opacity-60 md:w-auto"
-              confirmMessage="Permanently delete this Supervisor account? Associated students will remain."
-            >
-              {isDeleting ? (
+            <ConfirmDialog
+              title="Permanently delete this Supervisor account?" style="danger" onCertain={() => handleDeleteSupervisor()}
+              triggerChildren={isDeleting ? (
                 <>
                   <Loader2
                     size={16}
@@ -578,12 +569,11 @@ export default function SupervisorAccountPage({
                   Deleting account...
                 </>
               ) : (
-                <>
+                <div className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-destructive/30 bg-destructive px-5 py-2.5 text-sm font-semibold text-destructive-foreground shadow-sm transition-colors hover:bg-destructive/90 disabled:pointer-events-none disabled:opacity-60 md:w-auto">
                   <Trash2 size={16} aria-hidden="true" />
                   Delete account
-                </>
-              )}
-            </ConfirmSubmitButton>
+                </div>
+              )} />
           </div>
         </div>
       </aside>

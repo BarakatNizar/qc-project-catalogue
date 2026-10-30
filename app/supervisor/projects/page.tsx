@@ -1,24 +1,9 @@
 
 "use client";
-
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { FormEvent } from "react";
 import Link from "next/link";
-import {
-  Check,
-  ChevronLeft,
-  ChevronRight,
-  Filter,
-  FolderKanban,
-  Loader2,
-  Plus,
-  RotateCcw,
-  Search,
-  SlidersHorizontal,
-  UserRound,
-  X,
-} from "lucide-react";
-
+import { Check, ChevronLeft, ChevronRight, Filter, FolderKanban, Loader2, Plus, RotateCcw, Search, SlidersHorizontal, UserRound, X, } from "lucide-react";
 import { ProjectCard } from "@/components/ui/project-card";
 import { Button } from "@/components/ui/button";
 import ErrorState from "@/components/ErrorState";
@@ -174,9 +159,7 @@ export default function ManageProjectsPage() {
     };
   }, [loadProjects]);
 
-  const handleFilterSubmit = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-
+  const handleFilterSubmit = () => {
     const filters = buildSearchPayload(
       queryInput,
       supervisorInput,
@@ -187,7 +170,14 @@ export default function ManageProjectsPage() {
     setCurrentPage(1);
     void loadProjects(1, filters);
   };
-
+  const handleSearchKeyDown = (
+    event: React.KeyboardEvent<HTMLInputElement>
+  ) => {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      handleFilterSubmit();
+    }
+  };
   const handleClearFilters = () => {
     setQueryInput("");
     setSupervisorInput("");
@@ -232,18 +222,18 @@ export default function ManageProjectsPage() {
       : null,
     appliedFilters.supervisorName
       ? {
-          label: `Supervisor: ${appliedFilters.supervisorName}`,
-          key: "supervisor",
-        }
+        label: `Supervisor: ${appliedFilters.supervisorName}`,
+        key: "supervisor",
+      }
       : null,
     appliedFilters.projectType
       ? {
-          label:
-            appliedFilters.projectType === "GRADUATION"
-              ? "Graduation"
-              : "Pre-graduation",
-          key: "type",
-        }
+        label:
+          appliedFilters.projectType === "GRADUATION"
+            ? "Graduation"
+            : "Pre-graduation",
+        key: "type",
+      }
       : null,
   ].filter((item) => item !== null);
 
@@ -342,8 +332,9 @@ export default function ManageProjectsPage() {
           )}
         </div>
 
-        <form onSubmit={handleFilterSubmit} className="p-4 sm:p-5">
+        <section className="p-4 sm:p-5">
           <div className="grid min-w-0 grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_minmax(200px,0.7fr)]">
+            {/* Project search */}
             <div className="min-w-0 space-y-2">
               <label
                 htmlFor="project-query"
@@ -363,12 +354,13 @@ export default function ManageProjectsPage() {
                   type="search"
                   value={queryInput}
                   onChange={(event) => setQueryInput(event.target.value)}
+                  onKeyDown={handleSearchKeyDown}
                   placeholder="Title, summary, or keyword"
                   className="min-h-11 w-full min-w-0 rounded-xl border border-border bg-background pl-10 pr-3.5 text-sm outline-none transition-shadow placeholder:text-muted-foreground/70 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1"
                 />
               </div>
             </div>
-
+            {/* Supervisor name */}
             <div className="min-w-0 space-y-2">
               <label
                 htmlFor="project-supervisor"
@@ -390,12 +382,13 @@ export default function ManageProjectsPage() {
                   onChange={(event) =>
                     setSupervisorInput(event.target.value)
                   }
+                  onKeyDown={handleSearchKeyDown}
                   placeholder="Supervisor name"
                   className="min-h-11 w-full min-w-0 rounded-xl border border-border bg-background pl-10 pr-3.5 text-sm outline-none transition-shadow placeholder:text-muted-foreground/70 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1"
                 />
               </div>
             </div>
-
+            {/* Project type  */}
             <div className="min-w-0 space-y-2">
               <label
                 htmlFor="project-type"
@@ -460,7 +453,8 @@ export default function ManageProjectsPage() {
               )}
 
               <Button
-                type="submit"
+                type="button"
+                onClick={handleFilterSubmit}
                 disabled={isPending}
                 className="min-h-11 w-full gap-2 rounded-xl px-5 sm:w-auto"
               >
@@ -473,7 +467,7 @@ export default function ManageProjectsPage() {
               </Button>
             </div>
           </div>
-        </form>
+        </section>
       </section>
 
       {/* Results */}
@@ -529,9 +523,8 @@ export default function ManageProjectsPage() {
 
         {projects.length > 0 ? (
           <div
-            className={`grid min-w-0 grid-cols-1 gap-4 transition-opacity sm:grid-cols-2 sm:gap-5 xl:grid-cols-3 2xl:grid-cols-4 ${
-              isPending ? "opacity-60" : "opacity-100"
-            }`}
+            className={`grid min-w-0 grid-cols-1 gap-4 transition-opacity sm:grid-cols-2 sm:gap-5 xl:grid-cols-3 2xl:grid-cols-4 ${isPending ? "opacity-60" : "opacity-100"
+              }`}
             aria-busy={isPending}
           >
             {projects.map((project) => (
@@ -574,7 +567,7 @@ export default function ManageProjectsPage() {
               ) : null}
 
               {!hasActiveFilters && (
-                <Button  className="min-h-10 gap-2 rounded-xl">
+                <Button className="min-h-10 gap-2 rounded-xl">
                   <Link href="/supervisor/projects/new">
                     <Plus size={16} />
                     Create project

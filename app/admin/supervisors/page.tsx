@@ -34,6 +34,7 @@ import ErrorState from "@/components/ErrorState";
 import { PageHeading } from "@/components/ui/page-heading";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Button } from "@/components/ui/button";
+import { ConfirmDialog } from "@/components/confirm-dialog";
 
 const PAGE_SIZE = 10;
 
@@ -225,13 +226,6 @@ export default function SupervisorsPage() {
 
   async function handleDeleteSupervisor(supervisorId: string) {
     if (isMutating) return;
-
-    const confirmed = window.confirm(
-      "Permanently delete this Supervisor account? Associated students will remain.",
-    );
-
-    if (!confirmed) return;
-
     setIsMutating(true);
 
     try {
@@ -469,29 +463,19 @@ export default function SupervisorsPage() {
                           Edit details
                         </Link>
 
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          disabled={isMutating}
-                          onClick={() =>
-                            void handleDeleteSupervisor(supervisor.id)
-                          }
-                          className="min-h-9 flex-1 rounded-xl px-3 text-xs font-semibold text-destructive transition-colors hover:bg-destructive/10 hover:text-destructive sm:flex-none"
-                        >
-                          {isMutating ? (
+                        <ConfirmDialog
+                          title="Permanently delete this Supervisor account?" style="warn" onCertain={() => handleDeleteSupervisor(supervisor.id)}
+                          triggerChildren={isMutating ? (
                             <Loader2
                               className="size-4 animate-spin"
                               aria-hidden="true"
                             />
                           ) : (
                             <Trash2
-                              className="size-4"
+                              className="size-5 hover:scale-[1.1] duration-200 text-warning"
                               aria-hidden="true"
                             />
-                          )}
-                          Delete
-                        </Button>
+                          )} />
                       </div>
                     </article>
                   </li>
@@ -618,6 +602,7 @@ export default function SupervisorsPage() {
                 </p>
               </div>
               <div className="min-w-0 space-y-4">
+                {/* Name */}
                 <div className="space-y-2">
                   <label
                     htmlFor="supervisor-name"
@@ -640,7 +625,7 @@ export default function SupervisorsPage() {
                     className="h-11 w-full min-w-0 rounded-xl border border-border/80 bg-background px-3 text-sm outline-none transition placeholder:text-muted-foreground/80 focus:border-primary/60 focus:ring-2 focus:ring-primary/15 disabled:cursor-not-allowed disabled:opacity-50"
                   />
                 </div>
-
+                {/* Login Id */}
                 <div className="space-y-2">
                   <label
                     htmlFor="supervisor-login-id"
@@ -666,30 +651,7 @@ export default function SupervisorsPage() {
                     className="h-11 w-full min-w-0 rounded-xl border border-border/80 bg-background px-3 text-sm outline-none transition placeholder:text-muted-foreground/80 focus:border-primary/60 focus:ring-2 focus:ring-primary/15 disabled:cursor-not-allowed disabled:opacity-50"
                   />
                 </div>
-
-                <div className="space-y-2">
-                  <label
-                    htmlFor="supervisor-email"
-                    className="text-sm font-medium"
-                  >
-                    Email address
-                  </label>
-                  <p className="text-xs text-muted-foreground">
-                    Optional. No email delivery is implied by entering an address.
-                  </p>
-                  <input
-                    id="supervisor-email"
-                    name="email"
-                    type="email"
-                    autoComplete="email"
-                    placeholder="name@university.edu"
-                    value={email}
-                    onChange={(event) => setEmail(event.target.value)}
-                    disabled={isMutating}
-                    className="h-11 w-full min-w-0 rounded-xl border border-border/80 bg-background px-3 text-sm outline-none transition placeholder:text-muted-foreground/80 focus:border-primary/60 focus:ring-2 focus:ring-primary/15 disabled:cursor-not-allowed disabled:opacity-50"
-                  />
-                </div>
-
+                {/* Password */}
                 <div className="space-y-2">
                   <label
                     htmlFor="supervisor-password"
@@ -711,6 +673,29 @@ export default function SupervisorsPage() {
                     placeholder="Enter a temporary password"
                     value={password}
                     onChange={(event) => setPassword(event.target.value)}
+                    disabled={isMutating}
+                    className="h-11 w-full min-w-0 rounded-xl border border-border/80 bg-background px-3 text-sm outline-none transition placeholder:text-muted-foreground/80 focus:border-primary/60 focus:ring-2 focus:ring-primary/15 disabled:cursor-not-allowed disabled:opacity-50"
+                  />
+                </div>
+                {/* Email */}
+                <div className="space-y-2">
+                  <label
+                    htmlFor="supervisor-email"
+                    className="text-sm font-medium"
+                  >
+                    Email address
+                  </label>
+                  <p className="text-xs text-muted-foreground">
+                    Optional. No email delivery is implied by entering an address.
+                  </p>
+                  <input
+                    id="supervisor-email"
+                    name="email"
+                    type="email"
+                    autoComplete="email"
+                    placeholder="name@university.edu"
+                    value={email}
+                    onChange={(event) => setEmail(event.target.value)}
                     disabled={isMutating}
                     className="h-11 w-full min-w-0 rounded-xl border border-border/80 bg-background px-3 text-sm outline-none transition placeholder:text-muted-foreground/80 focus:border-primary/60 focus:ring-2 focus:ring-primary/15 disabled:cursor-not-allowed disabled:opacity-50"
                   />

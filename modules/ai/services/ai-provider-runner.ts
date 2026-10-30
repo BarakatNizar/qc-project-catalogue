@@ -16,7 +16,7 @@ import { resolveConfiguredAiProviders } from "@/modules/ai/services/ai-provider-
 
 type ValidationResult<T> =
   | { success: true; data: T }
-  | { success: false; issueCount: number };
+  | { success: false; issueCount: number; issues?:any };
 
 type RunWithProvidersOptions<T> = {
   invoke: (provider: AiProvider, context: ReturnType<typeof createAiRequestContext>) => Promise<AiProviderResult>;
@@ -61,6 +61,7 @@ export async function runWithOrderedProviders<T>(
           details: {
             attempt: attempt.attempt,
             issueCount: parsed.issueCount,
+            issues:parsed?.issues,
             providerConfigId: provider.providerConfigId,
             provider: provider.providerType,
             providerName: provider.providerName,
