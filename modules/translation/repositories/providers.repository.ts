@@ -48,7 +48,7 @@ function parseRepositoryError(error: unknown, operation: string): string {
   if (code === "P2003") {
     return "The translation provider operation violates a database relation constraint.";
   }
-
+  console.error("ERROR:\n",error)
   console.error(`[Translation Providers] ${operation} failed`, {
     errorName: error instanceof Error ? error.name : "UnknownError",
     prismaCode: code,
