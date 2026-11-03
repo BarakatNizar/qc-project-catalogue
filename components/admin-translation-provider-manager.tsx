@@ -273,7 +273,10 @@ export function AdminTranslationProviderManager({
         )}`,
       );
 
-      router.refresh();
+
+      setTimeout(() => {
+        router.refresh();
+      }, 800);
     } catch (error) {
       showError(error);
     } finally {
