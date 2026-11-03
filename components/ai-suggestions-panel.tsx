@@ -96,7 +96,7 @@ export function AiSuggestionsPanel({
             ),
         );
       } else {
-        setNotice(t(locale, "aiNoNewSuggestionsNotice"));
+        setNotice(t(locale, "aiSuggestionsAddedNotice"));
       }
     });
   }
