@@ -2,16 +2,24 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { Compass, LockKeyhole, ShieldCheck } from "lucide-react";
+
 import { getServerUserFromAccess, roleHome } from "@/core/auth/session";
 import { LoginForm } from "@/components/forms/login-form";
+import { getCurrentApplicationLanguage } from "@/modules/translation/services/application-language.service";
+import { t } from "@/shared/i18n/dictionary";
 
-export const metadata: Metadata = {
-  title: "Sign in",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const locale = await getCurrentApplicationLanguage();
+
+  return {
+    title: t(locale, "loginPageMetadataTitle"),
+  };
+}
 
 export default async function LoginPage() {
   const getResult = await getServerUserFromAccess();
   const user = !("error" in getResult) ? getResult : undefined;
+  const locale = await getCurrentApplicationLanguage();
 
   if (user) {
     redirect(
@@ -47,14 +55,16 @@ export default async function LoginPage() {
                 Qalamoon Compass
               </p>
               <p className="text-xs text-muted-foreground">
-                Academic project discovery
+                {t(locale, "loginAcademicDiscoveryLabel")}
               </p>
             </div>
           </div>
 
           <h1 className="mt-6 max-w-md text-2xl font-extrabold leading-tight tracking-tight sm:text-3xl">
-            A considered space for{" "}
-            <span className="text-primary">academic project ideas.</span>
+            {t(locale, "loginBrandHeadline")}{" "}
+            <span className="text-primary">
+              {t(locale, "loginBrandHeadlineHighlight")}
+            </span>
           </h1>
         </div>
 
@@ -78,16 +88,14 @@ export default async function LoginPage() {
             </p>
 
             <h1 className="max-w-xl text-4xl font-extrabold leading-[1.12] tracking-tight xl:text-5xl">
-              A considered space for{" "}
+              {t(locale, "loginBrandHeadline")}{" "}
               <span className="text-primary">
-                academic project ideas.
+                {t(locale, "loginBrandHeadlineHighlight")}
               </span>
             </h1>
 
             <p className="max-w-lg text-base leading-7 text-muted-foreground">
-              Sign in with an account provisioned by your QC administrator
-              or supervisor. Registration is managed directly by the
-              institution.
+              {t(locale, "loginBrandDescription")}
             </p>
           </div>
 
@@ -98,10 +106,10 @@ export default async function LoginPage() {
 
             <div className="min-w-0 pt-0.5">
               <p className="text-sm font-semibold text-foreground">
-                Managed academic access
+                {t(locale, "loginManagedAccessTitle")}
               </p>
               <p className="mt-1 text-sm leading-6 text-muted-foreground">
-                Role-based access, managed accounts, and private credentials.
+                {t(locale, "loginManagedAccessDescription")}
               </p>
             </div>
           </div>
@@ -127,18 +135,18 @@ export default async function LoginPage() {
               <div className="flex items-start justify-between gap-4">
                 <div className="min-w-0">
                   <p className="font-mono text-xs font-bold uppercase tracking-[0.16em] text-primary">
-                    Welcome back
+                    {t(locale, "loginWelcomeBack")}
                   </p>
 
                   <h2
                     id="login-heading"
                     className="mt-2 text-2xl font-extrabold tracking-tight text-foreground"
                   >
-                    Sign in to QC
+                    {t(locale, "loginSignInToQc")}
                   </h2>
 
                   <p className="mt-2 text-sm leading-6 text-muted-foreground">
-                    Use your login ID and password to continue.
+                    {t(locale, "loginCredentialsDescription")}
                   </p>
                 </div>
 
@@ -147,13 +155,12 @@ export default async function LoginPage() {
                 </span>
               </div>
 
-              <LoginForm />
+              <LoginForm locale={locale} />
             </div>
 
             <div className="mt-6 border-t border-border/70 pt-5">
               <p className="text-center text-xs leading-5 text-muted-foreground sm:text-[13px]">
-                No public registration. Ask your QC administrator or
-                supervisor for an account.
+                {t(locale, "loginNoPublicRegistration")}
               </p>
             </div>
           </div>

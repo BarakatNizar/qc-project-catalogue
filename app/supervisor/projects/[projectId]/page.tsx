@@ -11,7 +11,6 @@ export default async function SupervisorProjectPage({ params }: { params: Promis
   }
   const { data, user } = getProjectResult;
   const suggestions = await aiService.listSuggestions(user, projectId);
-
   return (
     <div className="space-y-2">
       <ProjectDetails project={data} suggestions={suggestions} supervisorView />

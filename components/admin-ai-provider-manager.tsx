@@ -32,6 +32,8 @@ import {
   setAiServiceEnabledAction,
 } from "@/Interfaces/actions/admin-ai-providers";
 import { Dialog, DialogContent } from "./ui/dialog";
+import { t } from "@/shared/i18n/dictionary";
+import { notify } from "./notificationToaster";
 
 type ProviderType = "OPENROUTER" | "LOCAL";
 
@@ -80,19 +82,19 @@ function sortProviders(providers: ProviderItem[]): ProviderItem[] {
   );
 }
 
-function getErrorMessage(error: unknown): string {
+function getErrorMessage(error: unknown, locale: Locale): string {
   if (error instanceof Error && error.message.trim()) {
     return error.message;
   }
 
-  return "An unexpected error occurred. Please try again.";
+  return t(locale, "unexpectedErrorTryAgain");
 }
 
 function FieldHint({ children }: { children: React.ReactNode }) {
   return (
-    <span className="mt-1 inline-flex items-start gap-1.5 text-xs leading-5 text-base-content/60">
+    <span className="mt-1 inline-flex items-start gap-1.5 text-[15px] leading-5 text-base-content text-muted-foreground font-semibold">
       <CircleHelp
-        className="mt-0.5 size-3.5 shrink-0"
+        className="mt-0.5 size-4 shrink-0"
         aria-hidden="true"
       />
       <span>{children}</span>
@@ -103,9 +105,11 @@ function FieldHint({ children }: { children: React.ReactNode }) {
 export function AdminAiProviderManager({
   initialProviders,
   initialAiEnabled,
+  locale = "en",
 }: {
   initialProviders: ProviderItem[];
   initialAiEnabled: boolean;
+  locale: Locale;
 }) {
   const [providers, setProviders] = useState(() =>
     sortProviders(initialProviders),
@@ -117,6 +121,7 @@ export function AdminAiProviderManager({
   const [isError, setIsError] = useState(false);
 
   const canCreate = providers.length < 4;
+
   const activeCount = useMemo(
     () => providers.filter((provider) => provider.enabled).length,
     [providers],
@@ -124,7 +129,7 @@ export function AdminAiProviderManager({
 
   function showError(error: unknown) {
     setIsError(true);
-    setMessage(getErrorMessage(error));
+    setMessage(getErrorMessage(error, locale));
   }
 
   function beginCreate() {
@@ -169,6 +174,7 @@ export function AdminAiProviderManager({
 
       if ("error" in result) {
         setIsError(true);
+        notify.error(result.error);
         setMessage(result.error);
         return;
       }
@@ -176,7 +182,8 @@ export function AdminAiProviderManager({
       setProviders(sortProviders(result.data as ProviderItem[]));
       setDraft(null);
       setIsError(false);
-      setMessage("Provider configuration saved.");
+      notify.success(t(locale, "providerConfigurationSaved"))
+      setMessage(t(locale, "providerConfigurationSaved"));
     } catch (error) {
       showError(error);
     } finally {
@@ -197,6 +204,7 @@ export function AdminAiProviderManager({
       });
 
       if ("error" in result) {
+        notify.error(t(locale,'genericErrorTitle'), result.error)
         setIsError(true);
         setMessage(result.error);
         return;
@@ -204,8 +212,17 @@ export function AdminAiProviderManager({
 
       setProviders(sortProviders(result.data as ProviderItem[]));
       setIsError(false);
+      notify.success(        `${provider.name} ${
+        provider.enabled
+          ? t(locale, "aiServiceDisabledBadge").toLowerCase()
+          : t(locale, "aiServiceEnabledBadge").toLowerCase()
+      }.`,)
       setMessage(
-        `${provider.name} ${provider.enabled ? "disabled" : "enabled"}.`,
+        `${provider.name} ${
+          provider.enabled
+            ? t(locale, "aiServiceDisabledBadge").toLowerCase()
+            : t(locale, "aiServiceEnabledBadge").toLowerCase()
+        }.`,
       );
     } catch (error) {
       showError(error);
@@ -218,7 +235,10 @@ export function AdminAiProviderManager({
     if (pending) return;
 
     const confirmed = window.confirm(
-      `Delete provider "${provider.name}"? This cannot be undone.`,
+      `${t(locale, "deleteProviderConfirmPrefix")} "${provider.name}"? ${t(
+        locale,
+        "deleteProviderConfirmWarning",
+      )}`,
     );
 
     if (!confirmed) return;
@@ -242,7 +262,7 @@ export function AdminAiProviderManager({
       }
 
       setIsError(false);
-      setMessage("Provider deleted.");
+      setMessage(t(locale, "providerDeletedMessage"));
     } catch (error) {
       showError(error);
     } finally {
@@ -265,13 +285,25 @@ export function AdminAiProviderManager({
 
       if ("error" in result) {
         setIsError(true);
+        notify.error(result.error);
         setMessage(result.error);
         return;
       }
 
       setAiEnabled(result.data.enabled);
       setIsError(false);
-      setMessage(`AI service ${nextEnabled ? "enabled" : "disabled"}.`);
+      notify.success(        `${t(locale, "aiServiceHeading")} ${
+        nextEnabled
+          ? t(locale, "aiServiceEnabledBadge").toLowerCase()
+          : t(locale, "aiServiceDisabledBadge").toLowerCase()
+      }.`)
+      setMessage(
+        `${t(locale, "aiServiceHeading")} ${
+          nextEnabled
+            ? t(locale, "aiServiceEnabledBadge").toLowerCase()
+            : t(locale, "aiServiceDisabledBadge").toLowerCase()
+        }.`,
+      );
     } catch (error) {
       showError(error);
     } finally {
@@ -280,19 +312,20 @@ export function AdminAiProviderManager({
   }
 
   return (
-    <div className="min-w-0 space-y-5 sm:space-y-6">
+    <div className="min-w-0 space-y-8 sm:space-y-6">
       {/* Global service control */}
       <section
         aria-labelledby="ai-service-heading"
-        className="overflow-hidden rounded-3xl border border-base-300 bg-base-100 shadow-sm"
+        className="overflow-hidden rounded-3xl border border-base-300 bg-base-100 shadow-md shadow-primary/40"
       >
         <div className="flex flex-col gap-5 p-4 sm:p-6 lg:flex-row lg:items-center lg:justify-between lg:p-7">
           <div className="flex min-w-0 items-start gap-3 sm:gap-4">
             <div
-              className={`flex size-11 shrink-0 items-center justify-center rounded-2xl ${aiEnabled
+              className={`flex size-11 shrink-0 items-center justify-center rounded-2xl ${
+                aiEnabled
                   ? "bg-success/10 text-success"
-                  : "bg-base-200 text-base-content/60"
-                }`}
+                  : "bg-base-200 text-base-content text-muted-foreground font-semibold"
+              }`}
             >
               {aiEnabled ? (
                 <Sparkles className="size-5" aria-hidden="true" />
@@ -301,64 +334,71 @@ export function AdminAiProviderManager({
               )}
             </div>
 
-            <div className="min-w-0 space-y-2">
+            <div className="min-w-0 space-y-4">
               <div className="flex flex-wrap items-center gap-2">
                 <h2
                   id="ai-service-heading"
                   className="text-lg font-semibold tracking-tight sm:text-xl"
                 >
-                  AI service
+                  {t(locale, "aiServiceHeading")}
                 </h2>
+
                 <span
-                  className={`badge badge-sm ${aiEnabled
+                  className={`badge badge-sm text-[15px] font-semibold  ${
+                    aiEnabled
                       ? "badge-success badge-outline"
                       : "badge-ghost"
-                    }`}
+                  }`}
                 >
                   <span
-                    className={`mr-1.5 size-1.5 rounded-full ${aiEnabled ? "bg-success" : "bg-base-content/40"
-                      }`}
+                    className={`mr-1.5 size-2 rounded-full ${
+                      aiEnabled ? "bg-success" : "bg-base-content/90"
+                    }`}
                     aria-hidden="true"
                   />
-                  {aiEnabled ? "Enabled" : "Disabled"}
+                  {aiEnabled
+                    ? t(locale, "aiServiceEnabledBadge")
+                    : t(locale, "aiServiceDisabledBadge")}
                 </span>
               </div>
 
-              <p className="max-w-2xl text-sm leading-6 text-base-content/70">
+              <p className="max-w-2xl text-lg leading-6 text-base-content text-muted-foreground font-semibold">
                 {aiEnabled
-                  ? "AI features are available to authorized users, subject to provider availability and the configured execution sequence."
-                  : "AI features are globally disabled. Enabling individual providers will not make AI features available until this service is enabled."}
+                  ? t(locale, "aiServiceEnabledDetails")
+                  : t(locale, "aiServiceDisabledDetails")}
               </p>
 
-              <p className="flex items-start gap-2 text-xs leading-5 text-base-content/60">
+              <p className="flex items-start gap-2 text-[16px] leading-5 text-base-content text-muted-foreground font-semibold">
                 <ArrowDownUp
-                  className="mt-0.5 size-3.5 shrink-0"
+                  className="mt-0.5 size-4 shrink-0"
                   aria-hidden="true"
                 />
-                Enabled providers are attempted in configured order when an
-                earlier provider fails.
+                {t(locale, "executionSequenceAttemptNote")}
               </p>
             </div>
           </div>
 
           <button
             type="button"
-            className={`btn w-full shrink-0 sm:w-fit ${aiEnabled ? "btn-outline btn-error" : "btn-primary"
-              }`}
+            className={`btn w-full shrink-0 sm:w-fit ${
+              aiEnabled ? "btn-outline btn-error" : "btn-primary"
+            }`}
             disabled={pending}
             onClick={toggleService}
           >
             {pending ? (
               <LoaderCircle
-                className="size-4 animate-spin"
+                className="size-5 animate-spin"
                 aria-hidden="true"
               />
             ) : aiEnabled ? (
-              <X className="size-4" aria-hidden="true" />
+              <X className="size-5" aria-hidden="true" />
             ) : (
-              <Check className="size-4" aria-hidden="true" />
+              <Check className="size-5" aria-hidden="true" />
             )}
-            {aiEnabled ? "Disable AI service" : "Enable AI service"}
+            {aiEnabled
+              ? t(locale, "disableAiServiceButton")
+              : t(locale, "enableAiServiceButton")}
           </button>
         </div>
       </section>
@@ -366,8 +406,9 @@ export function AdminAiProviderManager({
       {/* Action feedback */}
       {message ? (
         <div
-          className={`alert items-start ${isError ? "alert-error" : "alert-success"
-            }`}
+          className={`alert items-start ${
+            isError ? "alert-error" : "alert-success"
+          }`}
           role={isError ? "alert" : "status"}
           aria-live={isError ? "assertive" : "polite"}
         >
@@ -382,14 +423,16 @@ export function AdminAiProviderManager({
               aria-hidden="true"
             />
           )}
+
           <span className="min-w-0 break-words">{message}</span>
+
           <button
             type="button"
             className="btn btn-ghost btn-xs ml-auto shrink-0"
-            aria-label="Dismiss message"
+            aria-label={t(locale, "dismissMessageAria")}
             onClick={() => setMessage(null)}
           >
-            <X className="size-4" aria-hidden="true" />
+            <X className="size-5" aria-hidden="true" />
           </button>
         </div>
       ) : null}
@@ -397,9 +440,9 @@ export function AdminAiProviderManager({
       {/* Provider inventory */}
       <section
         aria-labelledby="configured-providers-heading"
-        className="min-w-0 rounded-3xl border border-base-300 bg-base-100 shadow-sm"
+        className="min-w-0 rounded-3xl border border-base-300 bg-base-100 shadow-md shadow-primary/40"
       >
-        <div className="space-y-5 p-4 sm:p-6 lg:p-7">
+        <div className="space-y-8 p-4 sm:p-6 lg:p-7">
           <div className="flex min-w-0 flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="min-w-0 space-y-2">
               <div className="flex flex-wrap items-center gap-2">
@@ -407,15 +450,16 @@ export function AdminAiProviderManager({
                   id="configured-providers-heading"
                   className="text-lg font-semibold tracking-tight sm:text-xl"
                 >
-                  Configured providers
+                  {t(locale, "configuredProvidersHeading")}
                 </h2>
+
                 <span className="badge badge-ghost">
-                  {providers.length} of 4
+                  {providers.length} {t(locale, "ofIndicator")} 4
                 </span>
               </div>
-              <p className="text-sm leading-6 text-base-content/70">
-                Review connection settings, manage provider availability, and
-                maintain the fallback sequence.
+
+              <p className="text-lg leading-6 text-base-content text-muted-foreground font-semibold">
+                {t(locale, "configuredProvidersReviewDesc")}
               </p>
             </div>
 
@@ -425,68 +469,77 @@ export function AdminAiProviderManager({
               disabled={!canCreate || pending}
               onClick={beginCreate}
             >
-              <Plus className="size-4" aria-hidden="true" />
-              Add provider
+              <Plus className="size-5" aria-hidden="true" />
+              {t(locale, "addProviderButton")}
             </button>
           </div>
 
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             <div className="rounded-2xl border border-base-300/80 bg-base-200/40 p-3.5">
-              <div className="flex items-center gap-2 text-xs text-base-content/60">
-                <Database className="size-4" aria-hidden="true" />
-                Configured
+              <div className="flex items-center gap-2 text-[15px] text-base-content text-muted-foreground font-semibold">
+                <Database className="size-5" aria-hidden="true" />
+                {t(locale, "configuredMetricLabel")}
               </div>
+
               <p className="mt-2 text-2xl font-semibold tabular-nums">
                 {providers.length}
-                <span className="ml-1 text-sm font-normal text-base-content/50">
+                <span className="ml-1 text-lg font-normal text-base-content text-muted-foreground font-semibold">
                   / 4
                 </span>
               </p>
             </div>
 
             <div className="rounded-2xl border border-base-300/80 bg-base-200/40 p-3.5">
-              <div className="flex items-center gap-2 text-xs text-base-content/60">
-                <CheckCircle2 className="size-4" aria-hidden="true" />
-                Enabled providers
+              <div className="flex items-center gap-2 text-[15px] text-base-content text-muted-foreground font-semibold">
+                <CheckCircle2 className="size-5" aria-hidden="true" />
+                {t(locale, "enabledProvidersMetricLabel")}
               </div>
+
               <p className="mt-2 text-2xl font-semibold tabular-nums">
                 {activeCount}
               </p>
             </div>
 
             <div className="rounded-2xl border border-base-300/80 bg-base-200/40 p-3.5">
-              <div className="flex items-center gap-2 text-xs text-base-content/60">
-                <Activity className="size-4" aria-hidden="true" />
-                Service availability
+              <div className="flex items-center gap-2 text-[15px] text-base-content text-muted-foreground font-semibold">
+                <Activity className="size-5" aria-hidden="true" />
+                {t(locale, "serviceAvailabilityMetricLabel")}
               </div>
+
               <p
-                className={`mt-2 text-sm font-semibold ${aiEnabled ? "text-success" : "text-base-content/60"
-                  }`}
+                className={`mt-2 text-lg font-semibold ${
+                  aiEnabled ? "text-success" : "text-base-content text-muted-foreground font-semibold"
+                }`}
               >
-                {aiEnabled ? "Globally enabled" : "Globally disabled"}
+                {aiEnabled
+                  ? t(locale, "globallyEnabledText")
+                  : t(locale, "globallyDisabledText")}
               </p>
             </div>
           </div>
 
           {providers.length === 0 ? (
             <div className="rounded-2xl border border-dashed border-base-300 px-4 py-10 text-center sm:px-8">
-              <div className="mx-auto flex size-12 items-center justify-center rounded-2xl bg-base-200 text-base-content/60">
+              <div className="mx-auto flex size-12 items-center justify-center rounded-2xl bg-base-200 text-base-content text-muted-foreground font-semibold">
                 <Server className="size-6" aria-hidden="true" />
               </div>
-              <h3 className="mt-4 font-semibold">No providers configured</h3>
-              <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-base-content/65">
-                Add a provider to configure an AI connection. Check its
-                endpoint, model identifier, and credentials before enabling
-                AI features.
+
+              <h3 className="mt-4 font-semibold">
+                {t(locale, "noProvidersConfiguredTitle")}
+              </h3>
+
+              <p className="mx-auto mt-2 max-w-md text-lg leading-6 text-base-content text-muted-foreground font-semibold">
+                {t(locale, "noProvidersConfiguredDesc")}
               </p>
+
               <button
                 type="button"
                 className="btn btn-primary mt-5"
                 disabled={!canCreate || pending}
                 onClick={beginCreate}
               >
-                <Plus className="size-4" aria-hidden="true" />
-                Add your first provider
+                <Plus className="size-5" aria-hidden="true" />
+                {t(locale, "addYourFirstProviderButton")}
               </button>
             </div>
           ) : (
@@ -494,19 +547,21 @@ export function AdminAiProviderManager({
               {providers.map((provider) => (
                 <article
                   key={provider.id}
-                  className={`min-w-0 overflow-hidden rounded-2xl border bg-base-100 transition-colors ${provider.enabled
+                  className={`min-w-0 overflow-hidden rounded-2xl border bg-base-100 transition-colors ${
+                    provider.enabled
                       ? "border-base-300"
                       : "border-base-300/70 bg-base-200/20"
-                    }`}
+                  }`}
                 >
                   <div className="flex min-w-0 flex-col gap-5 p-4 sm:p-5 xl:flex-row xl:items-start xl:justify-between">
                     <div className="min-w-0 flex-1 space-y-4">
                       <div className="flex min-w-0 items-start gap-3">
                         <div
-                          className={`flex size-11 shrink-0 items-center justify-center rounded-xl ${provider.provider === "OPENROUTER"
+                          className={`flex size-11 shrink-0 items-center justify-center rounded-xl ${
+                            provider.provider === "OPENROUTER"
                               ? "bg-primary/10 text-primary"
-                              : "bg-base-200 text-base-content/75"
-                            }`}
+                              : "bg-base-200 text-base-content text-muted-foreground font-semibold"
+                          }`}
                         >
                           {provider.provider === "OPENROUTER" ? (
                             <Cloud className="size-5" aria-hidden="true" />
@@ -517,16 +572,21 @@ export function AdminAiProviderManager({
 
                         <div className="min-w-0 flex-1 space-y-2">
                           <div className="flex flex-wrap items-center gap-2">
-                            <span className="badge badge-neutral badge-sm">
-                              Priority {provider.sortOrder + 1}
+                            <span className="badge badge-neutral badge-sm p-3">
+                              {t(locale, "priorityLabel")}{" "}
+                              {provider.sortOrder + 1}
                             </span>
+
                             <span
-                              className={`badge badge-sm ${provider.enabled
+                              className={`badge badge-sm text-[15px] font-semibold ${
+                                provider.enabled
                                   ? "badge-success badge-outline"
                                   : "badge-ghost"
-                                }`}
+                              }`}
                             >
-                              {provider.enabled ? "Enabled" : "Disabled"}
+                              {provider.enabled
+                                ? t(locale, "aiServiceEnabledBadge")
+                                : t(locale, "aiServiceDisabledBadge")}
                             </span>
                           </div>
 
@@ -534,67 +594,71 @@ export function AdminAiProviderManager({
                             {provider.name}
                           </h3>
 
-                          <p className="text-xs text-base-content/60 sm:text-sm">
+                          <p className="text-[15px] text-base-content text-muted-foreground font-semibold sm:text-lg">
                             {provider.provider === "OPENROUTER"
-                              ? "OpenRouter · Hosted provider"
-                              : "Local · Self-hosted endpoint"}
+                              ? t(locale, "openRouterHostedProvider")
+                              : t(locale, "localSelfHostedEndpoint")}
                           </p>
                         </div>
                       </div>
 
                       <div className="grid min-w-0 grid-cols-1 gap-3 md:grid-cols-2">
                         <div className="min-w-0 rounded-xl bg-base-200/50 p-3">
-                          <p className="text-xs font-medium text-base-content/60">
-                            Base URL
+                          <p className="text-[15px] font-medium text-base-content text-muted-foreground font-semibold">
+                            {t(locale, "baseUrlLabel")}
                           </p>
-                          <p className="mt-1 break-all text-sm leading-5">
+
+                          <p className="mt-1 break-all text-lg leading-5">
                             {provider.baseUrl}
                           </p>
                         </div>
 
                         <div className="min-w-0 rounded-xl bg-base-200/50 p-3">
-                          <p className="text-xs font-medium text-base-content/60">
-                            Model identifier
+                          <p className="text-[15px] font-medium text-base-content text-muted-foreground font-semibold">
+                            {t(locale, "modelIdentifierLabel")}
                           </p>
-                          <p className="mt-1 break-words text-sm leading-5">
+
+                          <p className="mt-1 break-words text-lg leading-5">
                             {provider.model}
                           </p>
                         </div>
                       </div>
 
-                      <div className="flex flex-wrap gap-x-5 gap-y-3 text-sm">
-                        <div className="inline-flex items-center gap-2 text-base-content/70">
+                      <div className="flex flex-wrap gap-x-5 gap-y-3 text-lg">
+                        <div className="inline-flex items-center gap-2 text-base-content text-muted-foreground font-semibold">
                           <Clock3
-                            className="size-4 shrink-0 text-base-content/50"
+                            className="size-5 shrink-0 text-base-content text-muted-foreground font-semibold"
                             aria-hidden="true"
                           />
+
                           <span>
                             <span className="font-medium text-base-content">
-                              Timeout
+                              {t(locale, "timeoutLabel")}
                             </span>{" "}
                             {provider.timeoutMs.toLocaleString()} ms
                           </span>
                         </div>
 
-                        <div className="inline-flex items-center gap-2 text-base-content/70">
+                        <div className="inline-flex items-center gap-2 text-base-content text-muted-foreground font-semibold">
                           {provider.hasApiKey ? (
                             <ShieldCheck
-                              className="size-4 shrink-0 text-success"
+                              className="size-5 shrink-0 text-success"
                               aria-hidden="true"
                             />
                           ) : (
                             <KeyRound
-                              className="size-4 shrink-0 text-base-content/50"
+                              className="size-5 shrink-0 text-base-content text-muted-foreground font-semibold"
                               aria-hidden="true"
                             />
                           )}
+
                           <span>
                             <span className="font-medium text-base-content">
-                              API key
+                              {t(locale, "apiKeyLabel")}
                             </span>{" "}
                             {provider.hasApiKey
-                              ? "Saved (encrypted)"
-                              : "Not set"}
+                              ? t(locale, "savedEncryptedStatus")
+                              : t(locale, "notSetStatus")}
                           </span>
                         </div>
                       </div>
@@ -603,36 +667,39 @@ export function AdminAiProviderManager({
                     <div className="flex w-full flex-wrap gap-2 border-t border-base-300/70 pt-4 xl:w-auto xl:shrink-0 xl:border-l xl:border-t-0 xl:pl-5 xl:pt-0">
                       <button
                         type="button"
-                        className="btn btn-sm btn-outline flex-1 sm:flex-none"
+                        className="btn btn-sm btn-outline text-sm flex-1 sm:flex-none"
                         disabled={pending}
                         onClick={() => beginEdit(provider)}
                       >
-                        <Settings2 className="size-4" aria-hidden="true" />
-                        Edit
+                        <Settings2 className="size-5" aria-hidden="true" />
+                        {t(locale, "editButton")}
                       </button>
 
                       <button
                         type="button"
-                        className="btn btn-sm btn-outline flex-1 sm:flex-none"
+                        className="btn btn-sm btn-outline text-sm flex-1 sm:flex-none"
                         disabled={pending}
                         onClick={() => toggleProvider(provider)}
                       >
                         {provider.enabled ? (
-                          <X className="size-4" aria-hidden="true" />
+                          <X className="size-5" aria-hidden="true" />
                         ) : (
-                          <Check className="size-4" aria-hidden="true" />
+                          <Check className="size-5" aria-hidden="true" />
                         )}
-                        {provider.enabled ? "Disable" : "Enable"}
+
+                        {provider.enabled
+                          ? t(locale, "disableButton")
+                          : t(locale, "enableButton")}
                       </button>
 
                       <button
                         type="button"
-                        className="btn btn-sm btn-outline btn-error flex-1 sm:flex-none"
+                        className="btn btn-sm btn-outline text-sm btn-error flex-1 sm:flex-none"
                         disabled={pending}
                         onClick={() => removeProvider(provider)}
                       >
-                        <Trash2 className="size-4" aria-hidden="true" />
-                        Delete
+                        <Trash2 className="size-5" aria-hidden="true" />
+                        {t(locale, "deleteButton")}
                       </button>
                     </div>
                   </div>
@@ -641,83 +708,97 @@ export function AdminAiProviderManager({
             </div>
           )}
 
-          <div className="flex items-start gap-2 rounded-xl border border-base-300/70 bg-base-200/30 p-3.5 text-xs leading-5 text-base-content/65">
+          <div className="flex items-start gap-2 rounded-xl border border-base-300/70 bg-base-200/30 p-3.5 text-[15px] leading-5 text-base-content text-muted-foreground font-semibold">
             <EyeOff
-              className="mt-0.5 size-4 shrink-0"
+              className="mt-0.5 size-5 shrink-0"
               aria-hidden="true"
             />
+
             <p>
-              <span className="font-semibold text-base-content/80">
-                Credential privacy.
+              <span className="font-semibold text-base-content text-muted-foreground font-semibold">
+                {t(locale, "credentialPrivacyTitle")}
               </span>{" "}
-              Saved API keys are not displayed. When editing a provider, leave
-              the key field empty to keep the existing key unchanged.
+              {t(locale, "credentialPrivacyDesc")}
             </p>
           </div>
         </div>
       </section>
 
       {/* Create / edit form */}
-      <Dialog open={Boolean(draft)} onOpenChange={(open) => !open && setDraft(null)}>
-        <DialogContent className="sm:max-w-4xl max-h-[90vh] overflow-y-auto p-0 border-primary/30 bg-base-100">
+      <Dialog
+        open={Boolean(draft)}
+        onOpenChange={(open) => !open && setDraft(null)}
+      >
+        <DialogContent className="sm:max-w-4xl max-h-[90vh] overflow-y-auto p-0 bg-base-100/20 border-secondary border-2 border-t-0">
           {draft ? (
             <section
               aria-labelledby="provider-editor-heading"
               className="min-w-0 overflow-hidden bg-base-100"
             >
-              <div className="border-b border-base-300 bg-primary/5 p-4 sm:p-6 lg:p-7">
+              <div className="border-b border-base-300 bg-secondary/40 p-4 sm:p-6 lg:p-7">
                 <div className="flex min-w-0 items-start justify-between gap-3">
                   <div className="flex min-w-0 items-start gap-3">
                     <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
                       <Settings2 className="size-5" aria-hidden="true" />
                     </div>
+
                     <div className="min-w-0">
                       <h2
                         id="provider-editor-heading"
                         className="text-lg font-semibold tracking-tight sm:text-xl"
                       >
-                        {draft.id ? "Edit provider" : "Add provider"}
+                        {draft.id
+                          ? t(locale, "editProviderTitle")
+                          : t(locale, "addProviderTitle")}
                       </h2>
-                      <p className="mt-1 text-sm leading-5 text-base-content/65">
-                        Configure the connection and execution settings for this
-                        provider.
+
+                      <p className="mt-1 text-lg leading-5 text-base-content text-muted-foreground font-semibold">
+                        {t(locale, "configureConnectionSettingsDesc")}
                       </p>
                     </div>
                   </div>
 
                   <button
                     type="button"
-                    className="btn btn-ghost btn-sm shrink-0"
+                    className="btn btn-ghost btn-sm shrink-0 text-sm "
                     disabled={pending}
                     onClick={() => setDraft(null)}
                   >
-                    <X className="size-4" aria-hidden="true" />
-                    <span className="hidden sm:inline">Cancel</span>
+                    <X className="size-5" aria-hidden="true" />
+                    <span className="hidden sm:inline">
+                      {t(locale, "cancelButton")}
+                    </span>
                   </button>
                 </div>
               </div>
 
-              <div className="p-4 sm:p-6 lg:p-7">
-                <form className="space-y-7" onSubmit={saveProvider}>
+              <div className="p-3 sm:p-4 lg:p-6">
+                <form className="space-y-7 bg-secondary/30 p-4 rounded-xl border border-primary/50 shadow-lg shadow-secondary" onSubmit={saveProvider}>
                   <fieldset disabled={pending} className="min-w-0 space-y-7">
-                    <legend className="sr-only">Provider configuration</legend>
+                    <legend className="sr-only">
+                      {/* {t(locale, "providerConfigurationLegend")} */}
+                    </legend>
 
                     <div className="space-y-4">
                       <div>
-                        <h3 className="font-semibold">Connection details</h3>
-                        <p className="mt-1 text-sm text-base-content/65">
-                          Identify the provider and the API endpoint used to reach
-                          it.
+                        <h3 className="font-semibold">
+                          {t(locale, "connectionDetailsHeading")}
+                        </h3>
+
+                        <p className="mt-1 text-lg text-base-content text-muted-foreground font-semibold">
+                          {t(locale, "connectionDetailsDesc")}
                         </p>
                       </div>
 
                       <div className="grid min-w-0 grid-cols-1 gap-x-4 gap-y-5 sm:grid-cols-2 xl:grid-cols-3">
-                        <label className="form-control min-w-0 gap-1">
-                          <span className="label-text font-medium">
-                            Display name
+                        <label className="form-control min-w-0 text-lg gap-1 space-y-1">
+                          <span className="label-text font-semibold">
+                            {t(locale, "displayNameLabel")}
                           </span>
+
                           <input
-                            className="input input-bordered w-full"
+                          dir="ltr"
+                            className="input input-bordered border text-[15px] mt-1 w-full"
                             required
                             maxLength={80}
                             value={draft.name}
@@ -726,18 +807,19 @@ export function AdminAiProviderManager({
                             }
                             placeholder="Local Qwen"
                           />
+
                           <FieldHint>
-                            A recognizable name shown in the administration
-                            interface.
+                            {t(locale, "displayNameHint")}
                           </FieldHint>
                         </label>
 
-                        <label className="form-control min-w-0 gap-1">
-                          <span className="label-text font-medium">
-                            Provider type
+                        <label className="form-control min-w-0 text-lg gap-1 space-y-1">
+                          <span className="label-text font-semibold">
+                            {t(locale, "providerTypeLabel")}
                           </span>
+
                           <select
-                            className="select select-bordered w-full"
+                            className="select select-bordered border text-[15px] mt-1 w-full"
                             value={draft.provider}
                             onChange={(event) => {
                               const provider = event.target.value as ProviderType;
@@ -754,23 +836,32 @@ export function AdminAiProviderManager({
                               }
                             }}
                           >
-                            <option value="LOCAL">Local</option>
-                            <option value="OPENROUTER">OpenRouter</option>
+                            <option value="LOCAL">
+                              {t(locale, "localOption")}
+                            </option>
+                            <option value="OPENROUTER">
+                              {t(locale, "openRouterOption")}
+                            </option>
                           </select>
+
                           <FieldHint>
-                            Choose a local endpoint or the OpenRouter provider.
+                            {t(locale, "providerTypeHint")}
                           </FieldHint>
                         </label>
 
-                        <label className="form-control min-w-0 gap-1">
-                          <span className="label-text font-medium">
-                            Execution order
+                        <label className="form-control min-w-0 text-lg gap-1 space-y-1">
+                          <span className="label-text font-semibold">
+                            {t(locale, "executionOrderLabel")}
                           </span>
+
                           <select
-                            className="select select-bordered w-full"
+                            className="select select-bordered border text-[15px] mt-1 w-full"
                             value={draft.sortOrder}
                             onChange={(event) =>
-                              updateDraft("sortOrder", Number(event.target.value))
+                              updateDraft(
+                                "sortOrder",
+                                Number(event.target.value),
+                              )
                             }
                           >
                             {Array.from(
@@ -782,21 +873,26 @@ export function AdminAiProviderManager({
                               },
                               (_, position) => (
                                 <option key={position} value={position}>
-                                  Provider {position + 1}
+                                  {t(locale, "providerPositionOption")}{" "}
+                                  {position + 1}
                                 </option>
                               ),
                             )}
                           </select>
+
                           <FieldHint>
-                            Earlier positions are tried before later enabled
-                            providers when a provider fails.
+                            {t(locale, "executionOrderHint")}
                           </FieldHint>
                         </label>
 
-                        <label className="form-control min-w-0 gap-1 sm:col-span-2 xl:col-span-1">
-                          <span className="label-text font-medium">Base URL</span>
+                        <label className="form-control min-w-0 text-lg gap-1 space-y-1 sm:col-span-2 xl:col-span-1">
+                          <span className="label-text font-semibold">
+                            {t(locale, "baseUrlLabel")}
+                          </span>
+
                           <input
-                            className="input input-bordered w-full"
+                          dir="ltr"
+                            className="input input-bordered border text-[15px] mt-1 w-full"
                             type="url"
                             required
                             maxLength={500}
@@ -810,18 +906,20 @@ export function AdminAiProviderManager({
                                 : "http://127.0.0.1:1234/v1"
                             }
                           />
+
                           <FieldHint>
-                            The API-compatible endpoint used to contact this
-                            provider.
+                            {t(locale, "baseUrlHint")}
                           </FieldHint>
                         </label>
 
-                        <label className="form-control min-w-0 gap-1">
-                          <span className="label-text font-medium">
-                            Model identifier
+                        <label className="form-control min-w-0 text-lg gap-1 space-y-1">
+                          <span className="label-text font-semibold">
+                            {t(locale, "modelIdentifierLabel")}
                           </span>
+
                           <input
-                            className="input input-bordered w-full"
+                          dir="ltr"
+                            className="input input-bordered border text-[15px] mt-1 w-full"
                             required
                             maxLength={180}
                             value={draft.model}
@@ -830,17 +928,20 @@ export function AdminAiProviderManager({
                             }
                             placeholder="provider/model-name"
                           />
+
                           <FieldHint>
-                            The exact model identifier expected by the endpoint.
+                            {t(locale, "modelIdentifierHint")}
                           </FieldHint>
                         </label>
 
-                        <label className="form-control min-w-0 gap-1">
-                          <span className="label-text font-medium">
-                            Timeout (milliseconds)
+                        <label className="form-control min-w-0 text-lg gap-1 space-y-1">
+                          <span className="label-text font-semibold">
+                            {t(locale, "timeoutMsLabel")}
                           </span>
+
                           <input
-                            className="input input-bordered w-full"
+                          dir="ltr"
+                            className="input input-bordered border text-[15px] mt-1 w-full"
                             type="number"
                             min={1000}
                             max={1800000}
@@ -848,47 +949,58 @@ export function AdminAiProviderManager({
                             required
                             value={draft.timeoutMs}
                             onChange={(event) =>
-                              updateDraft("timeoutMs", Number(event.target.value))
+                              updateDraft(
+                                "timeoutMs",
+                                Number(event.target.value),
+                              )
                             }
                           />
+
                           <FieldHint>
-                            Maximum wait time configured for a provider request.
+                            {t(locale, "timeoutMsHint")}
                           </FieldHint>
                         </label>
 
-                        <label className="form-control min-w-0 gap-1 sm:col-span-2 xl:col-span-1">
-                          <span className="label-text font-medium">
-                            API key{" "}
+                        <label className="form-control min-w-0 text-lg gap-1 space-y-1 sm:col-span-2 xl:col-span-1">
+                          <span className="label-text font-semibold">
+                            {t(locale, "apiKeyLabel")}{" "}
+                            {draft.provider==='OPENROUTER'&&"*"}
+
                             {draft.id
-                              ? "(optional update)"
+                              ? t(locale, "optionalUpdateText")
                               : draft.provider === "OPENROUTER"
-                                ? "(required)"
-                                : "(optional for local)"}
+                                ? t(locale, "requiredText")
+                                : t(locale, "optionalForLocalText")}
+
                           </span>
+
                           <input
-                            className="input input-bordered w-full"
+                          dir="ltr"
+                            className="input input-bordered border text-[15px] mt-1 w-full"
                             type="password"
                             autoComplete="new-password"
                             maxLength={2000}
+                            required={!(draft.id) && draft.provider==='OPENROUTER'}
                             value={draft.apiKey}
                             onChange={(event) =>
                               updateDraft("apiKey", event.target.value)
                             }
                             placeholder={
                               draft.id &&
-                                providers.find(
-                                  (provider) => provider.id === draft.id,
-                                )?.hasApiKey
-                                ? "Saved key is hidden"
-                                : "Enter API key"
+                              providers.find(
+                                (provider) => provider.id === draft.id,
+                              )?.hasApiKey
+                                ? t(locale, "savedKeyIsHiddenPlaceholder")
+                                : t(locale, "enterApiKeyPlaceholder")
                             }
                           />
+
                           <FieldHint>
                             {draft.id
-                              ? "Leave empty to keep the existing saved key unchanged."
+                              ? t(locale, "existingKeyUnchangedHint")
                               : draft.provider === "OPENROUTER"
-                                ? "Enter the key required to authenticate with OpenRouter."
-                                : "Only enter a key if your local endpoint requires one."}
+                                ? t(locale, "openRouterKeyHint")
+                                : t(locale, "localKeyHint")}
                           </FieldHint>
                         </label>
                       </div>
@@ -898,10 +1010,12 @@ export function AdminAiProviderManager({
 
                     <div className="space-y-4">
                       <div>
-                        <h3 className="font-semibold">Availability and security</h3>
-                        <p className="mt-1 text-sm text-base-content/65">
-                          Decide whether this provider can participate in the
-                          execution sequence.
+                        <h3 className="font-semibold">
+                          {t(locale, "availabilityAndSecurityHeading")}
+                        </h3>
+
+                        <p className="mt-1 text-lg text-base-content text-muted-foreground font-semibold">
+                          {t(locale, "availabilityAndSecurityDesc")}
                         </p>
                       </div>
 
@@ -912,16 +1026,20 @@ export function AdminAiProviderManager({
                             className="checkbox checkbox-sm mt-0.5"
                             checked={draft.clearApiKey}
                             onChange={(event) =>
-                              updateDraft("clearApiKey", event.target.checked)
+                              updateDraft(
+                                "clearApiKey",
+                                event.target.checked,
+                              )
                             }
                           />
+
                           <span className="min-w-0">
-                            <span className="block text-sm font-medium">
-                              Clear the currently saved API key
+                            <span className="block text-lg font-medium">
+                              {t(locale, "clearSavedApiKeyLabel")}
                             </span>
-                            <span className="mt-1 block text-xs leading-5 text-base-content/60">
-                              Available for local providers only. Use this only if
-                              the saved key should be removed.
+
+                            <span className="mt-1 block text-[15px] leading-5 text-base-content text-muted-foreground font-semibold">
+                              {t(locale, "clearSavedApiKeyHint")}
                             </span>
                           </span>
                         </label>
@@ -936,14 +1054,14 @@ export function AdminAiProviderManager({
                             updateDraft("enabled", event.target.checked)
                           }
                         />
+
                         <span className="min-w-0">
-                          <span className="block text-sm font-medium">
-                            Enable this provider
+                          <span className="block text-lg font-medium">
+                            {t(locale, "enableThisProviderLabel")}
                           </span>
-                          <span className="mt-1 block text-xs leading-5 text-base-content/60">
-                            Enabled providers are eligible for the configured
-                            execution sequence. The global AI service must also be
-                            enabled for AI features to be available.
+
+                          <span className="mt-1 block text-[15px] leading-5 text-base-content text-muted-foreground font-semibold">
+                            {t(locale, "enableThisProviderHint")}
                           </span>
                         </span>
                       </label>
@@ -957,7 +1075,7 @@ export function AdminAiProviderManager({
                       disabled={pending}
                       onClick={() => setDraft(null)}
                     >
-                      Cancel
+                      {t(locale, "cancelButton")}
                     </button>
 
                     <button
@@ -967,13 +1085,16 @@ export function AdminAiProviderManager({
                     >
                       {pending ? (
                         <LoaderCircle
-                          className="size-4 animate-spin"
+                          className="size-5 animate-spin"
                           aria-hidden="true"
                         />
                       ) : (
-                        <Save className="size-4" aria-hidden="true" />
+                        <Save className="size-5" aria-hidden="true" />
                       )}
-                      {pending ? "Saving…" : "Save provider"}
+
+                      {pending
+                        ? t(locale, "savingButton")
+                        : t(locale, "saveProviderButton")}
                     </button>
                   </div>
                 </form>

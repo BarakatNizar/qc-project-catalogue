@@ -1,24 +1,38 @@
+
 import type { Metadata, Viewport } from "next";
 import type { ReactNode } from "react";
 import { cookies } from "next/headers";
-import { Geist, Geist_Mono } from "next/font/google";
+import {
+  Geist,
+  Geist_Mono,
+  IBM_Plex_Sans_Arabic,
+} from "next/font/google";
+
 import { SiteHeader } from "@/components/site-header";
 import { Toaster } from "@/components/ui/sonner";
 import { cn } from "@/lib/utils";
 import "@/app/globals.css";
+import { getCurrentApplicationLanguage } from "@/modules/translation/services/application-language.service";
 
 const geistSans = Geist({
   subsets: ["latin"],
-  variable: "--font-sans",
+  variable: "--font-geist-sans",
 });
 
 const geistMono = Geist_Mono({
   subsets: ["latin"],
-  variable: "--font-mono",
+  variable: "--font-geist-mono",
+});
+
+const arabicFont = IBM_Plex_Sans_Arabic({
+  subsets: ["arabic", "latin"],
+  weight: ["400", "500", "600", "700"],
+  variable: "--font-arabic",
+  display: "swap",
 });
 
 export const metadata: Metadata = {
-  icons:'/icon.svg',
+  icons: "/icon.svg",
   title: {
     default: "Qalamoon Compass",
     template: "%s · Qalamoon Compass",
@@ -39,7 +53,9 @@ export default async function RootLayout({
 }: Readonly<{ children: ReactNode }>) {
   const cookieStore = await cookies();
 
-  const locale = cookieStore.get("qc_locale")?.value === "ar" ? "ar" : "en";
+  const locale = await getCurrentApplicationLanguage();
+
+  const isArabic = locale === "ar";
 
   const theme =
     cookieStore.get("qc_theme")?.value === "qc-dark"
@@ -49,17 +65,19 @@ export default async function RootLayout({
   return (
     <html
       lang={locale}
-      dir={locale === "ar" ? "rtl" : "ltr"}
+      dir={isArabic ? "rtl" : "ltr"}
       data-theme={theme}
       suppressHydrationWarning
       className={cn(
-        "font-sans antialiased",
+        isArabic ? arabicFont.className : geistSans.className,
         geistSans.variable,
         geistMono.variable,
+        arabicFont.variable,
+        "antialiased",
       )}
     >
       <body className="flex min-h-screen flex-col bg-background text-foreground antialiased selection:bg-primary/30 selection:text-foreground">
-        <SiteHeader locale={locale} />
+        <SiteHeader locale={locale} theme={theme} />
 
         <main
           id="main-content"
@@ -70,7 +88,10 @@ export default async function RootLayout({
 
         <Toaster position="bottom-right" />
 
-        <footer className="mt-auto border-t border-border/80 bg-card/60 px-4 py-7 backdrop-blur-xl md:px-6 md:py-8 lg:px-8 xl:px-12">
+        <footer
+          dir="ltr"
+          className="mt-auto border-t border-border/80 bg-card/60 px-4 py-7 backdrop-blur-xl md:px-6 md:py-8 lg:px-8 xl:px-12"
+        >
           <div className="page-shell flex flex-col items-center justify-between gap-4 text-center sm:flex-row sm:text-start">
             <div className="flex min-w-0 items-center gap-3">
               <span

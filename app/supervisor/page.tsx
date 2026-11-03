@@ -16,9 +16,12 @@ import { Card, CardTitle } from "@/components/ui/card";
 import ErrorState from "@/components/ErrorState";
 import { getCountsAction } from "@/Interfaces/getters/user.getters";
 import { ProjectBriefingTools } from "@/components/project-briefing-tools";
+import { getCurrentApplicationLanguage } from "@/modules/translation/services/application-language.service";
+import { t } from "@/shared/i18n/dictionary";
 
 export default async function SupervisorDashboard() {
   const supervisorData = await getCountsAction();
+  const locale = await getCurrentApplicationLanguage();
 
   if ("error" in supervisorData) {
     return <ErrorState message={supervisorData.error} />;
@@ -26,25 +29,25 @@ export default async function SupervisorDashboard() {
 
   const { data: counts, user } = supervisorData;
 
-  const firstName = user.name.trim().split(/\s+/)[0] || "there";
+  const firstName = user.name.trim().split(/\s+/)[0] || t(locale, "thereLabel");
 
   const stats = [
     {
-      title: "Project briefs",
+      title: t(locale, "projectBriefsStatTitle"),
       value: counts.projects,
       icon: FolderKanban,
       href: "/supervisor/projects",
-      detail: "Create, update, and maintain academic project briefs.",
-      eyebrow: "PROJECT CATALOGUE",
+      detail: t(locale, "projectBriefsStatDetail"),
+      eyebrow: t(locale, "projectCatalogueEyebrow"),
       accent: "text-primary bg-primary/10 border-primary/15",
     },
     {
-      title: "Student accounts",
+      title: t(locale, "studentAccountsStatTitle"),
       value: counts.students,
       icon: Users,
       href: "/supervisor/students",
-      detail: "Manage student accounts and their access to the platform.",
-      eyebrow: "STUDENT DIRECTORY",
+      detail: t(locale, "studentAccountsStatDetail"),
+      eyebrow: t(locale, "studentDirectoryEyebrow"),
       accent:
         "text-emerald-700 bg-emerald-500/10 border-emerald-500/20 dark:text-emerald-400",
     },
@@ -54,108 +57,116 @@ export default async function SupervisorDashboard() {
     <div className="mx-auto w-full space-y-7 pb-8 sm:space-y-9">
       {/* Welcome header */}
       <PageHeading
-        title={`Welcome, ${firstName}`}
-        description="Manage the academic project catalogue and student accounts from one workspace. Keep project briefs clear, relevant, and useful for students exploring their next academic project."
+        title={`${t(locale, "supervisorWelcomeTitle")} ${firstName}`}
+        description={t(locale, "supervisorDashboardWorkspaceDesc")}
         action={
           <Link
             href="/supervisor/projects/new"
-            className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground shadow-sm transition-all hover:brightness-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 sm:w-auto"
+            className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-lg font-semibold text-primary-foreground shadow-sm transition-all hover:brightness-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 sm:w-auto"
           >
             <Plus size={18} aria-hidden="true" />
-            <span>Create project</span>
+            <span>{t(locale, "createProjectButton")}</span>
             <ArrowRight size={16} aria-hidden="true" />
           </Link>
         }
       />
 
       {/* Dashboard metrics */}
-      <section aria-label="Workspace overview" className="space-y-4">
+      <section
+        aria-label={t(locale, "workspaceOverviewTitle")}
+        className="space-y-4"
+      >
         <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
           <div className="space-y-1">
-            <h2 className="text-base font-bold tracking-tight text-foreground sm:text-lg">
-              Your workspace at a glance
+            <h2 className="text-base font-bold text-foreground sm:text-lg">
+              {t(locale, "workspaceOverviewTitle")}
             </h2>
-            <p className="text-sm leading-relaxed text-muted-foreground">
-              Quick access to the two areas you manage most.
+            <p className="text-lg leading-relaxed text-muted-foreground font-semibold">
+              {t(locale, "workspaceOverviewDesc")}
             </p>
           </div>
 
-          <span className="text-xs text-muted-foreground">
-            Select a section to get started
+          <span className="text-[16px] text-muted-foreground font-semibold">
+            {t(locale, "selectSectionPrompt")}
           </span>
         </div>
 
         <div className="grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-5">
-          {stats.map(({ title, value, icon: Icon, href, detail, eyebrow, accent }) => (
-            <Link
-              key={title}
-              href={href}
-              aria-label={`${title}: ${value}. ${detail}`}
-              className="group block min-w-0 rounded-3xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-            >
-              <Card className="relative h-full min-w-0 overflow-hidden rounded-3xl border border-border/70 bg-card p-5 shadow-sm transition-all duration-200 group-hover:-translate-y-0.5 group-hover:border-primary/30 group-hover:shadow-lg group-hover:shadow-primary/5 sm:p-6">
-                <div
-                  aria-hidden="true"
-                  className="pointer-events-none absolute -right-12 -top-12 size-36 rounded-full bg-primary/[0.04] blur-2xl transition-colors group-hover:bg-primary/[0.09]"
-                />
+          {stats.map(
+            ({ title, value, icon: Icon, href, detail, eyebrow, accent }) => (
+              <Link
+                key={title}
+                href={href}
+                aria-label={`${title}: ${value}. ${detail}`}
+                className="group block min-w-0 rounded-3xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              >
+                <Card className="relative h-full min-w-0 overflow-hidden rounded-3xl border border-border/70 bg-card p-5 shadow-sm transition-all duration-200 group-hover:-translate-y-0.5 group-hover:border-primary/30 group-hover:shadow-lg group-hover:shadow-primary/5 sm:p-6">
+                  <div
+                    aria-hidden="true"
+                    className="pointer-events-none absolute -right-12 -top-12 size-36 rounded-full bg-primary/[0.04] blur-2xl transition-colors group-hover:bg-primary/[0.09]"
+                  />
 
-                <div className="relative flex min-w-0 items-start justify-between gap-3">
-                  <div className="min-w-0 space-y-4">
-                    <div className="flex min-w-0 items-center gap-3">
-                      <span
-                        className={`grid size-11 shrink-0 place-items-center rounded-2xl border ${accent}`}
-                      >
-                        <Icon size={21} strokeWidth={1.9} aria-hidden="true" />
-                      </span>
+                  <div className="relative flex min-w-0 items-start justify-between gap-3">
+                    <div className="min-w-0 space-y-4">
+                      <div className="flex min-w-0 items-center gap-3">
+                        <span
+                          className={`grid size-11 shrink-0 place-items-center rounded-2xl border ${accent}`}
+                        >
+                          <Icon
+                            size={21}
+                            strokeWidth={1.9}
+                            aria-hidden="true"
+                          />
+                        </span>
 
-                      <span className="min-w-0 break-words text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                        {eyebrow}
-                      </span>
+                        <span className="min-w-0 break-words text-[16px] font-semibold uppercase tracking-wider text-muted-foreground font-semibold">
+                          {eyebrow}
+                        </span>
+                      </div>
+
+                      <div className="space-y-1">
+                        <CardTitle className="break-words text-base font-bold text-foreground sm:text-lg">
+                          {title}
+                        </CardTitle>
+
+                        <p className="max-w-sm text-lg leading-relaxed text-muted-foreground font-semibold">
+                          {detail}
+                        </p>
+                      </div>
                     </div>
 
-                    <div className="space-y-1">
-                      <CardTitle className="break-words text-base font-bold tracking-tight text-foreground sm:text-lg">
-                        {title}
-                      </CardTitle>
+                    <span
+                      aria-hidden="true"
+                      className="grid size-9 shrink-0 place-items-center rounded-xl border border-border/70 bg-background/70 text-muted-foreground font-semibold transition-all group-hover:border-primary/20 group-hover:bg-primary/10 group-hover:text-primary"
+                    >
+                      <ArrowUpRight size={17} />
+                    </span>
+                  </div>
 
-                      <p className="max-w-sm text-sm leading-relaxed text-muted-foreground">
-                        {detail}
+                  <div className="relative mt-6 flex items-end justify-between gap-3 border-t border-border/60 pt-4">
+                    <div className="min-w-0">
+                      <p className="text-[14px] font-medium uppercase tracking-wider text-muted-foreground font-semibold">
+                        {t(locale, "totalLabel")}
+                      </p>
+                      <p className="mt-1 break-words text-3xl font-extrabold leading-none text-foreground tabular-nums sm:text-4xl">
+                        {value}
                       </p>
                     </div>
+
+                    <span className="inline-flex shrink-0 items-center gap-1.5 pb-0.5 text-[16px] font-semibold text-primary">
+                      {t(locale, "openSectionLabel")}
+                      <ArrowRight
+                        size={14}
+                        className="transition-transform group-hover:translate-x-0.5"
+                        aria-hidden="true"
+                      />
+                    </span>
                   </div>
-
-                  <span
-                    aria-hidden="true"
-                    className="grid size-9 shrink-0 place-items-center rounded-xl border border-border/70 bg-background/70 text-muted-foreground transition-all group-hover:border-primary/20 group-hover:bg-primary/10 group-hover:text-primary"
-                  >
-                    <ArrowUpRight size={17} />
-                  </span>
-                </div>
-
-                <div className="relative mt-6 flex items-end justify-between gap-3 border-t border-border/60 pt-4">
-                  <div className="min-w-0">
-                    <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
-                      Total
-                    </p>
-                    <p className="mt-1 break-words text-3xl font-extrabold leading-none tracking-tight text-foreground tabular-nums sm:text-4xl">
-                      {value}
-                    </p>
-                  </div>
-
-                  <span className="inline-flex shrink-0 items-center gap-1.5 pb-0.5 text-xs font-semibold text-primary">
-                    Open section
-                    <ArrowRight
-                      size={14}
-                      className="transition-transform group-hover:translate-x-0.5"
-                      aria-hidden="true"
-                    />
-                  </span>
-                </div>
-              </Card>
-            </Link>
-          ))}
+                </Card>
+              </Link>
+            ),
+          )}
         </div>
-        
       </section>
 
       {/* Shared catalogue information */}
@@ -174,11 +185,11 @@ export default async function SupervisorDashboard() {
                 </span>
 
                 <div className="min-w-0 space-y-1">
-                  <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-primary">
-                    Catalogue overview
+                  <p className="text-[14px] font-bold uppercase tracking-wide text-primary">
+                    {t(locale, "catalogueOverviewEyebrow")}
                   </p>
-                  <p className="text-xs text-muted-foreground">
-                    Shared academic workspace
+                  <p className="text-[16px] text-muted-foreground font-semibold">
+                    {t(locale, "sharedAcademicWorkspace")}
                   </p>
                 </div>
               </div>
@@ -186,43 +197,46 @@ export default async function SupervisorDashboard() {
               <div className="space-y-3">
                 <h2
                   id="catalogue-overview-title"
-                  className="max-w-xl text-xl font-extrabold leading-tight tracking-tight text-foreground sm:text-2xl"
+                  className="max-w-xl text-xl font-extrabold leading-tight text-foreground sm:text-2xl"
                 >
-                  One shared catalogue for academic project discovery
+                  {t(locale, "catalogueOverviewTitleText")}
                 </h2>
 
-                <p className="max-w-2xl text-sm leading-6 text-muted-foreground">
-                  Project briefs provide students with a starting point for
-                  exploring academic ideas, understanding project scope, and
-                  identifying work that aligns with their interests.
+                <p className="max-w-2xl text-lg leading-8 text-muted-foreground font-semibold">
+                  {t(locale, "catalogueOverviewDesc1")}
                 </p>
 
-                <p className="max-w-2xl text-sm leading-6 text-muted-foreground">
-                  Every supervisor can edit every project and manage every
-                  student. The Project Supervisor name on a brief is metadata;
-                  it does not determine QC account permissions.
+                <p className="max-w-2xl text-lg leading-8 text-muted-foreground font-semibold">
+                  {t(locale, "catalogueOverviewDesc2")}
                 </p>
               </div>
 
               <div className="flex flex-col gap-3 pt-1 sm:flex-row sm:flex-wrap">
                 <Link
                   href="/supervisor/projects"
-                  className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-border bg-background px-4 py-2.5 text-sm font-semibold text-foreground transition-colors hover:border-primary/30 hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 sm:w-auto"
+                  className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-border bg-background px-4 py-2.5 text-lg font-semibold text-foreground transition-colors hover:border-primary/30 hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 sm:w-auto"
                 >
-                  <Eye size={16} className="text-primary" aria-hidden="true" />
-                  Review catalogue
+                  <Eye
+                    size={16}
+                    className="text-primary"
+                    aria-hidden="true"
+                  />
+                  {t(locale, "reviewCatalogueButton")}
                   <ArrowRight size={15} aria-hidden="true" />
                 </Link>
 
                 <Link
                   href="/supervisor/students"
-                  className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 sm:w-auto"
+                  className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-lg font-semibold text-muted-foreground font-semibold transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 sm:w-auto"
                 >
-                  <Users size={16} className="text-primary" aria-hidden="true" />
-                  Manage students
+                  <Users
+                    size={16}
+                    className="text-primary"
+                    aria-hidden="true"
+                  />
+                  {t(locale, "manageStudentsButton")}
                 </Link>
               </div>
-              
             </div>
 
             {/* Catalogue principles */}
@@ -233,12 +247,11 @@ export default async function SupervisorDashboard() {
                 </span>
 
                 <div className="min-w-0 space-y-1">
-                  <h3 className="text-sm font-semibold text-foreground">
-                    Maintain project briefs
+                  <h3 className="text-lg font-semibold text-foreground">
+                    {t(locale, "maintainProjectBriefsTitle")}
                   </h3>
-                  <p className="text-xs leading-relaxed text-muted-foreground">
-                    Keep catalogue entries clear, structured, and useful for
-                    student discovery.
+                  <p className="text-[16px] leading-relaxed text-muted-foreground font-semibold">
+                    {t(locale, "maintainProjectBriefsDesc")}
                   </p>
                 </div>
               </div>
@@ -249,23 +262,20 @@ export default async function SupervisorDashboard() {
                 </span>
 
                 <div className="min-w-0 space-y-1">
-                  <h3 className="text-sm font-semibold text-foreground">
-                    Shared management access
+                  <h3 className="text-lg font-semibold text-foreground">
+                    {t(locale, "sharedManagementAccessTitle")}
                   </h3>
-                  <p className="text-xs leading-relaxed text-muted-foreground">
-                    Project editing and student management are shared across
-                    supervisors under the existing permission model.
+                  <p className="text-[16px] leading-relaxed text-muted-foreground font-semibold">
+                    {t(locale, "sharedManagementAccessDesc")}
                   </p>
                 </div>
               </div>
-
             </div>
           </div>
         </Card>
-        
       </section>
-      <ProjectBriefingTools/>
-    
+
+      <ProjectBriefingTools locale={locale} />
     </div>
   );
 }

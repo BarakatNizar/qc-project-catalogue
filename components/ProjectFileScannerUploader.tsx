@@ -29,12 +29,10 @@ export default function FileScannerUploader({ onExtracted }: FileScannerUploader
         mimeType: file.type || "application/octet-stream",
         data: arrayBuffer,
       };
-      console.log(payload)
 
       const result = await extractProjectFromFileAction(payload);
 
       setLoading(false);
-      console.log(result);
 
       if ("error" in result) {
         setError(result.error);

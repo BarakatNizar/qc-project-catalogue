@@ -12,6 +12,7 @@ import {
 
 import { Badge } from "@/components/ui/badge";
 import type { ProjectType, ProjectVisibility } from "@prisma/client";
+import { t, type Locale } from "@/shared/i18n/dictionary";
 
 type CardProject = {
   id: string;
@@ -31,14 +32,18 @@ type CardProject = {
 export function ProjectCard({
   project,
   management = false,
+  locale
 }: {
   project: CardProject;
   management?: boolean;
+  locale: Locale;
 }) {
   const isGraduationProject = project.projectType === "GRADUATION";
   const isVisible = project.visibility === "VISIBLE";
+
   const supervisorName =
-    project.projectSupervisorName?.trim() || "Supervisor not assigned";
+    project.projectSupervisorName?.trim() ||
+    t(locale, "supervisorNotAssigned");
 
   const projectHref = management
     ? `/supervisor/projects/${project.id}`
@@ -70,18 +75,21 @@ export function ProjectCard({
         <div className="absolute inset-x-3 top-3 flex min-w-0 items-start justify-between gap-2">
           <Badge
             variant="outline"
-            className="max-w-[75%] rounded-full border-border/70 bg-background/95 px-3 py-1 text-[11px] font-semibold text-foreground shadow-sm backdrop-blur-sm"
+            className={`max-w-[75%] rounded-full border-border/70 px-3 py-4 text-[15px] font-semibold text-foreground shadow-sm backdrop-blur-sm 
+              ${isGraduationProject? "bg-primary/20" : "bg-neutral/20"}`}
           >
-            {isGraduationProject ? "Graduation project" : "Pre-graduation"}
+            {isGraduationProject
+              ? t(locale, "graduationProject")
+              : t(locale, "preGraduationProject")}
           </Badge>
 
           {management ? (
             <Badge
               variant="outline"
-              className={`shrink-0 gap-1 rounded-full border px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide shadow-sm backdrop-blur-sm ${
+              className={`shrink-0 gap-1 rounded-full border px-2.5 py-3 text-[14px] font-bold uppercase tracking-wide shadow-sm backdrop-blur-sm ${
                 isVisible
-                  ? "border-emerald-500/30 bg-background/95 text-emerald-700 dark:text-emerald-300"
-                  : "border-border/70 bg-background/95 text-muted-foreground"
+                  ? "border-success  bg-success-content text-success"
+                  : "border-error bg-error-content text-error"
               }`}
             >
               {isVisible ? (
@@ -89,29 +97,32 @@ export function ProjectCard({
               ) : (
                 <EyeOff size={12} aria-hidden="true" />
               )}
-              {isVisible ? "Visible" : "Hidden"}
+              {isVisible
+                ? t(locale, "visible")
+                : t(locale, "hidden")}
             </Badge>
           ) : null}
         </div>
 
         {management && !isVisible ? (
-          <div className="absolute bottom-3 left-3 inline-flex items-center gap-1.5 rounded-lg border border-border/70 bg-background/95 px-2.5 py-1.5 text-xs font-medium text-muted-foreground shadow-sm backdrop-blur-sm">
+          <div className="absolute bottom-3 left-3 inline-flex items-center gap-1.5 rounded-lg border border-border/70 bg-background/95 px-2.5 py-1.5 text-[16px] font-medium text-muted-foreground shadow-sm backdrop-blur-sm">
             <EyeOff size={13} aria-hidden="true" />
-            <span>Not shown in student search</span>
+            <span>{t(locale, "notShownInStudentSearch")}</span>
           </div>
         ) : null}
       </div>
 
       <div className="flex min-w-0 flex-1 flex-col p-4 sm:p-5">
-        <div className="mb-3 flex min-w-0 items-start gap-2 text-xs text-muted-foreground">
+        <div className="mb-3 flex min-w-0 items-start gap-2 text-[16px] text-muted-foreground">
           <UserRound
             size={14}
             className="mt-0.5 shrink-0"
             aria-hidden="true"
           />
+
           <p className="min-w-0 break-words leading-5 [overflow-wrap:anywhere]">
             <span className="font-medium text-muted-foreground">
-              Supervisor
+              {t(locale, "projectSupervisor")}
             </span>
             <span aria-hidden="true"> · </span>
             <span className="font-semibold text-foreground/80">
@@ -129,21 +140,22 @@ export function ProjectCard({
           </Link>
         </h2>
 
-        <p className="mt-2.5 line-clamp-3 min-w-0 flex-1 break-words text-sm leading-6 text-muted-foreground [overflow-wrap:anywhere]">
+        <p className="mt-2.5 line-clamp-3 min-w-0 flex-1 break-words text-lg leading-6 text-muted-foreground [overflow-wrap:anywhere]">
           {project.summary}
         </p>
 
         {project.technologies.length > 0 ? (
           <div className="mt-4">
-            <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
-              Technologies
+            <p className="mb-2 text-[14px] font-semibold uppercase tracking-wide text-muted-foreground">
+              {t(locale, "technologiesLabel")}
             </p>
+
             <div className="flex flex-wrap gap-1.5">
               {project.technologies.slice(0, 3).map((technology) => (
                 <Badge
                   key={technology.name}
                   variant="secondary"
-                  className="max-w-full rounded-lg border border-border/60 bg-muted/50 px-2.5 py-1 text-xs font-medium text-muted-foreground"
+                  className="max-w-full rounded-lg border border-border/60 bg-muted/50 px-2.5 py-1 text-[16px] font-medium text-muted-foreground"
                 >
                   <span className="break-words [overflow-wrap:anywhere]">
                     {technology.name}
@@ -154,8 +166,11 @@ export function ProjectCard({
               {project.technologies.length > 3 ? (
                 <Badge
                   variant="secondary"
-                  className="rounded-lg border border-border/60 bg-muted/50 px-2.5 py-1 text-xs font-semibold text-muted-foreground"
-                  aria-label={`${project.technologies.length - 3} additional technologies`}
+                  className="rounded-lg border border-border/60 bg-muted/50 px-2.5 py-1 text-[16px] font-semibold text-muted-foreground"
+                  aria-label={t(locale, "additionalTechnologiesAria").replace(
+                    "{count}",
+                    String(project.technologies.length - 3)
+                  )}
                 >
                   +{project.technologies.length - 3}
                 </Badge>
@@ -171,12 +186,13 @@ export function ProjectCard({
               className="shrink-0 text-primary"
               aria-hidden="true"
             />
+
             <div className="min-w-0">
-              <p className="text-sm font-bold tabular-nums text-foreground">
+              <p className="text-lg font-bold tabular-nums text-foreground">
                 {project.counts.images}
               </p>
-              <p className="text-[11px] leading-4 text-muted-foreground">
-                Images
+              <p className="text-[15px] leading-4 text-muted-foreground">
+                {t(locale, "projectImages")}
               </p>
             </div>
           </div>
@@ -187,21 +203,23 @@ export function ProjectCard({
               className="shrink-0 text-primary"
               aria-hidden="true"
             />
+
             <div className="min-w-0">
-              <p className="text-sm font-bold tabular-nums text-foreground">
+              <p className="text-lg font-bold tabular-nums text-foreground">
                 {project.counts.suggestions}
               </p>
-              <p className="text-[11px] leading-4 text-muted-foreground">
-                Suggestions
+              <p className="text-[15px] leading-4 text-muted-foreground">
+                {t(locale, "aiSuggestions")}
               </p>
             </div>
           </div>
         </div>
 
         <div className="pointer-events-none mt-4 flex items-center justify-between border-t border-border/60 pt-3">
-          <span className="text-xs font-medium text-muted-foreground">
-            View project details
+          <span className="text-[16px] font-medium text-muted-foreground">
+            {t(locale, "viewProjectDetails")}
           </span>
+
           <span className="grid size-8 place-items-center rounded-lg border border-border/70 bg-background text-muted-foreground transition-colors group-hover:border-primary/25 group-hover:bg-primary/5 group-hover:text-primary">
             <ArrowUpRight size={16} aria-hidden="true" />
           </span>

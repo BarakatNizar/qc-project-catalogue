@@ -65,7 +65,7 @@ function validateSuggestionPayload(payload: unknown): ValidationResult<AiSuggest
 }
 
 function validateExtractionPayload(payload: unknown): ValidationResult<ExtractedProject> {
-  console.log(payload);
+  // console.log(payload);
   const parsed = extractedProjectResponseSchema.safeParse(payload);
   return parsed.success ? { success: true, data: parsed.data } : { success: false, issueCount: parsed.error.issues.length , issues: parsed.error.issues.map((issue) => ({
     path: issue.path,
@@ -159,7 +159,7 @@ export const aiService = {
 
     const remainingCapacity = MAX_SUGGESTIONS_PER_PROJECT - project.suggestions.length;
     if (remainingCapacity < MIN_SUGGESTIONS_PER_GENERATION) {
-      throw new AppError("AI_UNAVAILABLE", "There is not enough remaining capacity to generate at least three new suggestions.");
+      throw new AppError("AI_UNAVAILABLE", "No more suggestions can be generated.");
     }
 
     const execution = await startAiExecution({

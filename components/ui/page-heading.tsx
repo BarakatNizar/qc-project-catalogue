@@ -13,9 +13,9 @@ export function PageHeading({
 }) {
   return (
     <div className="mb-8 flex flex-col justify-between gap-5 sm:flex-row sm:items-end">
-      <div className="max-w-3xl space-y-2">
+      <div className="max-w-3xl space-y-4">
         {eyebrow && (
-          <p className="font-mono text-xs font-bold uppercase tracking-widest text-primary">
+          <p className="font-semibold text-xl font-black uppercase tracking-wide text-primary">
             {eyebrow}
           </p>
         )}
@@ -23,7 +23,7 @@ export function PageHeading({
           {title}
         </h1>
         {description && (
-          <p className="max-w-2xl text-xs leading-relaxed text-muted-foreground sm:text-sm">
+          <p className="max-w-3xl leading-relaxed text-muted-foreground font-semibold text-lg">
             {description}
           </p>
         )}

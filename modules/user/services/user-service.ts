@@ -115,7 +115,7 @@ export const userService = {
       throw new AppError("VALIDATION", validation.reason);
     }
     try {
-      console.log(payload)
+      // console.log(payload)
       const created = await userRepository.create({ 
         role: "SUPERVISOR", 
         loginId: payload.loginId, 

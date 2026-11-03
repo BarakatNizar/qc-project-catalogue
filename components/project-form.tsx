@@ -1,14 +1,18 @@
-// components/forms/project-form.tsx
+
 "use client";
 
-import { useState, useTransition, type ReactNode, type FormEvent } from "react";
+import {
+  useState,
+  useTransition,
+  type ReactNode,
+  type FormEvent,
+} from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   AlignLeft,
   AlertCircle,
   CalendarDays,
-  Check,
   CheckCircle2,
   Code2,
   FileText,
@@ -30,6 +34,8 @@ import {
 import { notify } from "@/components/notificationToaster";
 import { Button } from "@/components/ui/button";
 import type { ExtractedProject, ProjectDto } from "@/modules/project/types";
+import type { Locale } from "@/shared/i18n/dictionary";
+import { t } from "@/shared/i18n/dictionary";
 import type {
   CreateProjectPayload,
   DeleteProjectImagePayload,
@@ -42,7 +48,11 @@ import {
 } from "@/Interfaces/actions/projects.actions";
 import FileScannerUploader from "./ProjectFileScannerUploader";
 
-type Props = { project?: ProjectDto };
+type Props = {
+  project?: ProjectDto;
+  locale?: Locale;
+};
+
 type ProjectType = "GRADUATION" | "PRE_GRADUATION";
 
 type SectionCardProps = {
@@ -56,12 +66,11 @@ type SectionCardProps = {
 };
 
 const inputClass =
-  "w-full min-w-0 rounded-xl border border-border/70 bg-background/65 px-3.5 py-3 text-sm text-foreground " +
+  "w-full min-w-0 rounded-xl border border-border/70 bg-background/65 px-3.5 py-3 text-[17px] text-foreground " +
   "placeholder:text-muted-foreground/70 outline-none transition-colors " +
   "focus:border-primary focus:ring-2 focus:ring-primary/15 disabled:cursor-not-allowed disabled:opacity-60";
 
-const textareaClass =
-  inputClass + " min-h-28 resize-y leading-6";
+const textareaClass = inputClass + " min-h-28 resize-y leading-6";
 
 function SectionCard({
   number,
@@ -76,23 +85,28 @@ function SectionCard({
     <section className="min-w-0 overflow-hidden rounded-2xl border border-border/70 bg-card/75 shadow-sm">
       <div className="flex min-w-0 flex-col gap-4 border-b border-border/60 p-4 sm:flex-row sm:items-start sm:justify-between sm:p-5 lg:p-6">
         <div className="flex min-w-0 items-start gap-3">
-          <span className="grid size-10 shrink-0 place-items-center rounded-xl border border-primary/20 bg-primary/10 text-primary">
+          <span className="grid size-13 shrink-0 place-items-center rounded-xl border border-primary/20 bg-primary/10 text-primary">
             {icon}
           </span>
-          <div className="min-w-0">
-            <p className="text-[10px] font-bold uppercase tracking-[0.17em] text-primary">
+
+          <div className="min-w-0 space-y-2">
+            <p className=" text-lg lg:text-xl font-black uppercase tracking-wide text-primary">
               {number} / {eyebrow}
             </p>
-            <h2 className="mt-1 break-words text-base font-bold tracking-tight sm:text-lg">
+
+            <h2 className="mt-1 break-words text-xl font-bold tracking-tight lg:text-2xl">
               {title}
             </h2>
-            <p className="mt-1 max-w-3xl text-sm leading-6 text-muted-foreground">
+
+            <p className="mt-1 max-w-3xl text-lg leading-6 text-muted-foreground">
               {description}
             </p>
           </div>
         </div>
+
         {action && <div className="shrink-0 self-start">{action}</div>}
       </div>
+
       <div className="min-w-0 p-4 sm:p-5 lg:p-6">{children}</div>
     </section>
   );
@@ -112,22 +126,29 @@ function FieldLabel({
   return (
     <label
       htmlFor={htmlFor}
-      className="mb-2 flex min-w-0 items-center gap-2 text-sm font-semibold text-foreground"
+      className="mb-2 flex min-w-0 items-center gap-2 text-lg font-semibold text-foreground"
     >
       {icon && <span className="shrink-0 text-primary">{icon}</span>}
+
       <span className="min-w-0">{children}</span>
+
       {required && <span className="text-destructive">*</span>}
     </label>
   );
 }
 
 function FieldHint({ children }: { children: ReactNode }) {
-  return <p className="mt-1.5 text-xs leading-5 text-muted-foreground">{children}</p>;
+  return (
+    <p className="mt-1.5 text-[15px] leading-5 text-muted-foreground">
+      {children}
+    </p>
+  );
 }
 
-export function ProjectForm({ project }: Props) {
+export function ProjectForm({ project, locale = "en" }: Props) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
+
   const isEditing = Boolean(project);
 
   const [title, setTitle] = useState(project?.title ?? "");
@@ -162,6 +183,7 @@ export function ProjectForm({ project }: Props) {
       .map((feature) => feature.content)
       .join("\n") ?? ""
   );
+
   const [outScope, setOutScope] = useState(
     project?.features
       .filter((feature) => feature.scope === "OUT_OF_SCOPE")
@@ -169,6 +191,7 @@ export function ProjectForm({ project }: Props) {
       .map((feature) => feature.content)
       .join("\n") ?? ""
   );
+
   const [technologies, setTechnologies] = useState(
     project?.technologies
       .slice()
@@ -191,47 +214,61 @@ export function ProjectForm({ project }: Props) {
     setProjectSupervisorName(extracted.projectSupervisorName || "");
 
     const normalizedType = extracted.projectType?.toLowerCase() || "";
+
     setProjectType(
       normalizedType.includes("pre") ? "PRE_GRADUATION" : "GRADUATION"
     );
 
     setInScope(
-      extracted.inScopeFeatures?.map((feature) => feature.content).join("\n") || ""
+      extracted.inScopeFeatures
+        ?.map((feature) => feature.content)
+        .join("\n") || ""
     );
+
     setOutScope(
-      extracted.outScopeFeatures?.map((feature) => feature.content).join("\n") || ""
+      extracted.outScopeFeatures
+        ?.map((feature) => feature.content)
+        .join("\n") || ""
     );
+
     setTechnologies(
-      extracted.technologies?.map((technology) => technology.content).join("\n") || ""
+      extracted.technologies
+        ?.map((technology) => technology.content)
+        .join("\n") || ""
     );
 
     notify.success(
-      "Project scanned successfully",
-      "Form fields have been populated with extracted brief data."
+      t(locale, "projectScannedSuccessfully"),
+      t(locale, "projectScannedFieldsPopulated")
     );
   };
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+
     const formData = new FormData(event.currentTarget);
 
     const inScopeFeatures = inScope
       .split("\n")
       .map((item) => item.trim())
       .filter(Boolean);
+
     const outOfScopeFeatures = outScope
       .split("\n")
       .map((item) => item.trim())
       .filter(Boolean);
+
     const techList = technologies
       .split("\n")
       .map((item) => item.trim())
       .filter(Boolean);
 
     const imageFiles = formData.getAll("images");
+
     const hasImages = imageFiles.some(
       (file) => file instanceof File && file.size > 0
     );
+
     const imagesFormData = hasImages ? new FormData() : undefined;
 
     if (imagesFormData) {
@@ -266,16 +303,22 @@ export function ProjectForm({ project }: Props) {
         };
 
         const result = await updateProjectAction(payload, imagesFormData);
+
         if ("error" in result) {
-          notify.error("Failed to update project", result.error);
+          notify.error(
+            t(locale, "failedToUpdateProject"),
+            result.error
+          );
         } else {
           notify.success(
-            "Project updated",
-            "Changes have been saved successfully."
+            t(locale, "projectUpdated"),
+            t(locale, "projectChangesSaved")
           );
+
           router.push(`/supervisor/projects/${project.id}`);
           router.refresh();
         }
+
         return;
       }
 
@@ -298,13 +341,18 @@ export function ProjectForm({ project }: Props) {
       };
 
       const result = await createProjectAction(payload, imagesFormData);
+
       if ("error" in result) {
-        notify.error("Failed to create project", result.error);
+        notify.error(
+          t(locale, "failedToCreateProject"),
+          result.error
+        );
       } else {
         notify.success(
-          "Project created",
-          "Structured project brief has been added to the catalogue."
+          t(locale, "projectCreated"),
+          t(locale, "projectAddedToCatalogue")
         );
+
         router.push("/supervisor/projects");
         router.refresh();
       }
@@ -321,17 +369,31 @@ export function ProjectForm({ project }: Props) {
 
     startTransition(async () => {
       const result = await deleteProjectImageAction(payload);
+
       if ("error" in result) {
-        notify.error("Failed to delete image", result.error);
+        notify.error(
+          t(locale, "failedToDeleteImage"),
+          result.error
+        );
       } else {
-        notify.success("Image removed", "The project image has been deleted.");
+        notify.success(
+          t(locale, "imageRemoved"),
+          t(locale, "projectImageDeleted")
+        );
+
         router.refresh();
       }
     });
   };
 
-  const inScopeCount = inScope.split("\n").filter((item) => item.trim()).length;
-  const outScopeCount = outScope.split("\n").filter((item) => item.trim()).length;
+  const inScopeCount = inScope
+    .split("\n")
+    .filter((item) => item.trim()).length;
+
+  const outScopeCount = outScope
+    .split("\n")
+    .filter((item) => item.trim()).length;
+
   const technologyCount = technologies
     .split("\n")
     .filter((item) => item.trim()).length;
@@ -341,21 +403,29 @@ export function ProjectForm({ project }: Props) {
     : "/supervisor/projects";
 
   return (
-    <form onSubmit={handleSubmit} className="w-full min-w-0 space-y-5 pb-24 sm:space-y-6">
+    <form
+      onSubmit={handleSubmit}
+      className="w-full min-w-0 space-y-5 pb-24 sm:space-y-6"
+    >
       {/* Brief identity */}
       <SectionCard
         number="01"
-        eyebrow="Foundation"
-        title="Project identity"
-        description="Set the title, academic classification, supervisor, and short catalogue summary."
-        icon={<Layers3 size={19} />}
+        eyebrow={t(locale, "foundation")}
+        title={t(locale, "projectIdentity")}
+        description={t(locale, "projectIdentityDesc")}
+        icon={<Layers3 size={24} />}
         action={<FileScannerUploader onExtracted={handleExtractedProject} />}
       >
         <div className="grid min-w-0 grid-cols-1 gap-x-5 gap-y-5 md:grid-cols-2 xl:grid-cols-3">
           <div className="min-w-0 md:col-span-2 xl:col-span-3">
-            <FieldLabel htmlFor="project-title" icon={<Type size={15} />} required>
-              Project title
+            <FieldLabel
+              htmlFor="project-title"
+              icon={<Type size={20} />}
+              required
+            >
+              {t(locale, "projectTitle")}
             </FieldLabel>
+
             <input
               id="project-title"
               className={inputClass}
@@ -366,31 +436,48 @@ export function ProjectForm({ project }: Props) {
               maxLength={180}
               value={title}
               onChange={(event) => setTitle(event.target.value)}
-              placeholder="e.g. Campus Resource Booking Platform"
+              placeholder={t(locale, "projectTitlePlaceholder")}
             />
-            <FieldHint>Use a clear, specific title that describes the project.</FieldHint>
+
+            <FieldHint>{t(locale, "projectTitleHint")}</FieldHint>
           </div>
 
           <div className="min-w-0">
-            <FieldLabel htmlFor="project-type" icon={<Layers3 size={15} />} required>
-              Project type
+            <FieldLabel
+              htmlFor="project-type"
+              icon={<Layers3 size={20} />}
+              required
+            >
+              {t(locale, "projectTypeLabel")}
             </FieldLabel>
+
             <select
               id="project-type"
               className={inputClass}
               name="projectType"
               value={projectType}
-              onChange={(event) => setProjectType(event.target.value as ProjectType)}
+              onChange={(event) =>
+                setProjectType(event.target.value as ProjectType)
+              }
             >
-              <option value="GRADUATION">Graduation project</option>
-              <option value="PRE_GRADUATION">Pre-graduation / semester</option>
+              <option value="GRADUATION">
+                {t(locale, "graduationProject")}
+              </option>
+
+              <option value="PRE_GRADUATION">
+                {t(locale, "preGraduationSemester")}
+              </option>
             </select>
           </div>
 
           <div className="min-w-0">
-            <FieldLabel htmlFor="project-supervisor" icon={<UserRound size={15} />}>
-              Supervisor name
+            <FieldLabel
+              htmlFor="project-supervisor"
+              icon={<UserRound size={20} />}
+            >
+              {t(locale, "supervisorName")}
             </FieldLabel>
+
             <input
               id="project-supervisor"
               className={inputClass}
@@ -398,16 +485,23 @@ export function ProjectForm({ project }: Props) {
               name="projectSupervisorName"
               maxLength={160}
               value={projectSupervisorName}
-              onChange={(event) => setProjectSupervisorName(event.target.value)}
-              placeholder="Supervisor name"
+              onChange={(event) =>
+                setProjectSupervisorName(event.target.value)
+              }
+              placeholder={t(locale, "supervisorName")}
             />
-            <FieldHint>Academic metadata; it does not need to be a user account.</FieldHint>
+
+            <FieldHint>{t(locale, "supervisorNameHint")}</FieldHint>
           </div>
 
           <div className="min-w-0">
-            <FieldLabel htmlFor="year-presentation" icon={<CalendarDays size={15} />}>
-              Presentation year / term
+            <FieldLabel
+              htmlFor="year-presentation"
+              icon={<CalendarDays size={20} />}
+            >
+              {t(locale, "presentationYearTerm")}
             </FieldLabel>
+
             <input
               id="year-presentation"
               className={inputClass}
@@ -415,17 +509,24 @@ export function ProjectForm({ project }: Props) {
               name="yearPresentation"
               maxLength={20}
               value={yearPresentation}
-              onChange={(event) => setYearPresentation(event.target.value)}
-              placeholder="e.g. 2026-1"
+              onChange={(event) =>
+                setYearPresentation(event.target.value)
+              }
+              placeholder="2026-1"
             />
-            <FieldHint>Format: 20yy-x, where x is 1–3.</FieldHint>
+
+            <FieldHint>{t(locale, "presentationYearHint")}</FieldHint>
           </div>
 
-
           <div className="min-w-0 md:col-span-2 xl:col-span-3">
-            <FieldLabel htmlFor="project-summary" icon={<AlignLeft size={15} />} required>
-              Short summary
+            <FieldLabel
+              htmlFor="project-summary"
+              icon={<AlignLeft size={20} />}
+              required
+            >
+              {t(locale, "shortSummary")}
             </FieldLabel>
+
             <textarea
               id="project-summary"
               className={textareaClass}
@@ -436,11 +537,15 @@ export function ProjectForm({ project }: Props) {
               rows={3}
               value={summary}
               onChange={(event) => setSummary(event.target.value)}
-              placeholder="What does the project do, who is it for, and why does it matter?"
+              placeholder={t(locale, "shortSummaryPlaceholder")}
             />
+
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <FieldHint>Shown on project cards. Aim for one to three sentences.</FieldHint>
-              <span className="text-xs tabular-nums text-muted-foreground">{summary.length}/500</span>
+              <FieldHint>{t(locale, "shortSummaryHint")}</FieldHint>
+
+              <span className="text-[15px] tabular-nums text-muted-foreground">
+                {summary.length}/500
+              </span>
             </div>
           </div>
         </div>
@@ -449,16 +554,21 @@ export function ProjectForm({ project }: Props) {
       {/* Academic narrative */}
       <SectionCard
         number="02"
-        eyebrow="Academic brief"
-        title="Project narrative"
-        description="Explain the project, the problem it addresses, the planned solution, and its intended outcomes."
-        icon={<FileText size={19} />}
+        eyebrow={t(locale, "academicBrief")}
+        title={t(locale, "narrative")}
+        description={t(locale, "narrativeDesc")}
+        icon={<FileText size={24} />}
       >
         <div className="grid min-w-0 grid-cols-1 gap-5 xl:grid-cols-2">
           <div className="min-w-0 xl:col-span-2">
-            <FieldLabel htmlFor="project-description" icon={<FileText size={15} />} required>
-              Description
+            <FieldLabel
+              htmlFor="project-description"
+              icon={<FileText size={20} />}
+              required
+            >
+              {t(locale, "descriptionLabel")}
             </FieldLabel>
+
             <textarea
               id="project-description"
               className={`${textareaClass} min-h-40`}
@@ -468,14 +578,19 @@ export function ProjectForm({ project }: Props) {
               rows={6}
               value={description}
               onChange={(event) => setDescription(event.target.value)}
-              placeholder="Describe the concept, intended users, context, and expected system behavior."
+              placeholder={t(locale, "descriptionPlaceholder")}
             />
           </div>
 
           <div className="min-w-0">
-            <FieldLabel htmlFor="problem-statement" icon={<AlertCircle size={15} />} required>
-              Problem statement
+            <FieldLabel
+              htmlFor="problem-statement"
+              icon={<AlertCircle size={20} />}
+              required
+            >
+              {t(locale, "problemStatement")}
             </FieldLabel>
+
             <textarea
               id="problem-statement"
               className={`${textareaClass} min-h-36`}
@@ -483,15 +598,22 @@ export function ProjectForm({ project }: Props) {
               rows={5}
               required
               value={problemStatement}
-              onChange={(event) => setProblemStatement(event.target.value)}
-              placeholder="What problem or unmet need does this project address?"
+              onChange={(event) =>
+                setProblemStatement(event.target.value)
+              }
+              placeholder={t(locale, "problemStatementPlaceholder")}
             />
           </div>
 
           <div className="min-w-0">
-            <FieldLabel htmlFor="proposed-solution" icon={<Lightbulb size={15} />} required>
-              Proposed solution
+            <FieldLabel
+              htmlFor="proposed-solution"
+              icon={<Lightbulb size={20} />}
+              required
+            >
+              {t(locale, "proposedSolution")}
             </FieldLabel>
+
             <textarea
               id="proposed-solution"
               className={`${textareaClass} min-h-36`}
@@ -499,15 +621,22 @@ export function ProjectForm({ project }: Props) {
               rows={5}
               required
               value={proposedSolution}
-              onChange={(event) => setProposedSolution(event.target.value)}
-              placeholder="Explain how the proposed system will address the problem."
+              onChange={(event) =>
+                setProposedSolution(event.target.value)
+              }
+              placeholder={t(locale, "proposedSolutionPlaceholder")}
             />
           </div>
 
           <div className="min-w-0 xl:col-span-2">
-            <FieldLabel htmlFor="project-objectives" icon={<Target size={15} />} required>
-              Objectives
+            <FieldLabel
+              htmlFor="project-objectives"
+              icon={<Target size={20} />}
+              required
+            >
+              {t(locale, "objectivesLabel")}
             </FieldLabel>
+
             <textarea
               id="project-objectives"
               className={textareaClass}
@@ -516,7 +645,7 @@ export function ProjectForm({ project }: Props) {
               required
               value={objectives}
               onChange={(event) => setObjectives(event.target.value)}
-              placeholder="Describe the outcomes the project should achieve. One objective per line works well."
+              placeholder={t(locale, "objectivesPlaceholder")}
             />
           </div>
         </div>
@@ -525,16 +654,20 @@ export function ProjectForm({ project }: Props) {
       {/* Operating context */}
       <SectionCard
         number="03"
-        eyebrow="Context and limits"
-        title="Users, resources, and constraints"
-        description="Capture the project's target audience and the conditions that shape its implementation."
-        icon={<Users size={19} />}
+        eyebrow={t(locale, "contextAndLimits")}
+        title={t(locale, "usersResourcesConstraints")}
+        description={t(locale, "contextDesc")}
+        icon={<Users size={24} />}
       >
         <div className="grid min-w-0 grid-cols-1 gap-5 xl:grid-cols-3">
           <div className="min-w-0">
-            <FieldLabel htmlFor="target-users" icon={<Users size={15} />}>
-              Target users
+            <FieldLabel
+              htmlFor="target-users"
+              icon={<Users size={20} />}
+            >
+              {t(locale, "targetUsers")}
             </FieldLabel>
+
             <textarea
               id="target-users"
               className={textareaClass}
@@ -544,15 +677,20 @@ export function ProjectForm({ project }: Props) {
               maxLength={200}
               value={targetUsers}
               onChange={(event) => setTargetUsers(event.target.value)}
-              placeholder="Students, faculty members, administrators..."
+              placeholder={t(locale, "targetUsersPlaceholder")}
             />
-            <FieldHint>Who will use or benefit from the project?</FieldHint>
+
+            <FieldHint>{t(locale, "targetUsersHint")}</FieldHint>
           </div>
 
           <div className="min-w-0">
-            <FieldLabel htmlFor="resources-details" icon={<Wrench size={15} />}>
-              Available resources
+            <FieldLabel
+              htmlFor="resources-details"
+              icon={<Wrench size={20} />}
+            >
+              {t(locale, "availableResources")}
             </FieldLabel>
+
             <textarea
               id="resources-details"
               className={textareaClass}
@@ -560,16 +698,23 @@ export function ProjectForm({ project }: Props) {
               rows={5}
               maxLength={300}
               value={availableResources}
-              onChange={(event) => setAvailableResources(event.target.value)}
-              placeholder="Existing APIs, devices, datasets, facilities..."
+              onChange={(event) =>
+                setAvailableResources(event.target.value)
+              }
+              placeholder={t(locale, "availableResourcesPlaceholder")}
             />
-            <FieldHint>Existing resources the team can rely on.</FieldHint>
+
+            <FieldHint>{t(locale, "availableResourcesHint")}</FieldHint>
           </div>
 
           <div className="min-w-0">
-            <FieldLabel htmlFor="project-constraints" icon={<ShieldAlert size={15} />}>
-              Constraints
+            <FieldLabel
+              htmlFor="project-constraints"
+              icon={<ShieldAlert size={20} />}
+            >
+              {t(locale, "constraints")}
             </FieldLabel>
+
             <textarea
               id="project-constraints"
               className={textareaClass}
@@ -579,9 +724,10 @@ export function ProjectForm({ project }: Props) {
               rows={5}
               value={constraints}
               onChange={(event) => setConstraints(event.target.value)}
-              placeholder="Time, budget, privacy, offline operation, hardware, or technical limits..."
+              placeholder={t(locale, "constraintsPlaceholder")}
             />
-            <FieldHint>Limitations or requirements that affect delivery.</FieldHint>
+
+            <FieldHint>{t(locale, "constraintsHint")}</FieldHint>
           </div>
         </div>
       </SectionCard>
@@ -589,19 +735,24 @@ export function ProjectForm({ project }: Props) {
       {/* Scope and stack */}
       <SectionCard
         number="04"
-        eyebrow="Boundaries"
-        title="Scope and technologies"
-        description="Enter one feature or technology per line. Scope boundaries help keep the project and AI suggestions realistic."
-        icon={<Target size={19} />}
+        eyebrow={t(locale, "boundaries")}
+        title={t(locale, "scopeAndTechnologies")}
+        description={t(locale, "scopeAndTechDesc")}
+        icon={<Target size={24} />}
       >
         <div className="grid min-w-0 grid-cols-1 gap-5 xl:grid-cols-2">
           <div className="min-w-0 rounded-xl border border-success/20 bg-success/[0.035] p-3 sm:p-4">
             <div className="mb-3 flex items-center justify-between gap-2">
-              <FieldLabel htmlFor="in-scope-features" icon={<CheckCircle2 size={15} />}>
-                Features in scope
+              <FieldLabel
+                htmlFor="in-scope-features"
+                icon={<CheckCircle2 size={20} />}
+              >
+                {t(locale, "featuresInScope")}
               </FieldLabel>
+
               <BadgeCount count={inScopeCount} />
             </div>
+
             <textarea
               id="in-scope-features"
               className={`${textareaClass} min-h-44`}
@@ -609,18 +760,24 @@ export function ProjectForm({ project }: Props) {
               rows={7}
               value={inScope}
               onChange={(event) => setInScope(event.target.value)}
-              placeholder={"Account login\nSearch and filtering\nUser dashboard"}
+              placeholder={t(locale, "featuresInScopePlaceholder")}
             />
-            <FieldHint>Features that the project is expected to deliver.</FieldHint>
+
+            <FieldHint>{t(locale, "featuresInScopeHint")}</FieldHint>
           </div>
 
           <div className="min-w-0 rounded-xl border border-border/70 bg-background/20 p-3 sm:p-4">
             <div className="mb-3 flex items-center justify-between gap-2">
-              <FieldLabel htmlFor="out-scope-features" icon={<X size={15} />}>
-                Features out of scope
+              <FieldLabel
+                htmlFor="out-scope-features"
+                icon={<X size={20} />}
+              >
+                {t(locale, "featuresOutScope")}
               </FieldLabel>
+
               <BadgeCount count={outScopeCount} />
             </div>
+
             <textarea
               id="out-scope-features"
               className={`${textareaClass} min-h-44`}
@@ -628,18 +785,24 @@ export function ProjectForm({ project }: Props) {
               rows={7}
               value={outScope}
               onChange={(event) => setOutScope(event.target.value)}
-              placeholder={"Payment processing\nNative mobile application\nExternal integrations"}
+              placeholder={t(locale, "featuresOutScopePlaceholder")}
             />
-            <FieldHint>Explicit exclusions help prevent scope creep.</FieldHint>
+
+            <FieldHint>{t(locale, "featuresOutScopeHint")}</FieldHint>
           </div>
 
           <div className="min-w-0 xl:col-span-2">
             <div className="mb-3 flex items-center justify-between gap-2">
-              <FieldLabel htmlFor="project-technologies" icon={<Code2 size={15} />}>
-                Technologies
+              <FieldLabel
+                htmlFor="project-technologies"
+                icon={<Code2 size={20} />}
+              >
+                {t(locale, "technologiesLabel")}
               </FieldLabel>
+
               <BadgeCount count={technologyCount} />
             </div>
+
             <textarea
               id="project-technologies"
               className={textareaClass}
@@ -647,9 +810,10 @@ export function ProjectForm({ project }: Props) {
               rows={4}
               value={technologies}
               onChange={(event) => setTechnologies(event.target.value)}
-              placeholder={"Next.js\nPostgreSQL\nPrisma"}
+              placeholder={t(locale, "technologiesPlaceholder")}
             />
-            <FieldHint>Enter one language, framework, platform, or tool per line.</FieldHint>
+
+            <FieldHint>{t(locale, "technologiesHint")}</FieldHint>
           </div>
         </div>
       </SectionCard>
@@ -657,21 +821,26 @@ export function ProjectForm({ project }: Props) {
       {/* Images */}
       <SectionCard
         number="05"
-        eyebrow="Visual references"
-        title="Project images"
-        description="Add screenshots, diagrams, mockups, or other images that help explain the project."
-        icon={<Sparkles size={19} />}
+        eyebrow={t(locale, "visualReferences")}
+        title={t(locale, "projectImages")}
+        description={t(locale, "projectImagesDesc")}
+        icon={<Sparkles size={24} />}
       >
         <div className="rounded-xl border border-dashed border-border/80 bg-background/25 p-4 sm:p-5">
-          <label htmlFor="project-images" className="block text-sm font-semibold">
-            Upload images
+          <label
+            htmlFor="project-images"
+            className="block text-lg font-semibold"
+          >
+            {t(locale, "uploadImages")}
           </label>
-          <p className="mt-1 text-xs leading-5 text-muted-foreground">
-            JPEG, PNG, WebP, or AVIF. Up to four images, 4 MB each.
+
+          <p className="mt-1 text-[15px] leading-5 text-muted-foreground">
+            {t(locale, "uploadImagesHint")}
           </p>
+
           <input
             id="project-images"
-            className="mt-4 block w-full min-w-0 cursor-pointer text-sm text-muted-foreground file:mr-3 file:rounded-lg file:border-0 file:bg-primary file:px-3 file:py-2 file:text-sm file:font-semibold file:text-primary-foreground hover:file:bg-primary/90"
+            className="mt-4 block w-full min-w-0 cursor-pointer text-lg text-muted-foreground file:mr-3 file:rounded-lg file:border-0 file:bg-primary file:px-3 file:py-2 file:text-lg file:font-semibold file:text-primary-foreground hover:file:bg-primary/90"
             type="file"
             name="images"
             accept="image/jpeg,image/png,image/webp,image/avif"
@@ -682,9 +851,12 @@ export function ProjectForm({ project }: Props) {
         {project && project.images.length > 0 && (
           <div className="mt-5">
             <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-              <h3 className="text-sm font-semibold">Current images</h3>
-              <span className="text-xs text-muted-foreground">
-                {project.images.length} attached
+              <h3 className="text-lg font-semibold">
+                {t(locale, "currentImages")}
+              </h3>
+
+              <span className="text-[15px] text-muted-foreground">
+                {project.images.length} {t(locale, "attachedCount")}
               </span>
             </div>
 
@@ -702,28 +874,29 @@ export function ProjectForm({ project }: Props) {
                       target="_blank"
                       rel="noreferrer"
                       className="block overflow-hidden rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-                      aria-label={`Open ${image.fileName ?? "project image"}`}
+                      aria-label={t(locale, "openProjectImage")}
                     >
                       <img
                         src={`/projects/${project.id}/images/${image.id}`}
-                        alt={image.fileName ?? "Project image"}
+                        alt={image.fileName ?? t(locale, "projectImage")}
                         loading="lazy"
                         className="aspect-[4/3] w-full object-cover"
                       />
                     </a>
 
                     <div className="flex min-w-0 items-center justify-between gap-2 px-1 pt-3">
-                      <p className="min-w-0 truncate text-xs text-muted-foreground">
-                        {image.fileName ?? "Project image"}
+                      <p className="min-w-0 truncate text-[15px] text-muted-foreground">
+                        {image.fileName ?? t(locale, "projectImage")}
                       </p>
+
                       <button
                         type="button"
                         onClick={() => handleDeleteImage(image.id)}
                         disabled={isPending}
-                        className="inline-flex shrink-0 items-center gap-1 rounded-md px-1.5 py-1 text-xs font-semibold text-destructive transition-colors hover:bg-destructive/10 disabled:opacity-50"
+                        className="inline-flex shrink-0 items-center gap-1 rounded-md px-1.5 py-1 text-[15px] font-semibold text-destructive transition-colors hover:bg-destructive/10 disabled:opacity-50"
                       >
                         <Trash2 size={13} />
-                        Remove
+                        {t(locale, "remove")}
                       </button>
                     </div>
                   </div>
@@ -737,11 +910,14 @@ export function ProjectForm({ project }: Props) {
       <div className="fixed inset-x-0 bottom-0 z-30 border-t border-border/70 bg-background/90 p-3 backdrop-blur-xl sm:px-5 lg:px-8 xl:px-10 2xl:px-12">
         <div className="mx-auto flex w-full min-w-0 max-w-none flex-col-reverse gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
           <div className="hidden min-w-0 sm:block">
-            <p className="truncate text-sm font-semibold">
-              {isEditing ? "Editing project brief" : "Creating project brief"}
+            <p className="truncate text-lg font-semibold">
+              {isEditing
+                ? t(locale, "editingProjectBrief")
+                : t(locale, "creatingProjectBrief")}
             </p>
-            <p className="text-xs text-muted-foreground">
-              Required fields are marked with an asterisk.
+
+            <p className="text-[15px] text-muted-foreground">
+              {t(locale, "requiredFieldsAsterisk")}
             </p>
           </div>
 
@@ -751,8 +927,9 @@ export function ProjectForm({ project }: Props) {
               disabled={isPending}
               className="min-w-0 flex-1 sm:flex-none"
             >
-              <Link href={cancelHref}>Cancel</Link>
+              <Link href={cancelHref}>{t(locale, "cancel")}</Link>
             </Button>
+
             <Button
               type="submit"
               disabled={isPending}
@@ -761,12 +938,14 @@ export function ProjectForm({ project }: Props) {
               {isPending ? (
                 <>
                   <Loader2 size={16} className="animate-spin" />
-                  Saving...
+                  {t(locale, "saving")}
                 </>
               ) : (
                 <>
                   <Save size={16} />
-                  {isEditing ? "Save changes" : "Create project"}
+                  {isEditing
+                    ? t(locale, "saveChanges")
+                    : t(locale, "createProject")}
                 </>
               )}
             </Button>
@@ -779,9 +958,8 @@ export function ProjectForm({ project }: Props) {
 
 function BadgeCount({ count }: { count: number }) {
   return (
-    <span className="inline-flex min-w-7 shrink-0 items-center justify-center rounded-full border border-border/70 bg-background/70 px-2 py-1 text-xs font-semibold tabular-nums text-muted-foreground">
+    <span className="inline-flex min-w-7 shrink-0 items-center justify-center rounded-full border border-border/70 bg-background/70 px-2 py-1 text-[15px] font-semibold tabular-nums text-muted-foreground">
       {count}
     </span>
   );
 }
-

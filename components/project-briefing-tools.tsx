@@ -13,13 +13,18 @@ import {
 
 import { Button } from "@/components/ui/button";
 import { notify } from "@/components/notificationToaster";
+import { t, type Locale } from "@/shared/i18n/dictionary";
 
 type PromptApiResponse = {
   prompt?: unknown;
   error?: unknown;
 };
 
-export function ProjectBriefingTools() {
+type Props = {
+  locale?: Locale;
+};
+
+export function ProjectBriefingTools({ locale='en' }: Props) {
   const [isCopying, setIsCopying] = useState(false);
   const [copied, setCopied] = useState(false);
 
@@ -44,21 +49,16 @@ export function ProjectBriefingTools() {
         throw new Error(
           typeof result.error === "string"
             ? result.error
-            : "Unable to retrieve the project briefing prompt.",
+            : t(locale, "projectBriefingPromptRetrievalError"),
         );
       }
 
-      if (
-        typeof result.prompt !== "string" ||
-        !result.prompt.trim()
-      ) {
-        throw new Error("The API returned an empty or invalid prompt.");
+      if (typeof result.prompt !== "string" || !result.prompt.trim()) {
+        throw new Error(t(locale, "projectBriefingInvalidPromptError"));
       }
 
       if (!navigator.clipboard?.writeText) {
-        throw new Error(
-          "Clipboard access is unavailable. Open the application over HTTPS or localhost and try again.",
-        );
+        throw new Error(t(locale, "projectBriefingClipboardUnavailableError"));
       }
 
       await navigator.clipboard.writeText(result.prompt);
@@ -66,16 +66,19 @@ export function ProjectBriefingTools() {
       setCopied(true);
 
       notify.success(
-        "Prompt copied",
-        "The project briefing prompt is ready to paste into your AI tool.",
+        t(locale, "projectBriefingPromptCopiedTitle"),
+        t(locale, "projectBriefingPromptCopiedDescription"),
       );
     } catch (error) {
       const message =
         error instanceof Error
           ? error.message
-          : "An unexpected error occurred.";
+          : t(locale, "unexpectedErrorTryAgain");
 
-      notify.error("Could not copy prompt", message);
+      notify.error(
+        t(locale, "projectBriefingCopyFailedTitle"),
+        message,
+      );
     } finally {
       setIsCopying(false);
     }
@@ -95,21 +98,21 @@ export function ProjectBriefingTools() {
           </span>
 
           <div className="min-w-0 flex-1">
-            <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-primary">
-              Project preparation
+            <p className="text-[16px] font-bold uppercase tracking-wide text-primary">
+              {t(locale, "projectBriefingPreparationLabel")}
             </p>
 
-            <h2 className="mt-1 break-words text-base font-bold tracking-tight sm:text-lg">
-              Project Brief Toolkit
+            <h2 className="mt-1 break-words text-lg font-bold tracking-tight sm:text-xl">
+              {t(locale, "projectBriefingToolkitTitle")}
             </h2>
 
-            <p className="mt-1 max-w-2xl text-sm leading-6 text-muted-foreground">
-              Turn any existing project documentation into a structured
-              academic brief, or download the template to prepare one manually.
+            <p className="mt-1 max-w-3xl text-lg leading-6 text-muted-foreground font-semibold">
+              {t(locale, "projectBriefingToolkitDescription")}
             </p>
           </div>
         </div>
-        <div className="max-md:flex-1 mt-5 grid min-w-0 grid-cols-1 gap-2 ">
+
+        <div className="max-md:flex-1 mt-5 grid min-w-0 grid-cols-1 gap-2">
           <Button
             type="button"
             onClick={handleCopyPrompt}
@@ -124,12 +127,12 @@ export function ProjectBriefingTools() {
               <ClipboardCopy size={16} />
             )}
 
-            <span>
+            <span className="text-[16px]">
               {isCopying
-                ? "Retrieving prompt..."
+                ? t(locale, "projectBriefingRetrievingPrompt")
                 : copied
-                  ? "Prompt copied"
-                  : "Copy Project Briefing Prompt"}
+                  ? t(locale, "projectBriefingPromptCopied")
+                  : t(locale, "projectBriefingCopyPromptButton")}
             </span>
           </Button>
 
@@ -144,12 +147,13 @@ export function ProjectBriefingTools() {
               className="flex items-center gap-2"
             >
               <Download size={16} />
-              <span>Download Project Brief Template</span>
+              <span className="text-[16px]">
+                {t(locale, "projectBriefingDownloadTemplateButton")}
+              </span>
             </a>
           </Button>
         </div>
       </div>
-
 
       <div
         className="mt-4 flex items-start gap-2 border-t border-border/60 pt-4"
@@ -158,12 +162,11 @@ export function ProjectBriefingTools() {
       >
         <FileText
           size={14}
-          className="mt-0.5 shrink-0 text-muted-foreground"
+          className="mt-0.5 shrink-0 text-muted-foreground font-semibold"
         />
-        <p className="text-xs leading-5 text-muted-foreground">
-          Use the prompt with your AI assistant to organize your project
-          information. The PDF provides a structured template for the
-          required project details.
+
+        <p className="text-[16px] leading-5 text-muted-foreground font-semibold">
+          {t(locale, "projectBriefingToolkitHint")}
         </p>
       </div>
     </section>

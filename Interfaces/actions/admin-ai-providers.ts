@@ -35,7 +35,6 @@ export async function saveAiProviderAction( payload: AiProviderConfigSaveInput, 
 
   try {
     const providers = await aiProviderConfigService.saveProvider(actor.user, parsed.data);
-  console.log("providers:  ", providers )
 
     revalidatePath("/admin/ai/providers");
     revalidatePath("/admin/ai");

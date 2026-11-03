@@ -12,6 +12,8 @@ import {
 import { requireUserForService } from "@/core/auth/session";
 import { aiProviderConfigService } from "@/modules/ai/services/ai-provider-config-service";
 import { AdminAiProviderManager } from "@/components/admin-ai-provider-manager";
+import { getCurrentApplicationLanguage } from "@/modules/translation/services/application-language.service";
+import { t } from "@/shared/i18n/dictionary";
 
 export default async function AdminAiProvidersPage() {
   const actor = await requireUserForService();
@@ -31,12 +33,14 @@ export default async function AdminAiProvidersPage() {
     );
   }
 
+  const locale = await getCurrentApplicationLanguage();
+
   if (actor.user.role !== "ADMIN") {
     return (
       <main className="mx-auto w-full max-w-5xl p-4 sm:p-8">
         <div className="alert alert-error" role="alert">
           <ShieldCheck className="size-5 shrink-0" aria-hidden="true" />
-          <span>Only administrators can manage AI providers.</span>
+          <span>{t(locale, "onlyAdminsManageAiProviders")}</span>
         </div>
       </main>
     );
@@ -55,11 +59,13 @@ export default async function AdminAiProvidersPage() {
         />
 
         <div className="relative flex min-w-0 flex-col gap-6 p-5 sm:p-8 lg:flex-row lg:items-end lg:justify-between">
-          <div className="min-w-0 space-y-4">
-            <div className="flex flex-wrap items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-base-content/60">
-              <span>Administration</span>
+          <div className="min-w-0 space-y-6">
+            <div className="flex flex-wrap items-center gap-2 text-xs font-semibold uppercase tracking-wide text-base-content/85">
+              <span>{t(locale, "adminBreadcrumb")}</span>
               <span aria-hidden="true">/</span>
-              <span className="text-primary">AI infrastructure</span>
+              <span className="text-primary">
+                {t(locale, "aiInfrastructureBreadcrumb")}
+              </span>
             </div>
 
             <div className="flex items-start gap-3 sm:gap-4">
@@ -67,43 +73,42 @@ export default async function AdminAiProvidersPage() {
                 <Bot className="size-6 sm:size-7" aria-hidden="true" />
               </div>
 
-              <div className="min-w-0 space-y-2">
+              <div className="min-w-0 space-y-4">
                 <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl lg:text-4xl">
-                  AI provider configuration
+                  {t(locale, "aiProviderConfigTitle")}
                 </h1>
-                <p className="max-w-3xl text-sm leading-6 text-base-content/70 sm:text-base">
-                  Manage the providers that power AI features, configure their
-                  connection settings, and control the order used when a
-                  provider fails.
+                <p className="max-w-4xl text-lg leading-6 text-base-content/85">
+                  {t(locale, "aiProviderConfigDesc")}
                 </p>
               </div>
             </div>
 
-            <div className="flex flex-wrap gap-x-4 gap-y-2 text-xs text-base-content/65 sm:text-sm">
+            <div className="flex flex-wrap gap-x-4 gap-y-2 text-xs text-base-content/85 sm:text-[16px]">
               <span className="inline-flex items-center gap-2">
                 <Workflow
-                  className="size-4 text-primary"
+                  className="size-5 text-primary"
                   aria-hidden="true"
                 />
-                Up to four configured providers
+                {t(locale, "upToFourProviders")}
               </span>
+
               <span className="inline-flex items-center gap-2">
                 <ShieldCheck
-                  className="size-4 text-primary"
+                  className="size-5 text-primary"
                   aria-hidden="true"
                 />
-                Saved API keys are not displayed
+                {t(locale, "savedApiKeysHidden")}
               </span>
             </div>
           </div>
 
           <Link
-            className="btn btn-outline btn-sm w-full shrink-0 gap-2 sm:w-fit"
+            className="btn btn-outline btn-sm w-full shrink-0 gap-2 sm:w-fit text-[15px]"
             href="/admin/ai/logs"
           >
-            <Activity className="size-4" aria-hidden="true" />
-            View AI logs
-            <ArrowUpRight className="size-4" aria-hidden="true" />
+            <Activity className="size-5" aria-hidden="true" />
+            {t(locale, "viewAiLogsButton")}
+            <ArrowUpRight className="size-5" aria-hidden="true" />
           </Link>
         </div>
       </header>
@@ -111,6 +116,7 @@ export default async function AdminAiProvidersPage() {
       <AdminAiProviderManager
         initialProviders={config.providers}
         initialAiEnabled={config.aiEnabled}
+        locale={locale}
       />
     </main>
   );

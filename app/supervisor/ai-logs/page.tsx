@@ -1,4 +1,4 @@
-
+// /supervisor/ai-logs/page.tsx
 "use client";
 
 import Link from "next/link";
@@ -221,30 +221,9 @@ export default function AdminAiLogsPage() {
       : null;
 
   return (
-    <main className="mx-auto min-w-0 max-w-screen-3xl space-y-8">
+    <main dir="ltr" className="mx-auto min-w-0 max-w-screen-3xl space-y-8">
       {/* Page header */}
       <header className="space-y-5 border-b border-border/70 pb-6 sm:pb-7">
-        {/* <nav
-          aria-label="Breadcrumb"
-          className="flex flex-wrap items-center gap-2 text-xs font-medium text-muted-foreground"
-        >
-          <Link
-            href="/admin/"
-            className="transition-colors hover:text-primary focus-visible:rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          >
-            Administration
-          </Link>
-          <span aria-hidden="true">/</span>
-          <Link
-            href="/admin/ai"
-            className="transition-colors hover:text-primary focus-visible:rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          >
-            AI service
-          </Link>
-          <span aria-hidden="true">/</span>
-          <span className="text-foreground">Execution logs</span>
-        </nav> */}
-
         <div className="flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
           <div className="min-w-0 space-y-3">
             <div className="flex items-center gap-3">

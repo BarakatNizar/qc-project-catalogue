@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState } from "react";
@@ -17,6 +16,8 @@ import { formatDate } from "@/shared/utils/format";
 import { ConfirmSubmitButton } from "@/components/forms/confirm-submit-button";
 import { notify } from "@/components/notificationToaster";
 import type { DeleteAiSuggestionActionPayload } from "@/shared/validation/ai-action";
+import { t, type Locale } from "@/shared/i18n/dictionary";
+import { ConfirmDialog } from "./confirm-dialog";
 
 type Suggestion = {
   id: string;
@@ -28,11 +29,13 @@ type Suggestion = {
 type SuggestionAdminListProps = {
   projectId: string;
   suggestions: Suggestion[];
+  locale: Locale;
 };
 
 export function SuggestionAdminList({
   projectId,
   suggestions: initialSuggestions,
+  locale,
 }: SuggestionAdminListProps) {
   const [suggestions, setSuggestions] = useState(initialSuggestions);
   const [deletingIds, setDeletingIds] = useState<Set<string>>(
@@ -44,7 +47,7 @@ export function SuggestionAdminList({
 
     setDeletingIds((current) => new Set(current).add(id));
 
-    const toastId = notify.loading("Deleting suggestion...");
+    const toastId = notify.loading(t(locale, "deletingSuggestion"));
 
     try {
       const payload: DeleteAiSuggestionActionPayload = {
@@ -57,7 +60,7 @@ export function SuggestionAdminList({
       notify.dismiss(toastId);
 
       if ("error" in result) {
-        notify.error("Unable to delete suggestion", result.error);
+        notify.error(t(locale, "unableToDeleteSuggestion"), result.error);
         return;
       }
 
@@ -66,15 +69,15 @@ export function SuggestionAdminList({
       );
 
       notify.success(
-        "Suggestion deleted",
-        "The shared suggestion has been removed.",
+        t(locale, "suggestionDeleted"),
+        t(locale, "sharedSuggestionRemoved"),
       );
     } catch (error) {
       console.error("Failed to delete AI suggestion:", error);
       notify.dismiss(toastId);
       notify.error(
-        "Network error",
-        "The suggestion could not be deleted. Please try again.",
+        t(locale, "networkError"),
+        t(locale, "suggestionDeleteNetworkError"),
       );
     } finally {
       setDeletingIds((current) => {
@@ -87,113 +90,133 @@ export function SuggestionAdminList({
 
   if (suggestions.length === 0) {
     return (
-      <div className="flex min-w-0 flex-col items-center rounded-xl border border-dashed border-border/70 bg-background/30 px-4 py-8 text-center">
-        <span className="grid size-11 place-items-center rounded-xl border border-primary/20 bg-primary/10 text-primary">
-          <MessageSquareText size={20} />
+      <div className="flex min-w-0 flex-col items-center rounded-2xl border border-dashed border-border/80 bg-background/40 p-6 text-center sm:p-8">
+        <span className="grid size-12 place-items-center rounded-2xl border border-primary/25 bg-primary/10 text-primary shadow-sm">
+          <MessageSquareText size={22} />
         </span>
 
-        <h3 className="mt-3 text-sm font-bold">
-          No shared suggestions
+        <h3 className="mt-4 text-base font-bold text-foreground sm:text-lg">
+          {t(locale, "noSharedSuggestions")}
         </h3>
 
-        <p className="mt-1 max-w-xs text-xs leading-5 text-muted-foreground">
-          Suggestions generated for this project will appear here. You can
-          review and remove them from the shared list.
+        <p className="mt-1.5 max-w-sm text-[16px] leading-relaxed text-muted-foreground sm:text-lg">
+          {t(locale, "noSharedSuggestionsDesc")}
         </p>
       </div>
     );
   }
 
   return (
-    <section className="min-w-0 space-y-3" aria-label="Manage AI suggestions">
-      {/* List summary */}
-      <div className="flex min-w-0 items-center justify-between gap-3 rounded-xl border border-primary/20 bg-primary/[0.05] p-3">
-        <div className="flex min-w-0 items-center gap-2.5">
-          <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-primary/10 text-primary">
-            <Sparkles size={16} />
+    <section
+      className="min-w-0 space-y-4"
+      aria-label={t(locale, "manageAiSuggestions")}
+    >
+      {/* List summary banner */}
+      <div className="flex min-w-0 items-center justify-between gap-3 rounded-2xl border border-primary/25 bg-primary/[0.06] p-4 shadow-sm">
+        <div className="flex min-w-0 items-center gap-3">
+          <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-primary/15 text-primary">
+            <Sparkles size={17} />
           </span>
 
-          <div className="min-w-0">
-            <p className="text-sm font-semibold">Shared ideas</p>
-            <p className="text-xs text-muted-foreground">
-              Visible in project suggestions
+          <div className="min-w-0 space-y-0.5">
+            <p className="text-lg font-bold text-foreground sm:text-base">
+              {t(locale, "sharedIdeas")}
+            </p>
+            <p className="text-[16px] text-muted-foreground sm:text-lg">
+              {t(locale, "visibleInProjectSuggestions")}
             </p>
           </div>
         </div>
 
-        <span className="shrink-0 rounded-lg border border-primary/20 bg-background/80 px-2.5 py-1 font-mono text-sm font-bold tabular-nums text-primary">
+        <span className="shrink-0 rounded-xl border border-primary/30 bg-background/90 px-3 py-1 font-mono text-base font-extrabold tabular-nums text-primary shadow-xs">
           {suggestions.length}
         </span>
       </div>
 
       {/* Suggestion cards */}
-      <ol className="space-y-2.5 overflow-y-auto max-h-[700px]">
+      <ol className="max-h-[700px] space-y-3 overflow-y-auto pr-1">
         {suggestions.map((suggestion, index) => {
           const isDeleting = deletingIds.has(suggestion.id);
 
           return (
             <li
               key={suggestion.id}
-              className="group min-w-0 overflow-hidden rounded-xl border border-border/70 bg-background/30 transition-colors hover:border-primary/25"
+              className="group min-w-0 overflow-hidden rounded-2xl border border-border/80 bg-card/60 transition-all duration-200 hover:border-primary/40 hover:shadow-md"
             >
-              <div className="flex min-w-0 items-start gap-3 p-3 sm:p-4">
-                <span className="grid size-8 shrink-0 place-items-center rounded-lg border border-primary/15 bg-primary/[0.08] font-mono text-xs font-bold text-primary">
-                  {String(index + 1).padStart(2, "0")}
-                </span>
-
-                <div className="min-w-0 flex-1">
-                  <h3 className="break-words text-sm font-semibold leading-5 [overflow-wrap:anywhere]">
-                    {suggestion.title?.trim() || "Untitled suggestion"}
-                  </h3>
-
-                  <p className="mt-1.5 text-[10px] leading-4 text-muted-foreground">
-                    Added {formatDate(suggestion.createdAt)}
-                  </p>
-                </div>
-
-                {/* Confirmation control retains the existing delete workflow. */}
-                <div className="relative z-10 shrink-0">
-                  <ConfirmSubmitButton
-                    onClick={() => handleDelete(suggestion.id)}
-                    confirmMessage="Permanently remove this shared suggestion? It will no longer be included in future AI context."
-                    aria-label={`Permanently remove ${suggestion.title || "suggestion"}`}
-                    title="Permanently remove suggestion"
-                    className="inline-flex size-9 items-center justify-center rounded-lg border border-border/70 bg-card text-muted-foreground transition-colors hover:border-destructive/30 hover:bg-destructive/10 hover:text-destructive disabled:pointer-events-none disabled:opacity-50"
-                  >
-                    {isDeleting ? (
-                      <Loader2 size={16} className="animate-spin" />
-                    ) : (
-                      <Trash2 size={16} />
-                    )}
-                  </ConfirmSubmitButton>
-                </div>
-              </div>
-
-              {/* Expandable content: collapsed by default */}
-              <details className="group/details border-t border-border/50">
-                <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 text-xs font-medium text-muted-foreground transition-colors hover:bg-primary/[0.035] hover:text-foreground [&::-webkit-details-marker]:hidden">
-                  <span className="inline-flex min-w-0 items-center gap-2">
-                    <MessageSquareText
-                      size={14}
-                      className="shrink-0 text-primary"
-                    />
-                    <span className="group-open/details:hidden">
-                      Read suggestion details
-                    </span>
-                    <span className="hidden group-open/details:inline">
-                      Hide suggestion details
-                    </span>
+              <details className="group/details">
+                <summary className="flex cursor-pointer list-none items-start gap-3.5 p-4 sm:p-5 [&::-webkit-details-marker]:hidden">
+                  <span className="grid size-8 shrink-0 place-items-center rounded-xl border border-primary/20 bg-primary/10 font-mono text-[16px] font-bold text-primary shadow-2xs">
+                    {String(index + 1).padStart(2, "0")}
                   </span>
 
-                  <ChevronDown
-                    size={15}
-                    className="shrink-0 transition-transform group-open/details:rotate-180"
-                    aria-hidden="true"
-                  />
+                  <div className="min-w-0 flex-1 space-y-1">
+                    <h3 className="break-words text-base font-bold leading-snug text-foreground [overflow-wrap:anywhere] sm:text-lg">
+                      {suggestion.title?.trim() ||
+                        t(locale, "untitledSuggestion")}
+                    </h3>
+
+                    <p className="text-[16px] text-muted-foreground">
+                      {t(locale, "suggestionAdded")}{" "}
+                      <span className="font-medium text-foreground/80">
+                        {formatDate(suggestion.createdAt)}
+                      </span>
+                    </p>
+
+                    <div className="pt-2">
+                      <span className="inline-flex items-center gap-1.5 text-[16px] font-semibold text-primary transition-colors hover:text-primary/80">
+                        <MessageSquareText size={13} className="shrink-0" />
+                        <span className="group-open/details:hidden">
+                          {t(locale, "readSuggestionDetails")}
+                        </span>
+                        <span className="hidden group-open/details:inline">
+                          {t(locale, "hideSuggestionDetails")}
+                        </span>
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 shrink-0">
+                    {/* Confirmation control retains existing delete workflow */}
+                    <div className="relative z-10">
+                      <ConfirmDialog
+                        onCertain={() => handleDelete(suggestion.id)}
+                        style="warn"
+                        title={t(
+                          locale,
+                          "permanentlyRemoveSuggestionConfirm",
+                        )}
+                        // t(locale, "permanentlyRemoveSuggestion")
+                        // t(
+                        //   locale,
+                        //   "permanentlyRemoveSuggestionAria",
+                        // ).replace(
+                        //   "{title}",
+                        //   suggestion.title || t(locale, "suggestion"),
+                        // )
+
+                        triggerChildren={
+                          <div className="inline-flex size-9 items-center justify-center rounded-xl border border-border/80 bg-background text-muted-foreground transition-all hover:border-destructive/40 hover:bg-destructive/10 hover:text-destructive disabled:pointer-events-none disabled:opacity-50"   >
+
+                            {isDeleting ? (
+                              <Loader2 size={16} className="animate-spin" />
+                            ) : (
+                              <Trash2 size={16} />
+                            )}
+                          </div>
+                        }
+                      />
+                    </div>
+
+                    <ChevronDown
+                      size={18}
+                      className="shrink-0 text-muted-foreground transition-transform duration-200 group-open/details:rotate-180"
+                      aria-hidden="true"
+                    />
+                  </div>
                 </summary>
 
-                <div className="border-t border-border/50 bg-card/40 px-4 py-4">
-                  <p className="whitespace-pre-line break-words text-sm leading-6 text-foreground/85 [overflow-wrap:anywhere]">
+                <div className="border-t border-border/70 bg-background/60 px-4 py-4 sm:px-6 sm:py-5">
+                  <p className="whitespace-pre-line break-words text-[16px] sm:text-lg leading-relaxed text-foreground/90 [overflow-wrap:anywhere]">
                     {suggestion.content}
                   </p>
                 </div>
@@ -203,24 +226,25 @@ export function SuggestionAdminList({
         })}
       </ol>
 
-      {/* Permanent deletion information */}
-      <div className="flex min-w-0 items-start gap-2 rounded-xl border border-amber-500/20 bg-amber-500/[0.045] p-3">
+      {/* Permanent deletion information note */}
+      <div className="flex min-w-0 items-start gap-3 rounded-2xl border border-amber-500/25 bg-amber-500/[0.05] p-4">
         <AlertTriangle
-          size={15}
+          size={16}
           className="mt-0.5 shrink-0 text-amber-600 dark:text-amber-400"
         />
 
-        <p className="text-xs leading-5 text-muted-foreground">
-          Removing a suggestion permanently removes it from the shared list
-          and future AI context. Its parent AI response remains available
-          for history.
+        <p className="text-[16px] leading-relaxed text-muted-foreground sm:text-lg">
+          {t(locale, "manageSuggestionsWarning")}
         </p>
       </div>
 
       {deletingIds.size > 0 && (
-        <p className="flex items-center gap-2 text-xs text-muted-foreground" role="status">
+        <p
+          className="flex items-center gap-2 text-[16px] text-muted-foreground sm:text-lg"
+          role="status"
+        >
           <CheckCircle2 size={14} className="shrink-0 text-primary" />
-          Updating the shared suggestions list...
+          {t(locale, "updatingSharedSuggestions")}
         </p>
       )}
     </section>

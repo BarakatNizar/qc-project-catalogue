@@ -19,6 +19,7 @@ import { requestAiSuggestionsAction } from "@/Interfaces/actions/ai.actions";
 import { Alert } from "@/components/ui/alert";
 import { formatDate } from "@/shared/utils/format";
 import { Button } from "@/components/ui/button";
+import { t, type Locale } from "@/shared/i18n/dictionary";
 
 type Suggestion = {
   id: string;
@@ -32,6 +33,7 @@ type AiSuggestionsPanelProps = {
   initialSuggestions: Suggestion[];
   canRequest: boolean;
   aiEnabled: boolean;
+  locale: Locale;
 };
 
 export function AiSuggestionsPanel({
@@ -39,6 +41,7 @@ export function AiSuggestionsPanel({
   initialSuggestions,
   canRequest,
   aiEnabled,
+  locale,
 }: AiSuggestionsPanelProps) {
   const [suggestions, setSuggestions] = useState(initialSuggestions);
   const [error, setError] = useState<string | null>(null);
@@ -62,7 +65,7 @@ export function AiSuggestionsPanel({
       const incomingSuggestions: Suggestion[] =
         result.data.suggestions.map((item) => ({
           id: item.id,
-          title: item.title?.trim() || "Untitled suggestion",
+          title: item.title?.trim() || t(locale, "untitledSuggestion"),
           content: item.content,
           createdAt: item.createdAt,
         }));
@@ -83,12 +86,17 @@ export function AiSuggestionsPanel({
 
       if (addedCount > 0) {
         setNotice(
-          `Added ${addedCount} new ${addedCount === 1 ? "suggestion" : "suggestions"}. The ideas are now shared with everyone viewing this project.`,
+          t(locale, "aiSuggestionsAddedNotice")
+            .replace("{count}", String(addedCount))
+            .replace(
+              "{plural}",
+              addedCount === 1
+                ? t(locale, "suggestion")
+                : t(locale, "suggestions"),
+            ),
         );
       } else {
-        setNotice(
-          "The AI did not return any new suggestions. Existing suggestions have been preserved.",
-        );
+        setNotice(t(locale, "aiNoNewSuggestionsNotice"));
       }
     });
   }
@@ -111,24 +119,24 @@ export function AiSuggestionsPanel({
           </span>
 
           <div className="min-w-0 flex-1">
-            <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-primary">
-              AI-assisted discovery
+            <p className="text-[16px] font-bold uppercase tracking-wide text-primary">
+              {t(locale, "aiAssistedDiscovery")}
             </p>
 
             <h2
               id="ai-suggestions-title"
-              className="mt-1 break-words text-base font-bold tracking-tight sm:text-lg"
+              className="mt-1 break-words text-base font-bold tracking-tight text-lg sm:text-lg"
             >
-              Feature suggestions
+              {t(locale, "featureSuggestions")}
             </h2>
 
-            <p className="mt-1 text-xs leading-5 text-muted-foreground">
-              Explore possible enhancements grounded in this project's brief.
+            <p className="mt-1 text-[16px] leading-6 opacity-85">
+              {t(locale, "featureSuggestionsDesc")}
             </p>
           </div>
 
-          <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-border/70 bg-background/70 px-2.5 py-1 text-xs font-semibold tabular-nums">
-            <Sparkles size={12} className="text-primary" />
+          <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-border/70 bg-background/70 px-2.5 py-1 text-[16px] font-semibold tabular-nums">
+            <Sparkles size={17} className="text-primary" />
             {suggestions.length}
           </span>
         </div>
@@ -142,12 +150,14 @@ export function AiSuggestionsPanel({
             className="mt-4 min-h-11 w-full gap-2 rounded-xl"
           >
             {isPending ? (
-              <Loader2 size={16} className="animate-spin" />
+              <Loader2 size={20} className="animate-spin" />
             ) : (
-              <Sparkles size={16} />
+              <Sparkles size={20} />
             )}
 
-            {isPending ? "Generating ideas..." : "Suggest new features"}
+            {isPending
+              ? t(locale, "generatingIdeas")
+              : t(locale, "suggestNewFeatures")}
           </Button>
         )}
 
@@ -155,11 +165,10 @@ export function AiSuggestionsPanel({
           <div className="mt-4 flex items-start gap-2 rounded-xl border border-border/60 bg-background/40 p-3">
             <LockKeyhole
               size={15}
-              className="mt-0.5 shrink-0 text-muted-foreground"
+              className="mt-0.5 shrink-0 opacity-85"
             />
-            <p className="text-xs leading-5 text-muted-foreground">
-              AI suggestions are available for viewing. Your current
-              permissions do not allow generating new suggestions.
+            <p className="text-[16px] leading-6 opacity-85">
+              {t(locale, "aiSuggestionsViewOnlyNotice")}
             </p>
           </div>
         )}
@@ -168,9 +177,8 @@ export function AiSuggestionsPanel({
           <Alert type="info">
             <span className="flex items-start gap-2">
               <LockKeyhole size={15} className="mt-0.5 shrink-0" />
-              <span className="text-sm leading-5">
-                AI generation is currently disabled by the administrator.
-                Existing suggestions remain available.
+              <span className="text-lg leading-6">
+                {t(locale, "aiGenerationDisabledNotice")}
               </span>
             </span>
           </Alert>
@@ -184,7 +192,9 @@ export function AiSuggestionsPanel({
             <Alert type="error">
               <span className="flex items-start gap-2">
                 <AlertCircle size={15} className="mt-0.5 shrink-0" />
-                <span className="break-words text-sm leading-5">{error}</span>
+                <span className="break-words text-lg leading-6">
+                  {error}
+                </span>
               </span>
             </Alert>
           )}
@@ -193,7 +203,9 @@ export function AiSuggestionsPanel({
             <Alert type="success">
               <span className="flex items-start gap-2">
                 <CheckCircle2 size={15} className="mt-0.5 shrink-0" />
-                <span className="break-words text-sm leading-5">{notice}</span>
+                <span className="break-words text-lg leading-6">
+                  {notice}
+                </span>
               </span>
             </Alert>
           )}
@@ -204,15 +216,17 @@ export function AiSuggestionsPanel({
       <div className="space-y-3 p-3 sm:p-4">
         <div className="flex min-w-0 items-center justify-between gap-3 px-1">
           <div className="min-w-0">
-            <h3 className="text-sm font-bold">Shared ideas</h3>
-            <p className="mt-0.5 text-xs text-muted-foreground">
-              Open an idea to read the full description.
+            <h3 className="text-lg font-bold">
+              {t(locale, "sharedIdeas")}
+            </h3>
+            <p className="mt-0.5 text-[16px] opacity-85">
+              {t(locale, "openIdeaToReadDescription")}
             </p>
           </div>
 
           {suggestions.length > 0 && (
-            <span className="shrink-0 text-xs text-muted-foreground">
-              {suggestions.length} total
+            <span className="shrink-0 text-[16px] opacity-85">
+              {suggestions.length} {t(locale, "total")}
             </span>
           )}
         </div>
@@ -223,14 +237,14 @@ export function AiSuggestionsPanel({
               <Lightbulb size={20} />
             </span>
 
-            <h3 className="mt-3 text-sm font-bold">
-              No suggestions yet
+            <h3 className="mt-3 text-lg font-bold">
+              {t(locale, "noSuggestionsYet")}
             </h3>
 
-            <p className="mt-1 max-w-xs text-xs leading-5 text-muted-foreground">
+            <p className="mt-1 max-w-xs text-[16px] leading-6 opacity-85">
               {canRequest && aiEnabled
-                ? "Generate ideas to explore additional features and improvements for this project."
-                : "There are no shared feature suggestions available yet."}
+                ? t(locale, "generateIdeasEmptyDesc")
+                : t(locale, "noSharedFeatureSuggestionsDesc")}
             </p>
 
             {canRequest && aiEnabled && (
@@ -238,55 +252,56 @@ export function AiSuggestionsPanel({
                 type="button"
                 onClick={requestSuggestions}
                 disabled={isPending}
-                className="mt-4 inline-flex min-h-9 items-center justify-center gap-2 rounded-lg border border-primary/25 bg-primary/[0.06] px-3 py-2 text-xs font-semibold text-primary transition-colors hover:bg-primary/10 disabled:opacity-50"
+                className="mt-4 inline-flex min-h-9 items-center justify-center gap-2 rounded-lg border border-primary/25 bg-primary/[0.06] px-3 py-2 text-[16px] font-semibold text-primary transition-colors hover:bg-primary/10 disabled:opacity-50"
               >
                 {isPending ? (
                   <Loader2 size={14} className="animate-spin" />
                 ) : (
                   <Plus size={14} />
                 )}
-                Generate first ideas
+                {t(locale, "generateFirstIdeas")}
               </button>
             )}
           </div>
         ) : (
-          <ol className="space-y-2 overflow-y-auto max-h-[700px]">
+          <ol className="max-h-[700px] space-y-2 overflow-y-auto">
             {suggestions.map((suggestion, index) => (
               <li key={suggestion.id} className="min-w-0">
                 <details className="group min-w-0 overflow-hidden rounded-xl border border-border/60 bg-background/25 transition-colors open:border-primary/30 open:bg-background/45">
                   <summary className="flex cursor-pointer list-none items-start gap-3 p-3.5 [&::-webkit-details-marker]:hidden sm:p-4">
-                    <span className="grid size-7 shrink-0 place-items-center rounded-lg border border-primary/15 bg-primary/[0.08] font-mono text-xs font-bold text-primary">
+                    <span className="grid size-7 shrink-0 place-items-center rounded-lg border border-primary/15 bg-primary/[0.08] font-mono text-[16px] font-bold text-primary">
                       {String(index + 1).padStart(2, "0")}
                     </span>
 
                     <span className="min-w-0 flex-1">
-                      <span className="block break-words text-sm font-semibold leading-5 text-foreground [overflow-wrap:anywhere]">
-                        {suggestion.title || "Untitled suggestion"}
+                      <span className="block break-words text-lg font-semibold leading-6 text-foreground [overflow-wrap:anywhere]">
+                        {suggestion.title || t(locale, "untitledSuggestion")}
                       </span>
 
-                      <span className="mt-1.5 block text-[10px] text-muted-foreground">
-                        Added {formatDate(suggestion.createdAt)}
+                      <span className="mt-1.5 block text-[14px] opacity-85">
+                        {t(locale, "suggestionAdded")}{" "}
+                        {formatDate(suggestion.createdAt)}
                       </span>
 
-                      <span className="mt-2 inline-flex items-center gap-1.5 text-xs font-medium text-primary">
+                      <span className="mt-2 inline-flex items-center gap-1.5 text-[16px] font-medium text-primary">
                         <span className="group-open:hidden">
-                          Read full idea
+                          {t(locale, "readFullIdea")}
                         </span>
                         <span className="hidden group-open:inline">
-                          Hide details
+                          {t(locale, "hideSuggestionDetails")}
                         </span>
                       </span>
                     </span>
 
                     <ChevronDown
-                      size={16}
+                      size={20}
                       aria-hidden="true"
-                      className="mt-0.5 shrink-0 text-muted-foreground transition-transform duration-200 group-open:rotate-180"
+                      className="mt-0.5 shrink-0 opacity-85 transition-transform duration-200 group-open:rotate-180"
                     />
                   </summary>
 
                   <div className="border-t border-border/60 px-4 py-4 sm:px-5">
-                    <p className="whitespace-pre-line break-words text-sm leading-6 text-foreground/85 [overflow-wrap:anywhere]">
+                    <p className="whitespace-pre-line break-words text-lg leading-6 text-foreground/85 [overflow-wrap:anywhere]">
                       {suggestion.content}
                     </p>
                   </div>
@@ -306,9 +321,8 @@ export function AiSuggestionsPanel({
               size={15}
               className="mt-0.5 shrink-0 animate-spin text-primary"
             />
-            <p className="text-xs leading-5 text-muted-foreground">
-              The configured AI provider is reviewing this project brief.
-              Existing suggestions are preserved while the request runs.
+            <p className="text-[16px] leading-6 opacity-85">
+              {t(locale, "aiProviderReviewingBrief")}
             </p>
           </div>
         )}
@@ -319,9 +333,8 @@ export function AiSuggestionsPanel({
               size={13}
               className="mt-0.5 shrink-0 text-primary"
             />
-            <p className="text-[11px] leading-5 text-muted-foreground">
-              AI output is validated before storage. Generation can fail if
-              providers are unavailable or return duplicate ideas.
+            <p className="text-[14px] leading-6 opacity-85">
+              {t(locale, "aiSuggestionValidationNotice")}
             </p>
           </div>
         )}

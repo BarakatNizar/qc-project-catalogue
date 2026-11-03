@@ -6,6 +6,7 @@ import { requireUserForService } from "@/core/auth/session";
 import { toSafeMessage } from "@/core/errors/app-error";
 import { projectService } from "@/modules/project/services/project-service";
 import type { ProjectSearchPayload } from "@/shared/validation/project";
+import { getCurrentApplicationLanguage } from "@/modules/translation/services/application-language.service";
 
 export async function listProjectAction( search: ProjectSearchPayload = {}, page?: number, pageSize?: number ) {
   const actor = await requireUserForService();
@@ -15,9 +16,10 @@ export async function listProjectAction( search: ProjectSearchPayload = {}, page
     return { error: actor.error };
   }
   const { user } = actor;
+  const targetLanguage = await getCurrentApplicationLanguage();
 
   try {
-    return await projectService.listProject(user, search, page, pageSize);
+    return await projectService.listProjects(user, search, page, pageSize, targetLanguage);
   } catch (error) {
     return { error: toSafeMessage(error) };
   }
@@ -31,10 +33,10 @@ export async function getProjectByIdAction(projectId: string) {
     return { error: actor.error };
   }
   const { user } = actor;
-
+  const targetLanguage = await getCurrentApplicationLanguage();
   try {
-    const {data} =  await projectService.getProjectById(user, projectId);
-    return {data, user}
+    const response =  await projectService.getProjectById(user, projectId, targetLanguage );
+    return {...response, user}
   } catch (error) {
     return { error: toSafeMessage(error) };
   }

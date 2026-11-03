@@ -3,6 +3,7 @@ import { notify } from './notificationToaster'
 import { deleteProjectAction,  } from '@/Interfaces/actions/projects.actions'
 import { useRouter } from 'next/navigation'
 import { ConfirmSubmitButton } from './forms/confirm-submit-button';
+import { ConfirmDialog } from './confirm-dialog';
 
 type Props = {
     projectId: string,
@@ -34,13 +35,17 @@ const DeleteProjectButton = ({ projectId }: Props) => {
 
     return (
         <div>
-            <ConfirmSubmitButton
-              className="rounded-xl px-3.5 py-1.5 text-xs font-semibold text-destructive hover:bg-destructive/10 transition-colors"
-              confirmMessage="Permanently delete this project and all its features, images, AI responses, and suggestions?"
-                onClick={()=>handleDeleteProject()}
-            >
-              Delete project
-            </ConfirmSubmitButton>
+            <ConfirmDialog 
+            onCertain={()=>handleDeleteProject()}
+            title="Permanently delete this project and all its features, images, AI responses, and suggestions?"
+style='danger'
+triggerChildren={
+    <div className="rounded-xl px-3.5 py-1.5 text-xs font-semibold text-destructive hover:bg-destructive/10 transition-colors" >
+        Delete project
+
+    </div>
+}
+/>
           </div>
     )
 }

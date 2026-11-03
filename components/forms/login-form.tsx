@@ -16,8 +16,13 @@ import { Button } from "@/components/ui/button";
 import { notify } from "../notificationToaster";
 import type { LoginPayload } from "@/shared/validation/user";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
+import { t, type Locale } from "@/shared/i18n/dictionary";
 
-export function LoginForm() {
+type Props = {
+  locale: Locale;
+};
+
+export function LoginForm({ locale }: Props) {
   const router = useRouter();
 
   const [loginId, setLoginId] = useState("");
@@ -31,12 +36,12 @@ export function LoginForm() {
     if (pending) return;
 
     if (!loginId.trim()) {
-      notify.system("Insert Your Login Id");
+      notify.system(t(locale, "loginMissingLoginId"));
       return;
     }
 
     if (!password) {
-      notify.system("Insert Your Password");
+      notify.system(t(locale, "loginMissingPassword"));
       return;
     }
 
@@ -44,7 +49,7 @@ export function LoginForm() {
 
     try {
       setPending(true);
-      toastId = notify.loading("Logging in...");
+      toastId = notify.loading(t(locale, "loginLoggingIn"));
 
       const payload: LoginPayload = {
         loginId,
@@ -54,14 +59,14 @@ export function LoginForm() {
       const loggedIn = await loginAction(payload);
 
       if ("error" in loggedIn) {
-        notify.error("Error", loggedIn.error);
+        notify.error(t(locale, "loginErrorTitle"), loggedIn.error);
         return;
       }
 
-      notify.success("Welcome Sir!");
+      notify.success(t(locale, "loginWelcomeMessage"));
       router.replace(loggedIn.redirect);
     } catch (error) {
-      notify.error("Network Error");
+      notify.error(t(locale, "loginNetworkError"));
       console.error(error);
     } finally {
       if (toastId !== undefined) {
@@ -80,29 +85,41 @@ export function LoginForm() {
     >
       <Card>
         <CardHeader>
-          <CardTitle>Quick Fill-In</CardTitle>
+          <CardTitle>{t(locale, "loginQuickFillTitle")}</CardTitle>
         </CardHeader>
+
         <CardContent className="space-x-4">
-          <button type="button" className="btn btn-sm btn-primary"
-          onClick={()=>{
-            setLoginId("admin");
-            setPassword("adminadmin12")
-          }}>
-            Admin
-            </button>
-          <button type="button" className="btn btn-sm btn-primary"
-          onClick={()=>{
-            setLoginId("123456789");
-            setPassword("123456789")
-          }}>
-            Supervisor
+          <button
+            type="button"
+            className="btn btn-sm btn-primary"
+            onClick={() => {
+              setLoginId("admin");
+              setPassword("adminadmin12");
+            }}
+          >
+            {t(locale, "loginAdminDemo")}
           </button>
-          <button type="button" className="btn btn-sm btn-primary"
-          onClick={()=>{
-            setLoginId("987654321");
-            setPassword("987654321")
-          }}>
-            Student
+
+          <button
+            type="button"
+            className="btn btn-sm btn-primary"
+            onClick={() => {
+              setLoginId("123456789");
+              setPassword("123456789");
+            }}
+          >
+            {t(locale, "loginSupervisorDemo")}
+          </button>
+
+          <button
+            type="button"
+            className="btn btn-sm btn-primary"
+            onClick={() => {
+              setLoginId("987654321");
+              setPassword("987654321");
+            }}
+          >
+            {t(locale, "loginStudentDemo")}
           </button>
         </CardContent>
       </Card>
@@ -113,7 +130,7 @@ export function LoginForm() {
           htmlFor="loginId"
           className="block text-xs font-semibold tracking-wide text-foreground"
         >
-          Login ID
+          {t(locale, "loginIdLabel")}
         </label>
 
         <div className="relative flex min-h-12 items-center rounded-xl border border-border bg-background transition-colors duration-200 focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20">
@@ -122,6 +139,7 @@ export function LoginForm() {
             size={17}
             className="pointer-events-none absolute start-3.5 shrink-0 text-muted-foreground"
           />
+
           <input
             id="loginId"
             name="loginId"
@@ -132,7 +150,7 @@ export function LoginForm() {
             autoFocus
             required
             disabled={pending}
-            placeholder="Enter your login ID"
+            placeholder={t(locale, "loginIdPlaceholder")}
             className="min-w-0 w-full bg-transparent py-3 ps-10 pe-3 text-sm text-foreground outline-none placeholder:text-muted-foreground/60 disabled:cursor-not-allowed disabled:opacity-60"
           />
         </div>
@@ -144,7 +162,7 @@ export function LoginForm() {
           htmlFor="password"
           className="block text-xs font-semibold tracking-wide text-foreground"
         >
-          Password
+          {t(locale, "loginPasswordLabel")}
         </label>
 
         <div className="relative flex min-h-12 items-center rounded-xl border border-border bg-background transition-colors duration-200 focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20">
@@ -163,7 +181,7 @@ export function LoginForm() {
             autoComplete="current-password"
             required
             disabled={pending}
-            placeholder="Enter your password"
+            placeholder={t(locale, "loginPasswordPlaceholder")}
             className="min-w-0 w-full bg-transparent py-3 ps-10 pe-12 text-sm text-foreground outline-none placeholder:text-muted-foreground/60 disabled:cursor-not-allowed disabled:opacity-60"
           />
 
@@ -171,7 +189,11 @@ export function LoginForm() {
             type="button"
             onClick={() => setShowPassword((visible) => !visible)}
             disabled={pending}
-            aria-label={showPassword ? "Hide password" : "Show password"}
+            aria-label={
+              showPassword
+                ? t(locale, "loginHidePassword")
+                : t(locale, "loginShowPassword")
+            }
             aria-pressed={showPassword}
             className="absolute end-2 grid size-8 place-items-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 disabled:cursor-not-allowed disabled:opacity-50"
           >
@@ -188,10 +210,10 @@ export function LoginForm() {
         {pending ? (
           <>
             <Loader2 size={17} className="animate-spin" />
-            <span>Signing in...</span>
+            <span>{t(locale, "loginSigningIn")}</span>
           </>
         ) : (
-          "Sign in"
+          t(locale, "loginSignInButton")
         )}
       </Button>
     </form>

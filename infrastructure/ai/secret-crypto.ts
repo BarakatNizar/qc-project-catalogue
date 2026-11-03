@@ -24,7 +24,7 @@ export function encryptAiSecret(plainText: string): string {
 try {
   const iv = randomBytes(12);
   const cipher = createCipheriv(CIPHER, getEncryptionKey(), iv);
-  console.log("cipher:  ", cipher )
+  // console.log("cipher:  ", cipher )
   const ciphertext = Buffer.concat([cipher.update(plainText, "utf8"), cipher.final()]);
   const tag = cipher.getAuthTag();
 

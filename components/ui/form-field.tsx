@@ -3,11 +3,11 @@ import type { InputHTMLAttributes, ReactNode  } from "react";
 export function FormField({ label, name, hint, children }: { label: string; name: string; hint?: string; children: ReactNode }) {
   return (
     <div className="space-y-1.5">
-      <label className="font-mono text-[14px] font-bold uppercase tracking-wider text-muted-foreground" htmlFor={name}>
+      <label className="font-mono text-[16px] font-bold uppercase font-semibold text-muted-foreground" htmlFor={name}>
         {label}
       </label>
       {children}
-      {hint && <p className="text-[14px] leading-relaxed text-muted-foreground/70">{hint}</p>}
+      {hint && <p className="text-[15px] leading-relaxed text-muted-foreground/70">{hint}</p>}
     </div>
   );
 }

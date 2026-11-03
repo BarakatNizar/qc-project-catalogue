@@ -1,7 +1,10 @@
 
+// /admin/supervisors/page.tsx
+
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react"; import Link from "next/link";
+import { useCallback, useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import {
   ArrowLeft,
   ArrowRight,
@@ -35,15 +38,17 @@ import { PageHeading } from "@/components/ui/page-heading";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/confirm-dialog";
+import { t, type Locale } from "@/shared/i18n/dictionary";
+import { APPLICATION_LANGUAGE_COOKIE } from "@/modules/translation/constants/language.constants";
 
 const PAGE_SIZE = 10;
 
-function getErrorMessage(error: unknown): string {
+function getErrorMessage(error: unknown, locale: Locale): string {
   if (error instanceof Error && error.message.trim()) {
     return error.message;
   }
 
-  return "An unexpected error occurred. Please try again.";
+  return t(locale, "unexpectedErrorTryAgain");
 }
 
 function getInitials(name: string): string {
@@ -57,14 +62,14 @@ function getInitials(name: string): string {
     .toUpperCase();
 }
 
-function formatCreatedDate(value: string | Date): string {
+function formatCreatedDate(value: string | Date, locale: Locale): string {
   const date = new Date(value);
 
   if (Number.isNaN(date.getTime())) {
-    return "Date unavailable";
+    return t(locale, "dateUnavailable");
   }
 
-  return new Intl.DateTimeFormat("en-GB", {
+  return new Intl.DateTimeFormat(locale === "ar" ? "ar" : "en-GB", {
     day: "numeric",
     month: "short",
     year: "numeric",
@@ -72,6 +77,18 @@ function formatCreatedDate(value: string | Date): string {
 }
 
 export default function SupervisorsPage() {
+  const [locale, setLocale] = useState<Locale>("en");
+
+  // Read the application language from the qc_locale cookie.
+  useEffect(() => {
+    const languageCookie = document.cookie
+      .split("; ")
+      .find((cookie) => cookie.startsWith("qc_locale"));
+    // console.log(document)
+    const cookieValue = languageCookie?.split("=")[1];
+    setLocale(cookieValue === "ar" ? "ar" : "en");
+  }, []);
+
   const [initialLoading, setInitialLoading] = useState(true);
   const [initialError, setInitialError] = useState<string | null>(null);
 
@@ -119,7 +136,10 @@ export default function SupervisorsPage() {
           if (isInitial) {
             setInitialError(result.error);
           } else {
-            notify.error("Unable to load supervisors", result.error);
+            notify.error(
+              t(locale, "unableToLoadSupervisorsError"),
+              result.error,
+            );
           }
 
           return;
@@ -133,12 +153,12 @@ export default function SupervisorsPage() {
           return;
         }
 
-        const message = getErrorMessage(error);
+        const message = getErrorMessage(error, locale);
 
         if (isInitial) {
           setInitialError(message);
         } else {
-          notify.error("Unable to load supervisors", message);
+          notify.error(t(locale, "unableToLoadSupervisorsError"), message);
         }
       } finally {
         if (requestId === requestIdRef.current) {
@@ -147,7 +167,7 @@ export default function SupervisorsPage() {
         }
       }
     },
-    [],
+    [locale],
   );
 
   // Load the initial directory and fetch whenever the settled query or page changes.
@@ -202,13 +222,16 @@ export default function SupervisorsPage() {
       const result = await createSupervisorAction(payload);
 
       if ("error" in result) {
-        notify.error("Failed to create supervisor", result.error);
+        notify.error(
+          t(locale, "failedToCreateSupervisorError"),
+          result.error,
+        );
         return;
       }
 
       notify.success(
-        "Supervisor account created",
-        "Credentials have been successfully initialized.",
+        t(locale, "supervisorAccountCreatedSuccessTitle"),
+        t(locale, "supervisorAccountCreatedSuccessDesc"),
       );
 
       setName("");
@@ -218,7 +241,10 @@ export default function SupervisorsPage() {
 
       await loadDirectory(searchQuery.trim(), currentPage);
     } catch (error) {
-      notify.error("Failed to create supervisor", getErrorMessage(error));
+      notify.error(
+        t(locale, "failedToCreateSupervisorError"),
+        getErrorMessage(error, locale),
+      );
     } finally {
       setIsMutating(false);
     }
@@ -232,18 +258,24 @@ export default function SupervisorsPage() {
       const result = await deleteSupervisorAction(supervisorId);
 
       if ("error" in result) {
-        notify.error("Failed to delete supervisor", result.error);
+        notify.error(
+          t(locale, "failedToDeleteSupervisorError"),
+          result.error,
+        );
         return;
       }
 
       notify.success(
-        "Supervisor account removed",
-        "Students remain and their supervisor association is cleared.",
+        t(locale, "deleteSupervisorSuccessTitle"),
+        t(locale, "deleteSupervisorSuccessDesc"),
       );
 
       await loadDirectory(searchQuery.trim(), currentPage);
     } catch (error) {
-      notify.error("Failed to delete supervisor", getErrorMessage(error));
+      notify.error(
+        t(locale, "failedToDeleteSupervisorError"),
+        getErrorMessage(error, locale),
+      );
     } finally {
       setIsMutating(false);
     }
@@ -253,7 +285,7 @@ export default function SupervisorsPage() {
     return (
       <main
         className="flex min-h-80 items-center justify-center px-4 py-12"
-        aria-label="Loading supervisor directory"
+        aria-label={t(locale, "loadingSupervisorDirectory")}
         aria-busy="true"
       >
         <div className="flex flex-col items-center gap-4 text-center">
@@ -261,9 +293,11 @@ export default function SupervisorsPage() {
             <Loader2 className="size-7 animate-spin" aria-hidden="true" />
           </span>
           <div>
-            <p className="font-semibold">Loading supervisor directory</p>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Retrieving supervisor accounts and pagination details.
+            <p className="font-semibold">
+              {t(locale, "loadingSupervisorDirectory")}
+            </p>
+            <p className="mt-1 text-lg text-muted-foreground font-semibold">
+              {t(locale, "retrievingSupervisorAccountsDesc")}
             </p>
           </div>
         </div>
@@ -278,9 +312,9 @@ export default function SupervisorsPage() {
   return (
     <main className="min-w-0 space-y-6 sm:space-y-8">
       <PageHeading
-        eyebrow="Access management"
-        title="Supervisors"
-        description="Create and maintain QC Supervisor accounts. Every Supervisor can manage all students and all project briefs."
+        eyebrow={t(locale, "accessManagementEyebrow")}
+        title={t(locale, "supervisorsTitle")}
+        description={t(locale, "supervisorsPageDesc")}
       />
 
       {/* Page context */}
@@ -290,8 +324,8 @@ export default function SupervisorsPage() {
             <Users className="size-5" aria-hidden="true" />
           </span>
           <div className="min-w-0">
-            <p className="text-xs text-muted-foreground">
-              Supervisor accounts
+            <p className="text-[15px] text-muted-foreground font-semibold">
+              {t(locale, "supervisorAccountsMetric")}
             </p>
             <p className="mt-1 text-xl font-semibold tabular-nums">
               {totalCount}
@@ -304,8 +338,12 @@ export default function SupervisorsPage() {
             <ShieldCheck className="size-5" aria-hidden="true" />
           </span>
           <div className="min-w-0">
-            <p className="text-xs text-muted-foreground">Account management</p>
-            <p className="mt-1 text-sm font-semibold">Administrator controlled</p>
+            <p className="text-[15px] text-muted-foreground font-semibold">
+              {t(locale, "accountManagementMetric")}
+            </p>
+            <p className="mt-1 text-lg font-semibold">
+              {t(locale, "administratorControlled")}
+            </p>
           </div>
         </div>
 
@@ -314,15 +352,19 @@ export default function SupervisorsPage() {
             <Search className="size-5" aria-hidden="true" />
           </span>
           <div className="min-w-0">
-            <p className="text-xs text-muted-foreground">Directory view</p>
-            <p className="mt-1 text-sm font-semibold">
-              {searchQuery.trim() ? "Search results" : "All supervisors"}
+            <p className="text-[15px] text-muted-foreground font-semibold">
+              {t(locale, "directoryViewMetric")}
+            </p>
+            <p className="mt-1 text-lg font-semibold">
+              {searchQuery.trim()
+                ? t(locale, "searchResultsView")
+                : t(locale, "allSupervisorsView")}
             </p>
           </div>
         </div>
       </section>
 
-      <div className="grid min-w-0 grid-cols-1 items-start gap-5 xl:grid-cols-[minmax(0,1fr)_360px] xl:gap-6">
+      <div className="grid min-w-0 grid-cols-1 items-start gap-5 xl:grid-cols-[minmax(0,1fr)_460px] xl:gap-6">
         {/* Supervisor directory */}
         <section
           aria-labelledby="supervisor-directory-heading"
@@ -336,15 +378,18 @@ export default function SupervisorsPage() {
                     id="supervisor-directory-heading"
                     className="text-lg font-semibold tracking-tight"
                   >
-                    Supervisor directory
+                    {t(locale, "supervisorDirectoryTitle")}
                   </h2>
-                  <span className="rounded-full border border-border bg-muted/50 px-2.5 py-1 text-xs font-medium tabular-nums text-muted-foreground">
-                    {totalCount} {totalCount === 1 ? "account" : "accounts"}
+                  <span className="rounded-full border border-border bg-muted/50 px-2.5 py-1 text-[15px] font-medium tabular-nums text-muted-foreground font-semibold">
+                    {totalCount}{" "}
+                    {t(
+                      locale,
+                      totalCount === 1 ? "accountSingular" : "accountPlural",
+                    )}
                   </span>
                 </div>
-                <p className="mt-1 text-sm leading-5 text-muted-foreground">
-                  Search accounts by supervisor name or login ID, then manage
-                  individual records.
+                <p className="mt-1 text-lg leading-5 text-muted-foreground font-semibold">
+                  {t(locale, "supervisorDirectoryDesc")}
                 </p>
               </div>
             </div>
@@ -352,41 +397,41 @@ export default function SupervisorsPage() {
             <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-center">
               <label className="relative block min-w-0 flex-1">
                 <span className="sr-only">
-                  Search supervisors by name or login ID
+                  {t(locale, "searchByNameOrLoginIdPlaceholder")}
                 </span>
                 <Search
-                  className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
+                  className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground font-semibold"
                   aria-hidden="true"
                 />
                 <input
                   type="search"
                   value={searchQuery}
                   onChange={(event) => handleSearchChange(event.target.value)}
-                  placeholder="Search by name or login ID..."
+                  placeholder={t(locale, "searchByNameOrLoginIdPlaceholder")}
                   maxLength={160}
-                  className="h-11 w-full min-w-0 rounded-xl border border-border/80 bg-background pl-10 pr-10 text-sm outline-none transition placeholder:text-muted-foreground/80 focus:border-primary/60 focus:ring-2 focus:ring-primary/15"
+                  className="h-11 w-full min-w-0 rounded-xl border border-border/80 bg-background pl-10 pr-10 text-lg outline-none transition placeholder:text-muted-foreground font-semibold/80 focus:border-primary/60 focus:ring-2 focus:ring-primary/15"
                 />
                 {searchQuery ? (
                   <button
                     type="button"
-                    aria-label="Clear supervisor search"
+                    aria-label={t(locale, "clearSupervisorSearchAria")}
                     onClick={() => handleSearchChange("")}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 rounded-md p-1 text-muted-foreground transition hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 rounded-md p-1 text-muted-foreground font-semibold transition hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
                   >
                     <X className="size-4" aria-hidden="true" />
                   </button>
                 ) : null}
               </label>
 
-              <span className="shrink-0 text-xs text-muted-foreground sm:text-right">
-                {PAGE_SIZE} accounts per page
+              <span className="shrink-0 text-[15px] text-muted-foreground font-semibold sm:text-right">
+                {PAGE_SIZE} {t(locale, "accountsPerPage")}
               </span>
             </div>
           </div>
 
           {isRefreshing ? (
             <div
-              className="flex items-center gap-2 border-b border-primary/10 bg-primary/5 px-4 py-3 text-sm text-muted-foreground sm:px-6"
+              className="flex items-center gap-2 border-b border-primary/10 bg-primary/5 px-4 py-3 text-lg text-muted-foreground font-semibold sm:px-6"
               role="status"
               aria-live="polite"
             >
@@ -394,7 +439,7 @@ export default function SupervisorsPage() {
                 className="size-4 animate-spin text-primary"
                 aria-hidden="true"
               />
-              Updating directory…
+              {t(locale, "updatingDirectory")}
             </div>
           ) : null}
 
@@ -409,7 +454,7 @@ export default function SupervisorsPage() {
                     <article className="flex min-w-0 flex-col gap-4 p-4 transition-colors hover:bg-muted/20 sm:p-5 lg:flex-row lg:items-center lg:justify-between lg:gap-5">
                       <div className="flex min-w-0 items-start gap-3.5">
                         <span
-                          className="flex size-11 shrink-0 items-center justify-center rounded-2xl border border-primary/15 bg-primary/10 text-xs font-bold tracking-wide text-primary"
+                          className="flex size-11 shrink-0 items-center justify-center rounded-2xl border border-primary/15 bg-primary/10 text-[15px] font-bold tracking-wide text-primary"
                           aria-hidden="true"
                         >
                           {getInitials(supervisor.name) || "S"}
@@ -417,11 +462,11 @@ export default function SupervisorsPage() {
 
                         <div className="min-w-0 flex-1 space-y-2">
                           <div className="min-w-0">
-                            <h3 className="break-words text-sm font-semibold leading-5">
+                            <h3 className="break-words text-lg font-semibold leading-5">
                               {supervisor.name}
                             </h3>
-                            <p className="mt-1 break-words text-xs leading-5 text-muted-foreground">
-                              Login ID:{" "}
+                            <p className="mt-1 break-words text-[15px] leading-5 text-muted-foreground font-semibold">
+                              {t(locale, "loginIdPrefix")}
                               <span className="font-medium text-foreground/80">
                                 {supervisor.loginId}
                               </span>
@@ -429,7 +474,7 @@ export default function SupervisorsPage() {
                           </div>
 
                           {supervisor.email ? (
-                            <p className="flex min-w-0 items-start gap-1.5 break-words text-xs leading-5 text-muted-foreground">
+                            <p className="flex min-w-0 items-start gap-1.5 break-words text-[15px] leading-5 text-muted-foreground font-semibold">
                               <Mail
                                 className="mt-0.5 size-3.5 shrink-0"
                                 aria-hidden="true"
@@ -439,17 +484,18 @@ export default function SupervisorsPage() {
                               </span>
                             </p>
                           ) : (
-                            <p className="text-xs text-muted-foreground/70">
-                              No email address provided
+                            <p className="text-[15px] text-muted-foreground font-semibold">
+                              {t(locale, "noEmailProvidedText")}
                             </p>
                           )}
 
-                          <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                          <p className="flex items-center gap-1.5 text-[15px] text-muted-foreground font-semibold">
                             <CalendarDays
                               className="size-3.5 shrink-0"
                               aria-hidden="true"
                             />
-                            Created {formatCreatedDate(supervisor.createdAt)}
+                            {t(locale, "createdDatePrefix")}
+                            {formatCreatedDate(supervisor.createdAt, locale)}
                           </p>
                         </div>
                       </div>
@@ -457,25 +503,32 @@ export default function SupervisorsPage() {
                       <div className="flex w-full shrink-0 flex-wrap gap-2 border-t border-border/60 pt-3 sm:justify-end lg:w-auto lg:border-t-0 lg:pt-0">
                         <Link
                           href={`/admin/supervisors/${supervisor.id}`}
-                          aria-label={`Edit ${supervisor.name}`}
-                          className="inline-flex min-h-9 flex-1 items-center justify-center rounded-xl border border-border bg-background px-3 py-2 text-xs font-semibold transition hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary sm:flex-none"
+                          aria-label={`${t(locale, "editDetailsButton")} ${supervisor.name}`}
+                          className="inline-flex min-h-9 flex-1 items-center justify-center rounded-xl border border-border bg-background px-3 py-2 text-[15px] font-semibold transition hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary sm:flex-none"
                         >
-                          Edit details
+                          {t(locale, "editDetailsButton")}
                         </Link>
 
                         <ConfirmDialog
-                          title="Permanently delete this Supervisor account?" style="warn" onCertain={() => handleDeleteSupervisor(supervisor.id)}
-                          triggerChildren={isMutating ? (
-                            <Loader2
-                              className="size-4 animate-spin"
-                              aria-hidden="true"
-                            />
-                          ) : (
-                            <Trash2
-                              className="size-5 hover:scale-[1.1] duration-200 text-warning"
-                              aria-hidden="true"
-                            />
-                          )} />
+                          title={t(locale, "deleteSupervisorConfirmTitle")}
+                          style="warn"
+                          onCertain={() =>
+                            handleDeleteSupervisor(supervisor.id)
+                          }
+                          triggerChildren={
+                            isMutating ? (
+                              <Loader2
+                                className="size-4 animate-spin"
+                                aria-hidden="true"
+                              />
+                            ) : (
+                              <Trash2
+                                className="size-5 text-warning duration-200 hover:scale-[1.1]"
+                                aria-hidden="true"
+                              />
+                            )
+                          }
+                        />
                       </div>
                     </article>
                   </li>
@@ -487,13 +540,13 @@ export default function SupervisorsPage() {
               <EmptyState
                 title={
                   searchQuery.trim()
-                    ? "No supervisors match your search"
-                    : "No supervisors found"
+                    ? t(locale, "noMatchingSupervisors")
+                    : t(locale, "noSupervisorsFound")
                 }
                 description={
                   searchQuery.trim()
-                    ? "Try a different name or login ID, or clear your search to view the full directory."
-                    : "Create a supervisor account using the form to get started."
+                    ? t(locale, "noMatchingSupervisorsDesc")
+                    : t(locale, "noSupervisorsFoundDesc")
                 }
               />
               {searchQuery.trim() ? (
@@ -506,7 +559,7 @@ export default function SupervisorsPage() {
                     className="rounded-xl"
                   >
                     <X className="size-4" aria-hidden="true" />
-                    Clear search
+                    {t(locale, "clearSearchButton")}
                   </Button>
                 </div>
               ) : null}
@@ -516,15 +569,15 @@ export default function SupervisorsPage() {
           {/* Pagination */}
           {pagination && pagination.totalPages > 1 ? (
             <nav
-              aria-label="Supervisor directory pagination"
+              aria-label={t(locale, "supervisorDirectoryPaginationAria")}
               className="flex flex-col gap-3 border-t border-border/70 bg-muted/20 p-4 sm:flex-row sm:items-center sm:justify-between sm:px-5"
             >
-              <p className="text-center text-xs text-muted-foreground sm:text-left">
-                Page{" "}
+              <p className="text-center text-[15px] text-muted-foreground font-semibold sm:text-left">
+                {t(locale, "pageIndicator")}{" "}
                 <span className="font-semibold text-foreground">
                   {pagination.currentPage}
                 </span>{" "}
-                of{" "}
+                {t(locale, "ofIndicator")}{" "}
                 <span className="font-semibold text-foreground">
                   {pagination.totalPages}
                 </span>
@@ -535,27 +588,33 @@ export default function SupervisorsPage() {
                   type="button"
                   variant="outline"
                   size="sm"
-                  disabled={!pagination.hasPreviousPage || isRefreshing || isMutating}
+                  disabled={
+                    !pagination.hasPreviousPage ||
+                    isRefreshing ||
+                    isMutating
+                  }
                   onClick={() =>
                     handlePageChange(pagination.currentPage - 1)
                   }
                   className="min-w-24 flex-1 rounded-xl sm:flex-none"
                 >
                   <ArrowLeft className="size-4" aria-hidden="true" />
-                  Previous
+                  {t(locale, "previousPageButton")}
                 </Button>
 
                 <Button
                   type="button"
                   variant="outline"
                   size="sm"
-                  disabled={!pagination.hasNextPage || isRefreshing || isMutating}
+                  disabled={
+                    !pagination.hasNextPage || isRefreshing || isMutating
+                  }
                   onClick={() =>
                     handlePageChange(pagination.currentPage + 1)
                   }
                   className="min-w-24 flex-1 rounded-xl sm:flex-none"
                 >
-                  Next
+                  {t(locale, "nextPageButton")}
                   <ArrowRight className="size-4" aria-hidden="true" />
                 </Button>
               </div>
@@ -579,11 +638,10 @@ export default function SupervisorsPage() {
                     id="create-supervisor-heading"
                     className="text-lg font-semibold tracking-tight"
                   >
-                    Create supervisor
+                    {t(locale, "createSupervisorCardTitle")}
                   </h2>
-                  <p className="mt-1 text-sm leading-5 text-muted-foreground">
-                    Set up a new supervisor account with its own login
-                    credentials.
+                  <p className="mt-1 text-lg leading-5 text-muted-foreground font-semibold">
+                    {t(locale, "createSupervisorCardDesc")}
                   </p>
                 </div>
               </div>
@@ -595,20 +653,19 @@ export default function SupervisorsPage() {
                   className="mt-0.5 size-4 shrink-0 text-primary"
                   aria-hidden="true"
                 />
-                <p className="text-xs leading-5 text-muted-foreground">
-                  Supervisors can manage all students and all project briefs.
-                  Share initial credentials securely with the intended
-                  account holder.
+                <p className="text-[15px] leading-5 text-muted-foreground font-semibold">
+                  {t(locale, "supervisorPermissionsNotice")}
                 </p>
               </div>
+
               <div className="min-w-0 space-y-4">
                 {/* Name */}
                 <div className="space-y-2">
                   <label
                     htmlFor="supervisor-name"
-                    className="text-sm font-medium"
+                    className="text-lg font-medium"
                   >
-                    Full name *
+                    {t(locale, "fullNameRequiredLabel")}
                   </label>
                   <input
                     id="supervisor-name"
@@ -618,49 +675,52 @@ export default function SupervisorsPage() {
                     minLength={2}
                     maxLength={160}
                     autoComplete="name"
-                    placeholder="Supervisor name"
+                    placeholder={t(locale, "supervisorNamePlaceholder")}
                     value={name}
                     onChange={(event) => setName(event.target.value)}
                     disabled={isMutating}
-                    className="h-11 w-full min-w-0 rounded-xl border border-border/80 bg-background px-3 text-sm outline-none transition placeholder:text-muted-foreground/80 focus:border-primary/60 focus:ring-2 focus:ring-primary/15 disabled:cursor-not-allowed disabled:opacity-50"
+                    className="h-11 w-full min-w-0 rounded-xl border border-border/80 bg-background px-3 text-md outline-none transition placeholder:text-muted-foreground font-semibold/80 focus:border-primary/60 focus:ring-2 focus:ring-primary/15 disabled:cursor-not-allowed disabled:opacity-50"
                   />
                 </div>
+
                 {/* Login Id */}
                 <div className="space-y-2">
                   <label
                     htmlFor="supervisor-login-id"
-                    className="text-sm font-medium"
+                    className="text-lg font-medium"
                   >
-                    Login ID *
+                    {t(locale, "loginIdRequiredLabel")}
                   </label>
-                  <p className="text-xs text-muted-foreground">
-                    The identifier the supervisor will use to sign in.
+                  <p className="text-[15px] text-muted-foreground font-semibold">
+                    {t(locale, "loginIdHelperText")}
                   </p>
                   <input
                     id="supervisor-login-id"
+                  dir="ltr"
                     name="loginId"
                     type="text"
                     required
                     minLength={3}
                     maxLength={120}
                     autoComplete="off"
-                    placeholder="e.g. 202110878"
+                    placeholder={t(locale, "loginIdPlaceholderExample")}
                     value={loginId}
                     onChange={(event) => setLoginId(event.target.value)}
                     disabled={isMutating}
-                    className="h-11 w-full min-w-0 rounded-xl border border-border/80 bg-background px-3 text-sm outline-none transition placeholder:text-muted-foreground/80 focus:border-primary/60 focus:ring-2 focus:ring-primary/15 disabled:cursor-not-allowed disabled:opacity-50"
+                    className="h-11 w-full min-w-0 rounded-xl border border-border/80 bg-background px-3 text-md outline-none transition placeholder:text-muted-foreground font-semibold/80 focus:border-primary/60 focus:ring-2 focus:ring-primary/15 disabled:cursor-not-allowed disabled:opacity-50"
                   />
                 </div>
+
                 {/* Password */}
                 <div className="space-y-2">
                   <label
                     htmlFor="supervisor-password"
-                    className="text-sm font-medium"
+                    className="text-lg font-medium"
                   >
-                    Temporary password *
+                    {t(locale, "temporaryPasswordRequiredLabel")}
                   </label>
-                  <p className="text-xs text-muted-foreground">
-                    Use at least 9 characters. QC does not automatically generate or email passwords.
+                  <p className="text-[15px] text-muted-foreground font-semibold">
+                    {t(locale, "temporaryPasswordHelperText")}
                   </p>
                   <input
                     id="supervisor-password"
@@ -670,53 +730,52 @@ export default function SupervisorsPage() {
                     minLength={9}
                     maxLength={128}
                     autoComplete="new-password"
-                    placeholder="Enter a temporary password"
+                    placeholder={t(locale, "temporaryPasswordPlaceholderText")}
                     value={password}
                     onChange={(event) => setPassword(event.target.value)}
                     disabled={isMutating}
-                    className="h-11 w-full min-w-0 rounded-xl border border-border/80 bg-background px-3 text-sm outline-none transition placeholder:text-muted-foreground/80 focus:border-primary/60 focus:ring-2 focus:ring-primary/15 disabled:cursor-not-allowed disabled:opacity-50"
+                    className="h-11 w-full min-w-0 rounded-xl border border-border/80 bg-background px-3 text-md outline-none transition placeholder:text-muted-foreground font-semibold/80 focus:border-primary/60 focus:ring-2 focus:ring-primary/15 disabled:cursor-not-allowed disabled:opacity-50"
                   />
                 </div>
+
                 {/* Email */}
                 <div className="space-y-2">
                   <label
                     htmlFor="supervisor-email"
-                    className="text-sm font-medium"
+                    className="text-lg font-medium"
                   >
-                    Email address
+                    {t(locale, "emailAddressLabel")}
                   </label>
-                  <p className="text-xs text-muted-foreground">
-                    Optional. No email delivery is implied by entering an address.
+                  <p className="text-[15px] text-muted-foreground font-semibold">
+                    {t(locale, "emailAddressHelperText")}
                   </p>
                   <input
+                  dir="ltr"
                     id="supervisor-email"
                     name="email"
                     type="email"
                     autoComplete="email"
-                    placeholder="name@university.edu"
+                    placeholder={t(locale, "emailAddressPlaceholderExample")}
                     value={email}
                     onChange={(event) => setEmail(event.target.value)}
                     disabled={isMutating}
-                    className="h-11 w-full min-w-0 rounded-xl border border-border/80 bg-background px-3 text-sm outline-none transition placeholder:text-muted-foreground/80 focus:border-primary/60 focus:ring-2 focus:ring-primary/15 disabled:cursor-not-allowed disabled:opacity-50"
+                    className="h-11 w-full min-w-0 rounded-xl border border-border/80 bg-background px-3 text-md outline-none transition placeholder:text-muted-foreground font-semibold/80 focus:border-primary/60 focus:ring-2 focus:ring-primary/15 disabled:cursor-not-allowed disabled:opacity-50"
                   />
                 </div>
 
-                <div className="flex items-start gap-2 border-t border-border/70 pt-4 text-xs leading-5 text-muted-foreground">
+                <div className="flex items-start gap-2 border-t border-border/70 pt-4 text-[15px] leading-5 text-muted-foreground font-semibold">
                   <Clock3
                     className="mt-0.5 size-3.5 shrink-0"
                     aria-hidden="true"
                   />
-                  <p>
-                    Verify the login ID and share the initial password
-                    securely after the account has been created.
-                  </p>
+                  <p>{t(locale, "verifyLoginIdSecurityNotice")}</p>
                 </div>
 
                 <Button
                   type="button"
                   disabled={isMutating}
                   onClick={() => void handleCreateSupervisor()}
-                  className="w-full rounded-xl font-semibold"
+                  className="w-full rounded-xl font-semibold text-md"
                 >
                   {isMutating ? (
                     <Loader2
@@ -726,7 +785,9 @@ export default function SupervisorsPage() {
                   ) : (
                     <Plus className="size-4" aria-hidden="true" />
                   )}
-                  {isMutating ? "Processing…" : "Create supervisor account"}
+                  {isMutating
+                    ? t(locale, "processingButton")
+                    : t(locale, "createSupervisorAccountButton")}
                 </Button>
               </div>
             </div>

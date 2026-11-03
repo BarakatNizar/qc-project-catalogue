@@ -42,13 +42,13 @@ export function ConfirmDialog({
     return (
         <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger>{triggerChildren}</DialogTrigger>
-            <DialogContent className="w-[calc(100%-2rem)] max-w-md overflow-hidden rounded-2xl border-border/70 p-0">
+            <DialogContent className="sm:max-w-md max-w-md overflow-hidden rounded-2xl border-border/70 p-0">
                 <div
                     className={`h-1.5 w-full ${isDanger ? "bg-destructive" : "bg-amber-500"
                         }`}
                 />
 
-                <div className="space-y-5 p-6">
+                <div className="space-y-10 p-6">
                     <DialogHeader className="gap-4 text-left">
                         <div
                             className={`flex size-12 items-center justify-center rounded-xl ${isDanger
@@ -63,11 +63,11 @@ export function ConfirmDialog({
                             )}
                         </div>
 
-                        <DialogTitle className="text-lg font-semibold tracking-tight">
+                        <DialogTitle className="text-xl font-semibold tracking-tight">
                             {title}
                         </DialogTitle>
 
-                        <DialogDescription className="text-sm leading-6">
+                        <DialogDescription className="text-lg leading-6">
                             {isDanger
                                 ? "This action may have serious consequences. Review your decision before continuing."
                                 : "Please review this action carefully before continuing."}

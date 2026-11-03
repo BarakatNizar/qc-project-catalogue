@@ -1,4 +1,6 @@
 
+// /admin/supervisors/[supervisorId]/page.tsx
+
 "use client";
 
 import { useState, useEffect, use } from "react";
@@ -24,7 +26,6 @@ import ErrorState from "@/components/ErrorState";
 import { PageHeading } from "@/components/ui/page-heading";
 import { FormField, TextInput } from "@/components/ui/form-field";
 import { Button } from "@/components/ui/button";
-import { ConfirmSubmitButton } from "@/components/forms/confirm-submit-button";
 
 import type { UserDto } from "@/modules/user/mappers/user-mapper";
 import { getSupervisorAction } from "@/Interfaces/getters/user.getters";
@@ -38,6 +39,7 @@ import {
   updateSupervisorAction,
 } from "@/Interfaces/actions/users.actions";
 import { ConfirmDialog } from "@/components/confirm-dialog";
+import { t, type Locale } from "@/shared/i18n/dictionary";
 
 type SupervisorAccountPageProps = {
   params: Promise<{ supervisorId: string }>;
@@ -48,6 +50,19 @@ export default function SupervisorAccountPage({
 }: SupervisorAccountPageProps) {
   const { supervisorId } = use(params);
   const router = useRouter();
+
+  const [locale, setLocale] = useState<Locale>("en");
+
+  // Read the application language from the app-language cookie.
+  useEffect(() => {
+    const languageCookie = document.cookie
+      .split("; ")
+      .find((cookie) => cookie.startsWith("qc_locale"));
+
+    const cookieValue = languageCookie?.split("=")[1];
+
+    setLocale(cookieValue === "ar" ? "ar" : "en");
+  }, []);
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -78,7 +93,7 @@ export default function SupervisorAccountPage({
         }
       } catch {
         if (!cancelled) {
-          setError("Unable to load this supervisor account. Please try again.");
+          setError(t(locale, "unableToLoadSupervisorError"));
         }
       } finally {
         if (!cancelled) {
@@ -92,7 +107,7 @@ export default function SupervisorAccountPage({
     return () => {
       cancelled = true;
     };
-  }, [supervisorId]);
+  }, [supervisorId, locale]);
 
   const handleUpdateSupervisor = async (
     event: FormEvent<HTMLFormElement>,
@@ -119,7 +134,7 @@ export default function SupervisorAccountPage({
       const res = await updateSupervisorAction(payload);
 
       if ("error" in res) {
-        notify.error("Failed to update supervisor", res.error);
+        notify.error(t(locale, "failedToUpdateSupervisorError"), res.error);
         return;
       }
 
@@ -137,13 +152,13 @@ export default function SupervisorAccountPage({
       });
 
       notify.success(
-        "Supervisor details updated successfully",
-        "Changes have been saved.",
+        t(locale, "supervisorDetailsUpdatedSuccessTitle"),
+        t(locale, "changesSavedSuccessDesc"),
       );
     } catch {
       notify.error(
-        "Failed to update supervisor",
-        "An unexpected error occurred. Please try again.",
+        t(locale, "failedToUpdateSupervisorError"),
+        t(locale, "unexpectedErrorTryAgain"),
       );
     } finally {
       setIsUpdating(false);
@@ -151,11 +166,11 @@ export default function SupervisorAccountPage({
   };
 
   const handlePasswordReset = async () => {
-
-    if(!password){
-      notify.system("Set New Password !");return;
-
+    if (!password) {
+      notify.system(t(locale, "setNewPasswordToast"));
+      return;
     }
+
     if (!supervisor || isResetting) return;
 
     const payload: ResetSupervisorPasswordPayload = {
@@ -169,18 +184,20 @@ export default function SupervisorAccountPage({
       const res = await passwordResetSupervisorAction(payload);
 
       if ("error" in res) {
-        notify.error("Password reset failed", res.error);
+        notify.error(t(locale, "passwordResetFailedError"), res.error);
         return;
       }
 
       notify.success(
-        "Password reset successfully",
-        "A new temporary password has been assigned.",
+        t(locale, "passwordResetSuccessTitle"),
+        t(locale, "temporaryPasswordAssignedDesc"),
       );
+
+      setPassword("");
     } catch {
       notify.error(
-        "Password reset failed",
-        "An unexpected error occurred. Please try again.",
+        t(locale, "passwordResetFailedError"),
+        t(locale, "unexpectedErrorTryAgain"),
       );
     } finally {
       setIsResetting(false);
@@ -196,21 +213,21 @@ export default function SupervisorAccountPage({
       const res = await deleteSupervisorAction(supervisor.id);
 
       if ("error" in res) {
-        notify.error("Failed to delete supervisor", res.error);
+        notify.error(t(locale, "failedToDeleteSupervisorError"), res.error);
         setIsDeleting(false);
         return;
       }
 
       notify.success(
-        "Supervisor account removed",
-        "Redirecting to supervisors directory...",
+        t(locale, "deleteSupervisorSuccessTitle"),
+        t(locale, "redirectingToSupervisorsDirectory"),
       );
 
       router.push("/admin/supervisors");
     } catch {
       notify.error(
-        "Failed to delete supervisor",
-        "An unexpected error occurred. Please try again.",
+        t(locale, "failedToDeleteSupervisorError"),
+        t(locale, "unexpectedErrorTryAgain"),
       );
       setIsDeleting(false);
     }
@@ -221,7 +238,7 @@ export default function SupervisorAccountPage({
       <div
         className="mx-auto w-full max-w-7xl space-y-6"
         role="status"
-        aria-label="Loading supervisor account"
+        aria-label={t(locale, "loadingSupervisorAccountAria")}
       >
         <div className="flex items-center gap-3">
           <div className="size-11 shrink-0 animate-pulse rounded-2xl bg-muted" />
@@ -249,35 +266,41 @@ export default function SupervisorAccountPage({
           ))}
         </div>
 
-        <span className="sr-only">Loading supervisor account details...</span>
+        <span className="sr-only">
+          {t(locale, "loadingSupervisorAccountDetails")}
+        </span>
       </div>
     );
   }
 
   if (error || !supervisor) {
-    return <ErrorState message={error || "Supervisor not found."} />;
+    return (
+      <ErrorState
+        message={error || t(locale, "supervisorNotFoundMessage")}
+      />
+    );
   }
 
   return (
     <div className="mx-auto w-full max-w-7xl space-y-6 pb-8">
       <PageHeading
-        eyebrow="Supervisor account"
-        title="Manage supervisor"
-        description="Review account information, update contact details, or manage credentials and account access."
+        eyebrow={t(locale, "supervisorAccountLabel")}
+        title={t(locale, "manageSupervisorTitle")}
+        description={t(locale, "manageSupervisorDesc")}
         action={
           <Link
             href="/admin/supervisors"
-            className="inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-xl border border-border/70 bg-card px-4 py-2 text-sm font-semibold text-foreground transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 sm:w-auto"
+            className="inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-xl border border-border/70 bg-card px-4 py-2 text-[16px] font-semibold text-foreground transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 sm:w-auto"
           >
             <ArrowLeft size={16} aria-hidden="true" />
-            Back to directory
+            {t(locale, "backToDirectoryButton")}
           </Link>
         }
       />
 
       {/* Supervisor identity */}
       <section
-        aria-label="Supervisor identity"
+        aria-label={t(locale, "supervisorIdentityAria")}
         className="relative overflow-hidden rounded-3xl border border-border/70 bg-card p-5 shadow-sm sm:p-7"
       >
         <div
@@ -292,9 +315,9 @@ export default function SupervisorAccountPage({
 
           <div className="min-w-0 flex-1 space-y-2">
             <div className="flex flex-wrap items-center gap-2">
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/20 bg-primary/5 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wider text-primary">
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/20 bg-primary/5 px-2.5 py-1 text-[15px] font-semibold uppercase tracking-wider text-primary">
                 <ShieldCheck size={13} aria-hidden="true" />
-                Supervisor account
+                {t(locale, "supervisorAccountLabel")}
               </span>
             </div>
 
@@ -302,14 +325,14 @@ export default function SupervisorAccountPage({
               {supervisor.name}
             </h2>
 
-            <div className="flex min-w-0 flex-col gap-2 text-sm text-muted-foreground sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-5">
+            <div className="flex min-w-0 flex-col gap-2 text-[16px] font-semibold text-muted-foreground sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-5">
               <span className="inline-flex min-w-0 items-start gap-2">
                 <Fingerprint
                   size={16}
                   className="mt-0.5 shrink-0"
                   aria-hidden="true"
                 />
-                <span className="break-all font-mono text-xs sm:text-sm">
+                <span className="break-all font-mono text-[15px] sm:text-[16px]">
                   {supervisor.loginId}
                 </span>
               </span>
@@ -340,11 +363,10 @@ export default function SupervisorAccountPage({
 
             <div className="min-w-0 space-y-1">
               <h2 className="text-base font-bold tracking-tight sm:text-lg">
-                Account details
+                {t(locale, "editableDetailsTitle")}
               </h2>
-              <p className="text-sm leading-relaxed text-muted-foreground">
-                Update the supervisor&apos;s display name and optional contact
-                email. The login ID remains unchanged.
+              <p className="text-[16px] leading-relaxed font-semibold text-muted-foreground">
+                {t(locale, "updateSupervisorDetailsDesc")}
               </p>
             </div>
           </div>
@@ -353,53 +375,55 @@ export default function SupervisorAccountPage({
             <div className="flex items-start gap-3">
               <Fingerprint
                 size={17}
-                className="mt-0.5 shrink-0 text-muted-foreground"
+                className="mt-0.5 shrink-0 font-semibold text-muted-foreground"
                 aria-hidden="true"
               />
 
               <div className="min-w-0 flex-1 space-y-1">
-                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                  Permanent login ID
+                <p className="text-[15px] font-semibold uppercase tracking-wider font-semibold text-muted-foreground">
+                  {t(locale, "permanentLoginIdLabel")}
                 </p>
-                <p className="break-all font-mono text-sm font-medium text-foreground">
+                <p className="break-all font-mono text-[16px] font-medium text-foreground">
                   {supervisor.loginId}
                 </p>
-                <p className="text-xs leading-relaxed text-muted-foreground">
-                  This identifier is read-only and cannot be edited on this
-                  page.
+                <p className="text-[15px] leading-relaxed font-semibold text-muted-foreground">
+                  {t(locale, "permanentLoginIdReadOnlyDesc")}
                 </p>
               </div>
             </div>
           </div>
 
           <form onSubmit={handleUpdateSupervisor} className="space-y-5">
-            <FormField label="Full name" name="name">
+            <FormField
+              label={t(locale, "fullNameLabel")}
+              name="name"
+            >
               <TextInput
                 name="name"
                 required
                 defaultValue={supervisor.name}
                 autoComplete="name"
-                placeholder="Enter the supervisor's full name"
+                placeholder={t(locale, "supervisorNamePlaceholder")}
               />
             </FormField>
 
             <FormField
-              label="Email address"
+              label={t(locale, "emailOptionalLabel")}
               name="email"
-              hint="Optional. Used as contact information if supported by your application."
+              hint={t(locale, "emailOptionalHint")}
             >
               <TextInput
                 name="email"
                 type="email"
                 defaultValue={supervisor.email ?? ""}
                 autoComplete="email"
-                placeholder="supervisor@example.com"
+                placeholder={t(locale, "emailAddressPlaceholderExample")}
               />
             </FormField>
 
             <div className="flex flex-col gap-3 border-t border-border/60 pt-5 sm:flex-row sm:items-center sm:justify-between">
-              <p className="text-xs leading-relaxed text-muted-foreground">
-                Save your changes when you&apos;re finished.
+              <p className="text-[15px] leading-relaxed font-semibold text-muted-foreground">
+                {t(locale, "saveChangesPrompt")}
               </p>
 
               <Button
@@ -414,12 +438,12 @@ export default function SupervisorAccountPage({
                       className="animate-spin"
                       aria-hidden="true"
                     />
-                    Saving changes...
+                    {t(locale, "savingChangesButton")}
                   </>
                 ) : (
                   <>
                     <CheckCircle2 size={16} aria-hidden="true" />
-                    Save changes
+                    {t(locale, "saveChanges")}
                   </>
                 )}
               </Button>
@@ -436,11 +460,10 @@ export default function SupervisorAccountPage({
 
             <div className="min-w-0 space-y-1">
               <h2 className="text-base font-bold tracking-tight sm:text-lg">
-                Reset password
+                {t(locale, "resetPasswordCardTitle")}
               </h2>
-              <p className="text-sm leading-relaxed text-muted-foreground">
-                Set a new temporary password for this supervisor. This
-                operation changes credentials rather than profile information.
+              <p className="text-[16px] leading-relaxed font-semibold text-muted-foreground">
+                {t(locale, "resetPasswordCardDesc")}
               </p>
             </div>
           </div>
@@ -453,65 +476,65 @@ export default function SupervisorAccountPage({
             />
 
             <div className="space-y-1">
-              <p className="text-sm font-semibold text-foreground">
-                Handle temporary credentials securely
+              <p className="text-[16px] font-semibold text-foreground">
+                {t(locale, "handleTemporaryCredentialsTitle")}
               </p>
-              <p className="text-xs leading-relaxed text-muted-foreground">
-                Use a unique password and share it with the supervisor through
-                a secure channel. Do not include passwords in ordinary messages
-                or shared notes.
+              <p className="text-[15px] leading-relaxed font-semibold text-muted-foreground">
+                {t(locale, "handleTemporaryCredentialsDesc")}
               </p>
             </div>
           </div>
 
           <section className="space-y-5">
             <FormField
-              label="New temporary password"
+              label={t(locale, "newPasswordLabel")}
               name="password"
-              hint="Required. Use at least 9 characters; the maximum is 128."
+              hint={t(locale, "newPasswordHint")}
             >
               <TextInput
                 type="password"
                 required
                 value={password}
-                onChange={(e)=>setPassword(e.target.value)}
+                onChange={(event) => setPassword(event.target.value)}
                 minLength={9}
                 maxLength={128}
                 autoComplete="new-password"
-                placeholder="Enter a temporary password"
+                placeholder={t(locale, "newPasswordPlaceholder")}
               />
             </FormField>
 
-            <div className="flex items-start gap-2 text-xs leading-relaxed text-muted-foreground">
+            <div className="flex items-start gap-2 text-[15px] leading-relaxed font-semibold text-muted-foreground">
               <ShieldCheck
                 size={15}
                 className="mt-0.5 shrink-0"
                 aria-hidden="true"
               />
-              <p>
-                Resetting the password affects this supervisor&apos;s
-                credentials. Confirm the operation before submitting.
-              </p>
+              <p>{t(locale, "resetPasswordNotice")}</p>
             </div>
 
             <div className="border-t border-border/60 pt-5">
-            <ConfirmDialog
-              title="Are you sure you want to reset this supervisor's password?" style="warn" onCertain={() => handlePasswordReset()}
-              triggerChildren={isResetting ? (
-                <>
-                  <Loader2
-                    size={16}
-                    className="animate-spin"
-                    aria-hidden="true"
-                  />
-                  Resetting password...
-                </>
-              ) : (
-                <div className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-destructive/25 bg-destructive/10 px-5 py-2.5 text-sm font-semibold text-destructive transition-colors hover:bg-destructive/15 disabled:pointer-events-none disabled:opacity-60">
-                  <KeyRound size={16} aria-hidden="true" />
-                  Reset password
-                </div>
-              )} />
+              <ConfirmDialog
+                title={t(locale, "resetPasswordConfirmTitle")}
+                style="warn"
+                onCertain={() => handlePasswordReset()}
+                triggerChildren={
+                  isResetting ? (
+                    <>
+                      <Loader2
+                        size={16}
+                        className="animate-spin"
+                        aria-hidden="true"
+                      />
+                      {t(locale, "resettingPasswordButton")}
+                    </>
+                  ) : (
+                    <div className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-destructive/25 bg-destructive/10 px-5 py-2.5 text-[16px] font-semibold text-destructive transition-colors hover:bg-destructive/15">
+                      <KeyRound size={16} aria-hidden="true" />
+                      {t(locale, "resetPasswordActionButton")}
+                    </div>
+                  )
+                }
+              />
             </div>
           </section>
         </section>
@@ -526,11 +549,10 @@ export default function SupervisorAccountPage({
 
           <div className="min-w-0 space-y-1">
             <h2 className="font-bold tracking-tight text-foreground">
-              Danger zone
+              {t(locale, "dangerZoneTitle")}
             </h2>
-            <p className="text-sm leading-relaxed text-muted-foreground">
-              Permanently remove this supervisor account. This action should
-              only be used when the account is no longer needed.
+            <p className="text-[16px] leading-relaxed font-semibold text-muted-foreground">
+              {t(locale, "deleteSupervisorCardDesc")}
             </p>
           </div>
         </div>
@@ -544,36 +566,38 @@ export default function SupervisorAccountPage({
             />
 
             <div className="min-w-0 space-y-1">
-              <p className="text-sm font-semibold text-foreground">
-                Delete supervisor account
+              <p className="text-[16px] font-semibold text-foreground">
+                {t(locale, "deleteSupervisorActionTitle")}
               </p>
-              <p className="max-w-2xl text-xs leading-relaxed text-muted-foreground">
-                According to the existing behavior, associated students will
-                remain in the system and their supervisor association will be
-                cleared. The supervisor will be redirected to the directory
-                after successful deletion.
+              <p className="max-w-2xl text-[15px] leading-relaxed font-semibold text-muted-foreground">
+                {t(locale, "deleteSupervisorBehaviorDesc")}
               </p>
             </div>
           </div>
 
           <div className="w-full shrink-0 md:w-auto">
             <ConfirmDialog
-              title="Permanently delete this Supervisor account?" style="danger" onCertain={() => handleDeleteSupervisor()}
-              triggerChildren={isDeleting ? (
-                <>
-                  <Loader2
-                    size={16}
-                    className="animate-spin"
-                    aria-hidden="true"
-                  />
-                  Deleting account...
-                </>
-              ) : (
-                <div className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-destructive/30 bg-destructive px-5 py-2.5 text-sm font-semibold text-destructive-foreground shadow-sm transition-colors hover:bg-destructive/90 disabled:pointer-events-none disabled:opacity-60 md:w-auto">
-                  <Trash2 size={16} aria-hidden="true" />
-                  Delete account
-                </div>
-              )} />
+              title={t(locale, "deleteSupervisorConfirmTitle")}
+              style="danger"
+              onCertain={() => handleDeleteSupervisor()}
+              triggerChildren={
+                isDeleting ? (
+                  <>
+                    <Loader2
+                      size={16}
+                      className="animate-spin"
+                      aria-hidden="true"
+                    />
+                    {t(locale, "deletingAccountButton")}
+                  </>
+                ) : (
+                  <div className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-destructive/30 bg-destructive px-5 py-2.5 text-[16px] font-semibold text-destructive-foreground shadow-sm transition-colors hover:bg-destructive/90 md:w-auto">
+                    <Trash2 size={16} aria-hidden="true" />
+                    {t(locale, "deleteAccountButton")}
+                  </div>
+                )
+              }
+            />
           </div>
         </div>
       </aside>

@@ -229,8 +229,6 @@ model AiSuggestion {
 }
 
 
-
-
 model AiLog {
   id                   String            @id @default(uuid()) @db.Uuid
   traceId              String            @unique @db.VarChar(64)
@@ -275,4 +273,44 @@ model AiLog {
   @@index([finalProvider, startedAt])
   @@index([providerTypes], type: Gin)
   @@map("ai_logs")
+}
+
+
+
+model TranslationServiceSettings {
+  id        String   @id @default("global") @db.VarChar(40)
+  enabled   Boolean  @default(true)
+  updatedAt DateTime @updatedAt
+
+  @@map("translation_service_settings")
+}
+
+
+
+enum TranslationProviderType {
+  google
+  microsoft
+  deepl
+  libretranslate
+  lingva
+  ai_openrouter
+  ai_local
+}
+
+model TranslationProviderConfig {
+  id              String                  @id @default(uuid()) @db.Uuid
+  name            String                  @db.VarChar(80)
+  providerType    TranslationProviderType @unique
+  baseUrl         String                  @db.VarChar(500)
+  encryptedApiKey String?                 @db.Text
+  region          String?                 @db.Text
+  model           String?                 @db.VarChar(180)
+  timeoutMs       Int                     @default(45000)
+  enabled         Boolean                 @default(true)
+  sortOrder       Int                     @default(0)
+  createdAt       DateTime                @default(now())
+  updatedAt       DateTime                @updatedAt
+
+  @@index([enabled, sortOrder])
+  @@map("translation_provider_configs")
 }

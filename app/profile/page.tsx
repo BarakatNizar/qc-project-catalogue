@@ -26,12 +26,25 @@ import { getProfileAction } from "@/Interfaces/getters/user.getters";
 import { updateProfileAction } from "@/Interfaces/actions/auth.actions";
 import type { UserDto } from "@/modules/user/mappers/user-mapper";
 import type { UpdateProfilePayload } from "@/shared/validation/user";
+import { t, type Locale } from "@/shared/i18n/dictionary";
 
 export default function ProfilePage() {
+  const [locale, setLocale] = useState<Locale>("en");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [profile, setProfile] = useState<UserDto | null>(null);
   const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    const languageCookie = document.cookie
+      .split("; ")
+      .find((cookie) => cookie.startsWith("qc_locale"))
+      ?.split("=")[1];
+
+    if (languageCookie === "ar" || languageCookie === "en") {
+      setLocale(languageCookie);
+    }
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -54,7 +67,7 @@ export default function ProfilePage() {
         console.error("Failed to load profile:", err);
 
         if (!cancelled) {
-          setError("Unable to load your profile. Please try again.");
+          setError(t(locale, "profileLoadError"));
         }
       } finally {
         if (!cancelled) {
@@ -68,7 +81,7 @@ export default function ProfilePage() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [locale]);
 
   const handleUpdateProfile = async (
     e: React.FormEvent<HTMLFormElement>,
@@ -95,13 +108,13 @@ export default function ProfilePage() {
       const res = await updateProfileAction(payload);
 
       if ("error" in res) {
-        notify.error("Failed to update profile", res.error);
+        notify.error(t(locale, "profileUpdateFailed"), res.error);
         return;
       }
 
       notify.success(
-        "Profile saved",
-        "Your personal information has been updated successfully.",
+        t(locale, "profileSaved"),
+        t(locale, "profileUpdatedSuccessfully"),
       );
 
       try {
@@ -109,8 +122,8 @@ export default function ProfilePage() {
 
         if ("error" in updated) {
           notify.warning(
-            "Profile saved",
-            "Your changes were saved, but the displayed profile could not be refreshed. Reload the page to see the latest details.",
+            t(locale, "profileSaved"),
+            t(locale, "profileRefreshWarning"),
           );
         } else {
           setProfile(updated);
@@ -119,39 +132,49 @@ export default function ProfilePage() {
         console.error("Failed to refresh profile:", refreshError);
 
         notify.warning(
-          "Profile saved",
-          "Your changes were saved, but the displayed profile could not be refreshed. Reload the page to see the latest details.",
+          t(locale, "profileSaved"),
+          t(locale, "profileRefreshWarning"),
         );
       }
     } catch (updateError) {
       console.error("Failed to update profile:", updateError);
 
       notify.error(
-        "Failed to update profile",
-        "Something went wrong while saving your changes. Please try again.",
+        t(locale, "profileUpdateFailed"),
+        t(locale, "profileSaveUnexpectedError"),
       );
     } finally {
       setSaving(false);
     }
   };
 
+  const roleLabel =
+    profile?.role === "ADMIN"
+      ? t(locale, "roleAdmin")
+      : profile?.role === "SUPERVISOR"
+        ? t(locale, "roleSupervisor"): t(locale, "roleStudent")
+          
+
   if (loading) {
     return (
       <div
         role="status"
-        aria-label="Loading profile"
+        aria-label={t(locale, "loadingYourProfile")}
         className="page-shell flex min-h-[24rem] items-center justify-center px-4 py-12"
       >
         <div className="flex flex-col items-center gap-4 text-center">
           <span className="grid size-14 place-items-center rounded-2xl border border-primary/20 bg-primary/10 text-primary">
-            <Loader2 size={26} className="animate-spin motion-reduce:animate-none" />
+            <Loader2
+              size={26}
+              className="animate-spin motion-reduce:animate-none"
+            />
           </span>
           <div className="space-y-1">
-            <p className="text-sm font-semibold text-foreground">
-              Loading your profile
+            <p className="text-lg leading-relaxed font-semibold text-foreground">
+              {t(locale, "loadingYourProfile")}
             </p>
-            <p className="text-xs text-muted-foreground">
-              Retrieving your account information...
+            <p className="text-[16px] leading-relaxing py-1 opacity-90">
+              {t(locale, "retrievingAccountInfo")}
             </p>
           </div>
         </div>
@@ -162,17 +185,19 @@ export default function ProfilePage() {
   if (error || !profile) {
     return (
       <div className="page-shell px-4 py-10 sm:py-14">
-        <ErrorState message={error || "Profile not found."} />
+        <ErrorState
+          message={error || t(locale, "profileNotFound")}
+        />
       </div>
     );
   }
 
   return (
-    <div className="page-shell mx-auto max-w-6xl space-y-8 px-4 py-8 sm:space-y-10 sm:px-6 sm:py-12 lg:px-8">
+    <div className="page-shell mx-auto max-w-screen-2xl space-y-8 px-4 py-8 sm:space-y-10 sm:px-6 sm:py-12 lg:px-8">
       <PageHeading
-        eyebrow="Account settings"
-        title="Your profile"
-        description="Manage your personal information and account security. Your login ID, account role, and student College ID are managed by QC and cannot be edited here."
+        eyebrow={t(locale, "accountSettings")}
+        title={t(locale, "yourProfile")}
+        description={t(locale, "profileDesc")}
       />
 
       {/* Profile overview */}
@@ -189,27 +214,29 @@ export default function ProfilePage() {
             </div>
 
             <div className="min-w-0">
-              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-                Account overview
+              <p className="text-[16px] leading-relaxing py-1 font-semibold uppercase tracking-wide opacity-90">
+                {t(locale, "accountOverview")}
               </p>
               <h2 className="mt-1 truncate text-xl font-extrabold tracking-tight text-foreground sm:text-2xl">
                 {profile.name}
               </h2>
-              <p className="mt-1 break-all text-sm text-muted-foreground">
-                {profile.email || "No email address added"}
+              <p className="mt-1 break-all text-lg leading-relaxed opacity-90">
+                {profile.email || t(locale, "noEmailAdded")}
               </p>
             </div>
           </div>
 
           <div className="flex flex-wrap items-center gap-2 sm:justify-end">
-            <span className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-3 py-1.5 text-xs font-semibold text-foreground">
+            <span className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-3 py-1.5 text-[16px] leading-relaxing py-1 font-semibold text-foreground">
               <ShieldCheck size={14} className="text-primary" />
-              {profile.role.toLowerCase()}
+              {roleLabel}
             </span>
 
             {profile.role === "STUDENT" && profile.collegeId && (
-              <span className="inline-flex max-w-full items-center gap-2 rounded-full border border-border bg-background px-3 py-1.5 font-mono text-xs text-muted-foreground">
-                <span className="shrink-0">College ID</span>
+              <span className="inline-flex max-w-full items-center gap-2 rounded-full border border-border bg-background px-3 py-1.5 text-[16px] leading-relaxing py-1 opacity-90">
+                <span className="shrink-0">
+                  {t(locale, "collegeIdLabel")}
+                </span>
                 <span className="break-all font-semibold text-foreground">
                   {profile.collegeId}
                 </span>
@@ -219,7 +246,7 @@ export default function ProfilePage() {
         </div>
       </section>
 
-      <div className="grid min-w-0 gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(250px,300px)] lg:items-start">
+      <div className="grid min-w-0 gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(300px,500px)] lg:items-start">
         {/* Personal information */}
         <section className="min-w-0 overflow-hidden rounded-3xl border border-border/80 bg-card shadow-sm">
           <div className="flex items-start gap-3 border-b border-border/70 p-5 sm:p-7">
@@ -228,12 +255,11 @@ export default function ProfilePage() {
             </span>
 
             <div className="min-w-0">
-              <h2 className="text-lg font-bold tracking-tight text-foreground sm:text-xl">
-                Personal information
+              <h2 className="text-lg leading-relaxed font-bold tracking-tight text-foreground sm:text-xl">
+                {t(locale, "personalInformation")}
               </h2>
-              <p className="mt-1 text-sm leading-6 text-muted-foreground">
-                Keep your display name and contact details up to date.
-                These details help identify your account across QC.
+              <p className="mt-1 text-lg leading-relaxed leading-6 opacity-90">
+                {t(locale, "personalInformationDesc")}
               </p>
             </div>
           </div>
@@ -242,52 +268,49 @@ export default function ProfilePage() {
             {/* Managed account identifiers */}
             <div className="space-y-3">
               <div>
-                <h3 className="text-sm font-semibold text-foreground">
-                  Managed account details
+                <h3 className="text-lg leading-relaxed font-semibold text-foreground">
+                  {t(locale, "manageDetailsTitle")}
                 </h3>
-                <p className="mt-1 text-xs leading-5 text-muted-foreground">
-                  These identifiers are maintained by your institution.
-                  Contact your administrator or supervisor if they need to
-                  be corrected.
+                <p className="mt-1 text-[16px] leading-relaxing py-1 leading-7 opacity-90">
+                  {t(locale, "manageDetailsDesc")}
                 </p>
               </div>
 
               <dl className="grid gap-3 sm:grid-cols-2">
                 <div className="min-w-0 rounded-2xl border border-border/70 bg-background/60 p-4">
-                  <dt className="text-xs font-semibold text-muted-foreground">
-                    Login ID
+                  <dt className="text-[16px] leading-relaxing py-1 font-semibold opacity-90">
+                    {t(locale, "loginIdLabel")}
                   </dt>
-                  <dd className="mt-2 break-all font-mono text-sm font-medium text-foreground">
+                  <dd className="mt-2 break-all text-lg leading-relaxed font-medium text-foreground">
                     {profile.loginId}
                   </dd>
-                  <p className="mt-2 text-xs text-muted-foreground">
-                    Used to sign in to your account.
+                  <p className="mt-2 text-[16px] leading-relaxing py-1 opacity-90">
+                    {t(locale, "loginIdHint")}
                   </p>
                 </div>
 
                 <div className="min-w-0 rounded-2xl border border-border/70 bg-background/60 p-4">
-                  <dt className="text-xs font-semibold text-muted-foreground">
-                    Account role
+                  <dt className="text-[16px] leading-relaxing py-1 font-semibold opacity-90">
+                    {t(locale, "accountRoleLabel")}
                   </dt>
-                  <dd className="mt-2 break-words text-sm font-semibold capitalize text-foreground">
-                    {profile.role.toLowerCase()}
+                  <dd className="mt-2 break-words text-lg leading-relaxed font-semibold capitalize text-foreground">
+                    {roleLabel}
                   </dd>
-                  <p className="mt-2 text-xs text-muted-foreground">
-                    Determines your available areas and permissions.
+                  <p className="mt-2 text-[16px] leading-relaxing py-1 opacity-90">
+                    {t(locale, "accountRoleHint")}
                   </p>
                 </div>
 
                 {profile.role === "STUDENT" && (
                   <div className="min-w-0 rounded-2xl border border-border/70 bg-background/60 p-4 sm:col-span-2">
-                    <dt className="text-xs font-semibold text-muted-foreground">
-                      College ID
+                    <dt className="text-[16px] leading-relaxing py-1 font-semibold opacity-90">
+                      {t(locale, "collegeIdLabel")}
                     </dt>
-                    <dd className="mt-2 break-all font-mono text-sm font-semibold text-foreground">
-                      {profile.collegeId || "Not provided"}
+                    <dd className="mt-2 break-all text-lg leading-relaxed font-semibold text-foreground">
+                      {profile.collegeId || t(locale, "collegeIdNotProvided")}
                     </dd>
-                    <p className="mt-2 text-xs text-muted-foreground">
-                      Your institutional student identifier. It cannot be
-                      changed from this page.
+                    <p className="mt-2 text-[16px] leading-relaxing py-1 opacity-90">
+                      {t(locale, "collegeIdHint")}
                     </p>
                   </div>
                 )}
@@ -298,13 +321,11 @@ export default function ProfilePage() {
 
             {/* Editable fields */}
             <div className="space-y-2">
-              <h3 className="text-sm font-semibold text-foreground">
-                Editable details
+              <h3 className="text-lg leading-relaxed font-semibold text-foreground">
+                {t(locale, "editableDetailsTitle")}
               </h3>
-              <p className="text-xs leading-5 text-muted-foreground">
-                Update your name and optional email address below. Your
-                changes are saved to your QC profile when you select Save
-                profile.
+              <p className="text-[16px] leading-relaxing py-1 leading-7 opacity-90">
+                {t(locale, "editableDetailsDesc")}
               </p>
             </div>
 
@@ -315,9 +336,9 @@ export default function ProfilePage() {
               className="space-y-5"
             >
               <FormField
-                label="Full name"
+                label={t(locale, "fullNameLabel")}
                 name="name"
-                hint="Use the name you want displayed throughout QC."
+                hint={t(locale, "fullNameHint")}
               >
                 <TextInput
                   name="name"
@@ -331,15 +352,15 @@ export default function ProfilePage() {
               </FormField>
 
               <FormField
-                label="Email (optional)"
+                label={t(locale, "emailOptionalLabel")}
                 name="email"
-                hint="Add an email address if you want it associated with your account. Leave blank if you prefer not to provide one."
+                hint={t(locale, "emailOptionalHint")}
               >
                 <div className="relative">
                   <Mail
                     size={17}
                     aria-hidden="true"
-                    className="pointer-events-none absolute start-3.5 top-1/2 -translate-y-1/2 text-muted-foreground"
+                    className="pointer-events-none absolute start-3.5 top-1/2 -translate-y-1/2 opacity-90"
                   />
                   <TextInput
                     name="email"
@@ -347,21 +368,21 @@ export default function ProfilePage() {
                     defaultValue={profile.email ?? ""}
                     autoComplete="email"
                     disabled={saving}
-                    placeholder="you@example.com"
+                    placeholder={t(locale, "emailAddressPlaceholder")}
                     className="ps-10"
                   />
                 </div>
               </FormField>
 
               <div className="flex flex-col gap-3 border-t border-border/70 pt-5 sm:flex-row sm:items-center sm:justify-between">
-                <p className="flex items-start gap-2 text-xs leading-5 text-muted-foreground">
+                <p className="flex items-start gap-2 text-[16px] leading-relaxing py-1 leading-7 opacity-90">
                   <Info
                     size={15}
                     className="mt-0.5 shrink-0"
                     aria-hidden="true"
                   />
                   <span>
-                    Login ID and account role cannot be edited here.
+                    {t(locale, "loginIdRoleNotEditable")}
                   </span>
                 </p>
 
@@ -377,12 +398,12 @@ export default function ProfilePage() {
                         className="animate-spin motion-reduce:animate-none"
                         aria-hidden="true"
                       />
-                      Saving...
+                      {t(locale, "savingProfile")}
                     </>
                   ) : (
                     <>
                       <Save size={16} aria-hidden="true" />
-                      Save profile
+                      {t(locale, "saveProfile")}
                     </>
                   )}
                 </Button>
@@ -399,38 +420,35 @@ export default function ProfilePage() {
                 <KeyRound size={21} />
               </span>
 
-              <h2 className="mt-4 text-lg font-bold tracking-tight text-foreground">
-                Password and access
+              <h2 className="mt-4 text-lg leading-relaxed font-bold tracking-tight text-foreground">
+                {t(locale, "passwordAndAccess")}
               </h2>
-              <p className="mt-2 text-sm leading-6 text-muted-foreground">
-                Keep your account secure by choosing a strong, unique
-                password. Change it whenever you need to update your
-                credentials.
+              <p className="mt-2 text-lg leading-relaxed leading-6 opacity-90">
+                {t(locale, "passwordAccessDesc")}
               </p>
             </div>
 
             <div className="space-y-4 p-5">
               <div className="flex items-start gap-3">
-                <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-muted text-muted-foreground">
+                <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-muted opacity-90">
                   <LockKeyhole size={17} />
                 </span>
                 <div>
-                  <p className="text-sm font-semibold text-foreground">
-                    Password management
+                  <p className="text-lg leading-relaxed font-semibold text-foreground">
+                    {t(locale, "passwordManagement")}
                   </p>
-                  <p className="mt-1 text-xs leading-5 text-muted-foreground">
-                    Your current password is required to confirm a password
-                    change.
+                  <p className="mt-1 text-[16px] leading-relaxing py-1 leading-7 opacity-90">
+                    {t(locale, "passwordManagementDesc")}
                   </p>
                 </div>
               </div>
 
               <Link
                 href="/change-password"
-                className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-border bg-background px-4 py-2.5 text-sm font-semibold text-foreground transition-colors hover:border-primary/40 hover:bg-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+                className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-border bg-background px-4 py-2.5 text-lg leading-relaxed font-semibold text-foreground transition-colors hover:border-primary/40 hover:bg-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
               >
                 <KeyRound size={16} aria-hidden="true" />
-                Change password
+                {t(locale, "changeYourPassword")}
                 <ArrowUpRight
                   size={15}
                   aria-hidden="true"
@@ -449,14 +467,11 @@ export default function ProfilePage() {
               />
 
               <div className="min-w-0">
-                <h3 className="text-sm font-semibold text-foreground">
-                  Institution-managed account
+                <h3 className="text-lg leading-relaxed font-semibold text-foreground">
+                  {t(locale, "institutionManagedAccount")}
                 </h3>
-                <p className="mt-2 text-xs leading-5 text-muted-foreground">
-                  QC does not support public registration. For changes to
-                  your login ID, role, College ID, or other institution-
-                  managed account details, contact your QC administrator
-                  or supervisor.
+                <p className="mt-2 text-[16px] leading-relaxing py-1 leading-7 opacity-90">
+                  {t(locale, "institutionManagedDesc")}
                 </p>
               </div>
             </div>
@@ -469,10 +484,8 @@ export default function ProfilePage() {
                 className="mt-0.5 shrink-0 text-primary"
                 aria-hidden="true"
               />
-              <p className="text-xs leading-5 text-muted-foreground">
-                Review your details before saving. Your profile information
-                should remain accurate so other authorized QC users can
-                identify you correctly.
+              <p className="text-[16px] leading-relaxing py-1 leading-7 opacity-90">
+                {t(locale, "reviewDetailsPrompt")}
               </p>
             </div>
           </section>

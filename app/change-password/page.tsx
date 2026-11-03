@@ -1,3 +1,4 @@
+// /change-password/page.tsx
 
 import Link from "next/link";
 import { redirect } from "next/navigation";

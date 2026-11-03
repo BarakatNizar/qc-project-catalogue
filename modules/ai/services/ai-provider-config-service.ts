@@ -67,7 +67,6 @@ export const aiProviderConfigService = {
       // Never silently reuse credentials when changing provider type.
       encryptedApiKey = null;
     }
-    console.log("encryptedApiKey:  ", encryptedApiKey )
 
     if (input.provider === "OPENROUTER" && !encryptedApiKey) {
       throw new AppError("VALIDATION", "An API key is required for OpenRouter providers.");

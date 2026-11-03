@@ -29,6 +29,10 @@ import {
 
 import { toProjectDto } from "@/modules/project/mappers/project-mapper";
 import { getPaginationMeta } from "@/shared/utils/pagincation-utils";
+import { TranslationLanguage } from "@/modules/translation/types/translation.types";
+import { getAllCachedProjects, getCachedLocalizedProjects, getCachedProject, getCachedProjects, setCachedProject, setCachedProjects } from "../cache/project-cache";
+import { ProjectDto } from "../types";
+import { projectTranslationService } from "@/modules/translation/services/project-translation.service";
 
 // ==========================================
 // Map Known Database Errors
@@ -92,50 +96,233 @@ export const projectService = {
 
   //   return projects.map(toProjectDto);
   // },
-  async listProject(actor: ServerUser, search: ProjectSearchPayload = {}, page = 1, pageSize = 10) {
+  
+  
+  // // // OLD VERSION
+  // async listProjects(actor: ServerUser, search: ProjectSearchPayload = {}, page = 1, pageSize = 10,  targetLanguage?: TranslationLanguage) {
+  //   assertValid(checkProject_QuerySearch_Schema(search));
+
+  //   const supervisor = actor.role === "SUPERVISOR";
+
+  //   if (actor.role !== "SUPERVISOR" && actor.role !== "STUDENT" && actor.role !== "ADMIN") {
+  //     throw new AppError("FORBIDDEN");
+  //   }
+
+  //   const cacheResult = await getAllCachedProjects();
+
+    
+
+
+
+  //   const { data, totalCount } = await projectRepository.list({ 
+  //     query: search.query, 
+  //     supervisorName: search.supervisorName, 
+  //     projectType: search.projectType, 
+  //     includeHidden: supervisor,
+  //     page,
+  //     pageSize,
+  //   });
+
+  //   return {
+  //     data: data.map(toProjectDto),
+  //     pagination: getPaginationMeta(totalCount, page, pageSize),
+  //   };
+  // },
+  
+
+  async listProjects(
+    actor: ServerUser,
+    search: ProjectSearchPayload = {},
+    page = 1,
+    pageSize = 10,
+    targetLanguage?: TranslationLanguage,
+  ) {
     assertValid(checkProject_QuerySearch_Schema(search));
 
     const supervisor = actor.role === "SUPERVISOR";
 
-    if (actor.role !== "SUPERVISOR" && actor.role !== "STUDENT" && actor.role !== "ADMIN") {
+    if (
+      actor.role !== "SUPERVISOR" &&
+      actor.role !== "STUDENT" &&
+      actor.role !== "ADMIN"
+    ) {
       throw new AppError("FORBIDDEN");
     }
 
-    const { data, totalCount } = await projectRepository.list({ 
-      query: search.query, 
-      supervisorName: search.supervisorName, 
-      projectType: search.projectType, 
+    // 1. FAST INDEX QUERY: Get only the IDs and total count from Postgres
+    const { ids, totalCount } = await projectRepository.listIds({
+      query: search.query,
+      supervisorName: search.supervisorName,
+      projectType: search.projectType,
       includeHidden: supervisor,
       page,
       pageSize,
     });
 
+    if (ids.length === 0) {
+      return {
+        data: [],
+        pagination: getPaginationMeta(totalCount, page, pageSize),
+      };
+    }
+
+    // 2. CACHE LOOKUP: Fetch the full project snapshots & translations from Redis using the IDs
+    const cachedResult = await getCachedProjects(ids);
+    const cachedLookups = "data" in cachedResult ? cachedResult.data : [];
+
+    const projectMap = new Map<string, ProjectDto>();
+    const missingIds: string[] = [];
+
+    // Map existing cache hits, track what's missing
+    ids.forEach((id, index) => {
+      const cached = cachedLookups[index]?.data;
+      if (cached) {
+        // If a target language is requested, check if translation is cached
+        const localized = targetLanguage ? cached.translations[targetLanguage] : cached.source;
+        if (localized) {
+          projectMap.set(id, localized);
+        } else {
+          // Source is in cache, but the specific language translation is missing
+          missingIds.push(id);
+        }
+      } else {
+        // Completely missing from cache
+        missingIds.push(id);
+      }
+    });
+
+    // 3. CACHE MISS FALLBACK: Fetch missing records from PostgreSQL
+    let sourceProjectsToCache: ProjectDto[] = [];
+    if (missingIds.length > 0) {
+      const dbRecords = await projectRepository.findByIds(missingIds);
+      sourceProjectsToCache = dbRecords.map(toProjectDto);
+    }
+
+    // 4. TRANSLATE & BACKFILL: Handle translations for missing/uncached items
+    if (sourceProjectsToCache.length > 0) {
+      let finalProcessedProjects = sourceProjectsToCache;
+
+      if (targetLanguage) {
+        const translationResult = await projectTranslationService.translateProjects(
+          sourceProjectsToCache,
+          targetLanguage,
+        );
+
+        if ("data" in translationResult) {
+          finalProcessedProjects = translationResult.data;
+
+          // Prepare batch writes to Redis for both source and translation
+          const cacheWrites = sourceProjectsToCache.map((sourceProj, i) => ({
+            source: sourceProj,
+            localized: {
+              language: targetLanguage,
+              data: finalProcessedProjects[i],
+            },
+          }));
+          await setCachedProjects(cacheWrites);
+        } else {
+          // Fallback to source if translation service fails
+          console.warn("[Project] Translation fallback in list:", translationResult.error);
+          await setCachedProjects(sourceProjectsToCache.map(source => ({ source })));
+        }
+      } else {
+        // Cache source-only items
+        await setCachedProjects(sourceProjectsToCache.map(source => ({ source })));
+      }
+
+      // Add newly fetched/translated projects to our map
+      sourceProjectsToCache.forEach((sourceProj, i) => {
+        const targetProj = targetLanguage ? finalProcessedProjects[i] : sourceProj;
+        projectMap.set(sourceProj.id, targetProj);
+      });
+    }
+
+    // 5. RECONSTRUCT ORDER: Ensure the returned array matches the exact order of the original Postgres `ids` array
+    const orderedData = ids.map((id) => projectMap.get(id)).filter(Boolean) as ProjectDto[];
+
     return {
-      data: data.map(toProjectDto),
+      data: orderedData,
       pagination: getPaginationMeta(totalCount, page, pageSize),
     };
   },
+  
+  
   // ==========================================
   // Get Project
   // ==========================================
-  async getProjectById(actor: ServerUser, projectId: string) {
+  async getProjectById(actor: ServerUser, projectId: string, targetLanguage?: TranslationLanguage) {
     if ( actor.role !== "STUDENT" && actor.role !== "SUPERVISOR" ) {
       throw new AppError("FORBIDDEN");
     }
     
     assertValid(checkProjectId_Schema(projectId))
     
-    const project = await projectRepository.findById(projectId);
+    
+  const cacheResult = await getCachedProject(projectId);
 
-    if (
-      !project ||
-      (actor.role === "STUDENT" &&
-        project.visibility !== "VISIBLE")
-    ) {
-      throw new AppError("NOT_FOUND");
+  let sourceProject: ProjectDto | null = null;
+
+  if ("data" in cacheResult && cacheResult.data) {
+    const cached = cacheResult.data;
+    const cachedLocalized = targetLanguage? cached.translations[targetLanguage]: cached.source;
+
+    if (cachedLocalized) {
+      return { data: cachedLocalized };
     }
 
-    return {data:toProjectDto(project)};
+    sourceProject = cached.source;
+  } else if ("error" in cacheResult) {
+    console.warn("[Project] Cache read skipped:", cacheResult.error);
+  }
+
+  // 2. On a cache miss, retrieve and map the source DTO from PostgreSQL.
+  if (!sourceProject) {
+    // Replace these two lines with your existing repository + mapper calls.
+
+    const repositoryResult = await projectRepository.findById(projectId);
+    if (!repositoryResult) return { error: "Project not found." };
+
+    sourceProject = toProjectDto(repositoryResult);
+  }
+
+  // 3. Translate only the requested language. The translator uses its own
+  // field-level cache, so already translated fields do not call Google again.
+  if (targetLanguage){
+
+    const translationResult = await projectTranslationService.translateProject(
+      sourceProject,
+      targetLanguage,
+    );
+
+  if ("data" in translationResult) {
+    const cacheWrite = await setCachedProject({
+      source: sourceProject,
+      localized: {
+        language: targetLanguage,
+        data: translationResult.data,
+      },
+    });
+
+    if ("error" in cacheWrite) {
+      console.warn("[Project] Cache write skipped:", cacheWrite.error);
+    }
+
+    return { data: translationResult.data };
+  }
+  console.warn("[Project] Translation fallback:", translationResult.error);
+  }
+
+  // Translation failure is not a project retrieval failure. Cache the source
+  // DTO if possible, then return the original source data as a fallback.
+
+  const sourceCacheWrite = await setCachedProject({ source: sourceProject });
+ 
+
+  if ("error" in sourceCacheWrite) {
+    console.warn("[Project] Source cache write skipped:", sourceCacheWrite.error);
+  }
+
+  return { data: sourceProject };
   },
 
   // ==========================================

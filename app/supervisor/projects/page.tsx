@@ -1,9 +1,23 @@
 
 "use client";
+
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { FormEvent } from "react";
 import Link from "next/link";
-import { Check, ChevronLeft, ChevronRight, Filter, FolderKanban, Loader2, Plus, RotateCcw, Search, SlidersHorizontal, UserRound, X, } from "lucide-react";
+import {
+  Check,
+  ChevronLeft,
+  ChevronRight,
+  Filter,
+  FolderKanban,
+  Loader2,
+  Plus,
+  RotateCcw,
+  Search,
+  SlidersHorizontal,
+  UserRound,
+  X,
+} from "lucide-react";
+
 import { ProjectCard } from "@/components/ui/project-card";
 import { Button } from "@/components/ui/button";
 import ErrorState from "@/components/ErrorState";
@@ -12,6 +26,7 @@ import type { ProjectDto } from "@/modules/project/types";
 import type { PaginationMeta } from "@/shared/utils/pagincation-utils";
 import type { ProjectSearchPayload } from "@/shared/validation/project";
 import { listProjectAction } from "@/Interfaces/getters/project.getters";
+import { t, type Locale } from "@/shared/i18n/dictionary";
 
 type ProjectTypeFilter = "GRADUATION" | "PRE_GRADUATION" | "ALL";
 
@@ -29,14 +44,14 @@ function buildSearchPayload(
   };
 }
 
-function LoadingSkeleton() {
+function LoadingSkeleton({ locale }: { locale: Locale }) {
   return (
     <main
       className="w-full min-w-0 space-y-6 px-3 pb-8 pt-3 sm:px-5 lg:px-8 2xl:px-10"
       role="status"
       aria-live="polite"
     >
-      <span className="sr-only">Loading project catalogue...</span>
+      <span className="sr-only">{t(locale, "loadingProjectCatalogue")}</span>
 
       <div className="animate-pulse rounded-2xl border border-border/70 bg-card p-5 sm:p-8">
         <div className="h-3 w-36 rounded bg-muted" />
@@ -76,6 +91,8 @@ function LoadingSkeleton() {
 }
 
 export default function ManageProjectsPage() {
+  const [locale, setLocale] = useState<Locale>("en");
+
   const [initialLoading, setInitialLoading] = useState(true);
   const [initialError, setInitialError] = useState<string | null>(null);
   const [isPending, setIsPending] = useState(false);
@@ -93,6 +110,16 @@ export default function ManageProjectsPage() {
 
   // Prevent older requests from overwriting newer results.
   const requestIdRef = useRef(0);
+
+  useEffect(() => {
+    const languageCookie = document.cookie
+      .split("; ")
+      .find((cookie) => cookie.startsWith("qc_locale"));
+
+    const cookieValue = languageCookie?.split("=")[1];
+
+    setLocale(cookieValue === "ar" ? "ar" : "en");
+  }, []);
 
   const loadProjects = useCallback(
     async (
@@ -120,9 +147,12 @@ export default function ManageProjectsPage() {
 
         if ("error" in result) {
           if (isInitialRequest) {
-            setInitialError(result.error);
+            setInitialError(result.error ?? null);
           } else {
-            notify.error("Failed to load projects", result.error);
+            notify.error(
+              t(locale, "failedToLoadProjectsTitle"),
+              result.error,
+            );
           }
           return;
         }
@@ -133,13 +163,12 @@ export default function ManageProjectsPage() {
       } catch {
         if (requestId !== requestIdRef.current) return;
 
-        const message =
-          "An unexpected error occurred while loading projects.";
+        const message = t(locale, "unexpectedProjectLoadingError");
 
         if (isInitialRequest) {
           setInitialError(message);
         } else {
-          notify.error("Failed to load projects", message);
+          notify.error(t(locale, "failedToLoadProjectsTitle"), message);
         }
       } finally {
         if (requestId === requestIdRef.current) {
@@ -148,7 +177,7 @@ export default function ManageProjectsPage() {
         }
       }
     },
-    [],
+    [locale],
   );
 
   useEffect(() => {
@@ -170,14 +199,16 @@ export default function ManageProjectsPage() {
     setCurrentPage(1);
     void loadProjects(1, filters);
   };
+
   const handleSearchKeyDown = (
-    event: React.KeyboardEvent<HTMLInputElement>
+    event: React.KeyboardEvent<HTMLInputElement>,
   ) => {
     if (event.key === "Enter") {
       event.preventDefault();
       handleFilterSubmit();
     }
   };
+
   const handleClearFilters = () => {
     setQueryInput("");
     setSupervisorInput("");
@@ -212,33 +243,38 @@ export default function ManageProjectsPage() {
 
   const hasActiveFilters = activeFilterCount > 0;
   const totalCount = pagination?.totalCount ?? projects.length;
+
   const pageStart =
     totalCount === 0 ? 0 : (currentPage - 1) * PAGE_SIZE + 1;
+
   const pageEnd = Math.min(currentPage * PAGE_SIZE, totalCount);
 
   const appliedFilterLabels = [
     appliedFilters.query
-      ? { label: `Search: ${appliedFilters.query}`, key: "query" }
+      ? {
+          label: `${t(locale, "searchFilterPrefix")}: ${appliedFilters.query}`,
+          key: "query",
+        }
       : null,
     appliedFilters.supervisorName
       ? {
-        label: `Supervisor: ${appliedFilters.supervisorName}`,
-        key: "supervisor",
-      }
+          label: `${t(locale, "supervisorFilterPrefix")}: ${appliedFilters.supervisorName}`,
+          key: "supervisor",
+        }
       : null,
     appliedFilters.projectType
       ? {
-        label:
-          appliedFilters.projectType === "GRADUATION"
-            ? "Graduation"
-            : "Pre-graduation",
-        key: "type",
-      }
+          label:
+            appliedFilters.projectType === "GRADUATION"
+              ? t(locale, "graduationProjectType")
+              : t(locale, "preGraduationProjectType"),
+          key: "type",
+        }
       : null,
   ].filter((item) => item !== null);
 
   if (initialLoading) {
-    return <LoadingSkeleton />;
+    return <LoadingSkeleton locale={locale} />;
   }
 
   if (initialError) {
@@ -256,57 +292,65 @@ export default function ManageProjectsPage() {
 
         <div className="flex min-w-0 flex-col gap-6 p-5 sm:p-7 lg:flex-row lg:items-end lg:justify-between lg:p-9">
           <div className="min-w-0">
-            <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.16em] text-primary">
-              <FolderKanban size={13} />
-              Supervisor workspace
+            <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-3 py-1.5 text-[15px] font-bold uppercase tracking-wide text-primary">
+              <FolderKanban size={16} />
+              {t(locale, "supervisorWorkspaceLabel")}
             </div>
 
-            <h1 className="break-words text-2xl font-black tracking-tight sm:text-3xl lg:text-4xl">
-              Project catalogue
+            <h1 className="break-words text-2xl font-black sm:text-3xl lg:text-4xl">
+              {t(locale, "projectCatalogueTitle")}
             </h1>
 
-            <p className="mt-3 max-w-3xl text-sm leading-7 text-muted-foreground sm:text-base">
-              Create, review, and maintain academic project briefs. Manage
-              catalogue visibility and help students discover graduation
-              and pre-graduation ideas.
+            <p className="mt-3 max-w-4xl text-lg leading-8 text-muted-foreground font-semibold">
+              {t(locale, "projectCataloguePageDesc")}
             </p>
           </div>
 
           <Link
             href="/supervisor/projects/new"
-            className="inline-flex min-h-11 w-full shrink-0 items-center justify-center gap-2 rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground shadow-sm transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 sm:w-auto"
+            className="inline-flex min-h-11 w-full shrink-0 items-center justify-center gap-2 rounded-xl bg-primary px-5 py-3 text-lg font-semibold text-primary-foreground shadow-sm transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 sm:w-auto"
           >
             <Plus size={17} />
-            Create project
+            {t(locale, "createProjectButton")}
           </Link>
         </div>
 
         <div className="grid grid-cols-2 border-t border-border/60 bg-background/20 sm:grid-cols-4">
           <div className="border-r border-border/60 p-4 sm:px-5 sm:py-4">
-            <p className="text-xs text-muted-foreground">Matching projects</p>
+            <p className="text-[16px] text-muted-foreground font-semibold">
+              {t(locale, "matchingProjectsMetric")}
+            </p>
             <p className="mt-1 text-2xl font-black tabular-nums">
-              {totalCount.toLocaleString()}
+              {totalCount.toLocaleString(locale === "ar" ? "ar" : "en")}
             </p>
           </div>
 
           <div className="p-4 sm:border-r sm:border-border/60 sm:px-5 sm:py-4">
-            <p className="text-xs text-muted-foreground">Current page</p>
+            <p className="text-[16px] text-muted-foreground font-semibold">
+              {t(locale, "currentPageMetric")}
+            </p>
             <p className="mt-1 text-2xl font-black tabular-nums">
-              {pagination?.currentPage ?? 1}
+              {(pagination?.currentPage ?? 1).toLocaleString(
+                locale === "ar" ? "ar" : "en",
+              )}
             </p>
           </div>
 
           <div className="border-r border-t border-border/60 p-4 sm:border-t-0 sm:px-5 sm:py-4">
-            <p className="text-xs text-muted-foreground">Page size</p>
+            <p className="text-[16px] text-muted-foreground font-semibold">
+              {t(locale, "pageSizeMetric")}
+            </p>
             <p className="mt-1 text-2xl font-black tabular-nums">
-              {PAGE_SIZE}
+              {PAGE_SIZE.toLocaleString(locale === "ar" ? "ar" : "en")}
             </p>
           </div>
 
           <div className="border-t border-border/60 p-4 sm:border-t-0 sm:px-5 sm:py-4">
-            <p className="text-xs text-muted-foreground">Active filters</p>
+            <p className="text-[16px] text-muted-foreground font-semibold">
+              {t(locale, "activeFiltersMetric")}
+            </p>
             <p className="mt-1 text-2xl font-black tabular-nums">
-              {activeFilterCount}
+              {activeFilterCount.toLocaleString(locale === "ar" ? "ar" : "en")}
             </p>
           </div>
         </div>
@@ -320,16 +364,15 @@ export default function ManageProjectsPage() {
           </span>
 
           <div className="min-w-0 flex-1">
-            <h2 className="font-bold tracking-tight">Find a project</h2>
-            <p className="mt-1 text-sm leading-6 text-muted-foreground">
-              Search by keyword, supervisor, or academic project type.
-              Results update when you apply your filters.
+            <h2 className="font-bold">
+              {t(locale, "findProjectHeading")}
+            </h2>
+            <p className="mt-1 text-lg leading-6 text-muted-foreground font-semibold">
+              {t(locale, "findProjectDescription")}
             </p>
           </div>
 
-          {hasActiveFilters && (
-            <BadgeFallback count={activeFilterCount} />
-          )}
+          {hasActiveFilters && <BadgeFallback count={activeFilterCount} locale={locale} />}
         </div>
 
         <section className="p-4 sm:p-5">
@@ -338,15 +381,15 @@ export default function ManageProjectsPage() {
             <div className="min-w-0 space-y-2">
               <label
                 htmlFor="project-query"
-                className="text-sm font-semibold"
+                className="text-lg font-semibold"
               >
-                Search projects
+                {t(locale, "searchProjectsLabel")}
               </label>
 
               <div className="relative">
                 <Search
                   size={17}
-                  className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground"
+                  className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground font-semibold"
                 />
                 <input
                   id="project-query"
@@ -355,24 +398,25 @@ export default function ManageProjectsPage() {
                   value={queryInput}
                   onChange={(event) => setQueryInput(event.target.value)}
                   onKeyDown={handleSearchKeyDown}
-                  placeholder="Title, summary, or keyword"
-                  className="min-h-11 w-full min-w-0 rounded-xl border border-border bg-background pl-10 pr-3.5 text-sm outline-none transition-shadow placeholder:text-muted-foreground/70 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1"
+                  placeholder={t(locale, "projectSearchPlaceholder")}
+                  className="mt-2 min-h-11 w-full min-w-0 rounded-xl border border-border bg-background pl-10 pr-3.5 text-lg outline-none transition-shadow placeholder:text-muted-foreground font-semibold 70 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1"
                 />
               </div>
             </div>
+
             {/* Supervisor name */}
             <div className="min-w-0 space-y-2">
               <label
                 htmlFor="project-supervisor"
-                className="text-sm font-semibold"
+                className="text-lg font-semibold"
               >
-                Project supervisor
+                {t(locale, "projectSupervisorLabel")}
               </label>
 
               <div className="relative">
                 <UserRound
                   size={17}
-                  className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground"
+                  className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground font-semibold"
                 />
                 <input
                   id="project-supervisor"
@@ -383,18 +427,19 @@ export default function ManageProjectsPage() {
                     setSupervisorInput(event.target.value)
                   }
                   onKeyDown={handleSearchKeyDown}
-                  placeholder="Supervisor name"
-                  className="min-h-11 w-full min-w-0 rounded-xl border border-border bg-background pl-10 pr-3.5 text-sm outline-none transition-shadow placeholder:text-muted-foreground/70 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1"
+                  placeholder={t(locale, "supervisorNamePlaceholder")}
+                  className="mt-2 min-h-11 w-full min-w-0 rounded-xl border border-border bg-background pl-10 pr-3.5 text-lg outline-none transition-shadow placeholder:text-muted-foreground font-semibold 70 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1"
                 />
               </div>
             </div>
-            {/* Project type  */}
+
+            {/* Project type */}
             <div className="min-w-0 space-y-2">
               <label
                 htmlFor="project-type"
-                className="text-sm font-semibold"
+                className="text-lg font-semibold"
               >
-                Project type
+                {t(locale, "projectTypeLabel")}
               </label>
 
               <select
@@ -404,11 +449,17 @@ export default function ManageProjectsPage() {
                 onChange={(event) =>
                   setTypeInput(event.target.value as ProjectTypeFilter)
                 }
-                className="min-h-11 w-full min-w-0 rounded-xl border border-border bg-background px-3.5 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1"
+                className="mt-2 min-h-11 w-full min-w-0 rounded-xl border border-border bg-background px-3.5 text-lg outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1"
               >
-                <option value="ALL">All project types</option>
-                <option value="GRADUATION">Graduation</option>
-                <option value="PRE_GRADUATION">Pre-graduation</option>
+                <option value="ALL">
+                  {t(locale, "allProjectTypesOption")}
+                </option>
+                <option value="GRADUATION">
+                  {t(locale, "graduationProjectType")}
+                </option>
+                <option value="PRE_GRADUATION">
+                  {t(locale, "preGraduationProjectType")}
+                </option>
               </select>
             </div>
           </div>
@@ -417,14 +468,14 @@ export default function ManageProjectsPage() {
             <div className="flex min-w-0 flex-wrap items-center gap-2">
               {hasActiveFilters ? (
                 <>
-                  <span className="text-xs text-muted-foreground">
-                    Applied:
+                  <span className="text-[16px] text-muted-foreground font-semibold">
+                    {t(locale, "appliedFiltersLabel")}
                   </span>
                   {appliedFilterLabels.map((item) =>
                     item ? (
                       <span
                         key={item.key}
-                        className="inline-flex max-w-full items-center rounded-lg border border-primary/20 bg-primary/[0.06] px-2.5 py-1 text-xs font-medium text-foreground"
+                        className="inline-flex max-w-full items-center rounded-lg border border-primary/20 bg-primary/[0.06] px-2.5 py-1 text-[16px] font-medium text-foreground"
                       >
                         <span className="break-words">{item.label}</span>
                       </span>
@@ -432,8 +483,8 @@ export default function ManageProjectsPage() {
                   )}
                 </>
               ) : (
-                <p className="text-xs text-muted-foreground">
-                  No filters applied. Browse the full catalogue.
+                <p className="text-[16px] text-muted-foreground font-semibold">
+                  {t(locale, "noFiltersAppliedMessage")}
                 </p>
               )}
             </div>
@@ -448,7 +499,7 @@ export default function ManageProjectsPage() {
                   className="min-h-10 gap-2 rounded-xl"
                 >
                   <RotateCcw size={14} />
-                  Reset
+                  {t(locale, "resetFiltersButton")}
                 </Button>
               )}
 
@@ -463,7 +514,9 @@ export default function ManageProjectsPage() {
                 ) : (
                   <Filter size={16} />
                 )}
-                {isPending ? "Updating..." : "Apply filters"}
+                {isPending
+                  ? t(locale, "updatingCatalogueButton")
+                  : t(locale, "applyFiltersButton")}
               </Button>
             </div>
           </div>
@@ -480,36 +533,47 @@ export default function ManageProjectsPage() {
             <div className="flex flex-wrap items-center gap-2">
               <h2
                 id="project-results-heading"
-                className="text-xl font-black tracking-tight sm:text-2xl"
+                className="text-xl font-black sm:text-2xl"
               >
-                Project briefs
+                {t(locale, "projectBriefsHeading")}
               </h2>
 
               {hasActiveFilters && (
-                <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/20 bg-primary/5 px-2.5 py-1 text-xs font-semibold text-primary">
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/20 bg-primary/5 px-2.5 py-1 text-[16px] font-semibold text-primary">
                   <Check size={12} />
-                  Filtered results
+                  {t(locale, "filteredResultsLabel")}
                 </span>
               )}
             </div>
 
-            <p className="mt-1 text-sm leading-6 text-muted-foreground">
+            <p className="mt-1 text-lg leading-6 text-muted-foreground font-semibold">
               {totalCount === 0
-                ? "No matching projects found."
-                : `Showing ${pageStart.toLocaleString()}–${pageEnd.toLocaleString()} of ${totalCount.toLocaleString()} projects`}
+                ? t(locale, "noMatchingProjectsFound")
+                : t(locale, "showingProjectsRange")
+                    .replace("{start}", pageStart.toLocaleString(locale === "ar" ? "ar" : "en"))
+                    .replace("{end}", pageEnd.toLocaleString(locale === "ar" ? "ar" : "en"))
+                    .replace("{total}", totalCount.toLocaleString(locale === "ar" ? "ar" : "en"))}
             </p>
           </div>
 
-          <p className="shrink-0 text-xs text-muted-foreground">
+          <p className="shrink-0 text-[16px] text-muted-foreground font-semibold">
             {pagination && pagination.totalPages > 0
-              ? `Page ${pagination.currentPage} of ${pagination.totalPages}`
-              : "Catalogue overview"}
+              ? t(locale, "pageOfPages")
+                  .replace(
+                    "{current}",
+                    pagination.currentPage.toLocaleString(locale === "ar" ? "ar" : "en"),
+                  )
+                  .replace(
+                    "{total}",
+                    pagination.totalPages.toLocaleString(locale === "ar" ? "ar" : "en"),
+                  )
+              : t(locale, "catalogueOverviewLabel")}
           </p>
         </div>
 
         {isPending && (
           <div
-            className="flex items-center gap-2.5 rounded-xl border border-primary/20 bg-primary/[0.06] px-4 py-3 text-sm text-muted-foreground"
+            className="flex items-center gap-2.5 rounded-xl border border-primary/20 bg-primary/[0.06] px-4 py-3 text-lg text-muted-foreground font-semibold"
             role="status"
             aria-live="polite"
           >
@@ -517,18 +581,20 @@ export default function ManageProjectsPage() {
               size={16}
               className="shrink-0 animate-spin text-primary"
             />
-            Updating the catalogue...
+            {t(locale, "updatingCatalogueMessage")}
           </div>
         )}
 
         {projects.length > 0 ? (
           <div
-            className={`grid min-w-0 grid-cols-1 gap-4 transition-opacity sm:grid-cols-2 sm:gap-5 xl:grid-cols-3 2xl:grid-cols-4 ${isPending ? "opacity-60" : "opacity-100"
-              }`}
+            className={`grid min-w-0 grid-cols-1 gap-4 transition-opacity sm:grid-cols-2 sm:gap-5 xl:grid-cols-3  ${
+              isPending ? "opacity-60" : "opacity-100"
+            }`}
             aria-busy={isPending}
           >
             {projects.map((project) => (
               <ProjectCard
+              locale={locale}
                 key={project.id}
                 project={project}
                 management
@@ -543,14 +609,14 @@ export default function ManageProjectsPage() {
 
             <h3 className="mt-5 text-lg font-bold">
               {hasActiveFilters
-                ? "No matching project briefs"
-                : "Your catalogue is empty"}
+                ? t(locale, "noMatchingProjectBriefsTitle")
+                : t(locale, "emptyProjectCatalogueTitle")}
             </h3>
 
-            <p className="mt-2 max-w-md text-sm leading-6 text-muted-foreground">
+            <p className="mt-2 max-w-md text-lg leading-6 text-muted-foreground font-semibold">
               {hasActiveFilters
-                ? "Try broader search terms, change the supervisor name, or clear the filters to view more projects."
-                : "Create your first academic project brief to start building a catalogue for students."}
+                ? t(locale, "noMatchingProjectBriefsDesc")
+                : t(locale, "emptyProjectCatalogueDesc")}
             </p>
 
             <div className="mt-5 flex w-full flex-col justify-center gap-2 sm:w-auto sm:flex-row">
@@ -562,7 +628,7 @@ export default function ManageProjectsPage() {
                   className="min-h-10 gap-2 rounded-xl"
                 >
                   <X size={15} />
-                  Clear filters
+                  {t(locale, "clearFiltersButton")}
                 </Button>
               ) : null}
 
@@ -570,7 +636,7 @@ export default function ManageProjectsPage() {
                 <Button className="min-h-10 gap-2 rounded-xl">
                   <Link href="/supervisor/projects/new">
                     <Plus size={16} />
-                    Create project
+                    {t(locale, "createProjectButton")}
                   </Link>
                 </Button>
               )}
@@ -581,17 +647,17 @@ export default function ManageProjectsPage() {
         {/* Pagination */}
         {pagination && pagination.totalPages > 1 && (
           <nav
-            aria-label="Project catalogue pagination"
+            aria-label={t(locale, "projectCataloguePaginationAria")}
             className="flex min-w-0 flex-col gap-4 rounded-2xl border border-border/70 bg-card p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5"
           >
-            <p className="text-sm text-muted-foreground">
-              Page{" "}
+            <p className="text-lg text-muted-foreground font-semibold">
+              {t(locale, "pageLabel")}{" "}
               <span className="font-bold text-foreground">
-                {pagination.currentPage}
+                {pagination.currentPage.toLocaleString(locale === "ar" ? "ar" : "en")}
               </span>{" "}
-              of{" "}
+              {t(locale, "ofLabel")}{" "}
               <span className="font-bold text-foreground">
-                {pagination.totalPages}
+                {pagination.totalPages.toLocaleString(locale === "ar" ? "ar" : "en")}
               </span>
             </p>
 
@@ -604,7 +670,7 @@ export default function ManageProjectsPage() {
                 className="min-h-10 gap-2 rounded-xl px-4"
               >
                 <ChevronLeft size={16} />
-                Previous
+                {t(locale, "previousPageButton")}
               </Button>
 
               <Button
@@ -614,7 +680,7 @@ export default function ManageProjectsPage() {
                 onClick={() => handlePageChange(currentPage + 1)}
                 className="min-h-10 gap-2 rounded-xl px-4"
               >
-                Next
+                {t(locale, "nextPageButton")}
                 <ChevronRight size={16} />
               </Button>
             </div>
@@ -625,11 +691,17 @@ export default function ManageProjectsPage() {
   );
 }
 
-function BadgeFallback({ count }: { count: number }) {
+function BadgeFallback({
+  count,
+  locale,
+}: {
+  count: number;
+  locale: Locale;
+}) {
   return (
-    <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-primary/20 bg-primary/10 px-2.5 py-1 text-xs font-semibold text-primary">
+    <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-primary/20 bg-primary/10 px-2.5 py-1 text-[16px] font-semibold text-primary">
       <Filter size={12} />
-      {count}
+      {count.toLocaleString(locale === "ar" ? "ar" : "en")}
     </span>
   );
 }

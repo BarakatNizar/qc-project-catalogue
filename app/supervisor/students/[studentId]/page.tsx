@@ -36,6 +36,8 @@ import {
   passwordResetStudentAction,
 } from "@/Interfaces/actions/users.actions";
 import { ResetStudentPasswordPayload } from "@/shared/validation/user";
+import { t, type Locale } from "@/shared/i18n/dictionary";
+import { ConfirmDialog } from "@/components/confirm-dialog";
 
 type StudentDetailsPageProps = {
   params: Promise<{ studentId: string }>;
@@ -59,12 +61,12 @@ function DetailItem({
       </span>
 
       <div className="min-w-0 flex-1 space-y-1">
-        <dt className="text-xs font-medium text-muted-foreground">{label}</dt>
-        <dd className="break-words text-sm font-semibold leading-5 text-foreground [overflow-wrap:anywhere]">
+        <dt className="text-[16px] py-1 font-medium text-muted-foreground">{label}</dt>
+        <dd className="break-words text-lg py-1 font-semibold leading-5 text-foreground [overflow-wrap:anywhere]">
           {value}
         </dd>
         {description ? (
-          <p className="break-words text-xs leading-5 text-muted-foreground">
+          <p className="break-words text-[16px] py-1 leading-5 text-muted-foreground">
             {description}
           </p>
         ) : null}
@@ -73,14 +75,16 @@ function DetailItem({
   );
 }
 
-function LoadingState() {
+function LoadingState({ locale }: { locale: Locale }) {
   return (
     <div
       role="status"
       aria-live="polite"
       className="mx-auto flex min-h-[60vh] w-full max-w-5xl flex-col justify-center gap-6 px-1"
     >
-      <span className="sr-only">Loading student account details…</span>
+      <span className="sr-only">
+        {t(locale, "studentDetailsLoading")}
+      </span>
 
       <div className="flex items-center gap-4">
         <div className="grid size-14 shrink-0 animate-pulse place-items-center rounded-2xl bg-muted" />
@@ -115,11 +119,21 @@ export default function StudentDetailsPage({
   const { studentId } = use(params);
   const router = useRouter();
 
+  const [locale, setLocale] = useState<Locale>("en");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [student, setStudent] = useState<UserDto | null>(null);
   const [isResetting, setIsResetting] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+
+  useEffect(() => {
+    const languageCookie = document.cookie
+      .split("; ")
+      .find((cookie) => cookie.startsWith("qc_locale"))
+      ?.split("=")[1];
+
+    setLocale(languageCookie === "ar" ? "ar" : "en");
+  }, []);
 
   useEffect(() => {
     let active = true;
@@ -141,7 +155,7 @@ export default function StudentDetailsPage({
         }
       } catch {
         if (active) {
-          setError("Unable to load this student account. Please try again.");
+          setError(t(locale, "studentDetailsLoadError"));
         }
       } finally {
         if (active) {
@@ -155,7 +169,7 @@ export default function StudentDetailsPage({
     return () => {
       active = false;
     };
-  }, [studentId]);
+  }, [studentId, locale]);
 
   const handlePasswordReset = async (
     event: FormEvent<HTMLFormElement>,
@@ -164,7 +178,6 @@ export default function StudentDetailsPage({
 
     if (!student || isResetting || isDeleting) return;
 
-    // Capture the form before awaiting; currentTarget is event-scoped.
     const form = event.currentTarget;
     const formData = new FormData(form);
 
@@ -181,20 +194,20 @@ export default function StudentDetailsPage({
       const result = await passwordResetStudentAction(payload);
 
       if ("error" in result) {
-        notify.error("Password reset failed", result.error);
+        notify.error(t(locale, "studentPasswordResetFailed"), result.error);
         return;
       }
 
       notify.success(
-        "Password reset successfully",
-        "A new temporary password has been assigned.",
+        t(locale, "studentPasswordResetSuccess"),
+        t(locale, "studentTemporaryPasswordAssigned"),
       );
 
       form.reset();
     } catch {
       notify.error(
-        "Password reset failed",
-        "An unexpected error occurred. Please try again.",
+        t(locale, "studentPasswordResetFailed"),
+        t(locale, "studentUnexpectedError"),
       );
     } finally {
       setIsResetting(false);
@@ -210,20 +223,20 @@ export default function StudentDetailsPage({
       const result = await deleteStudentAction(student.id);
 
       if ("error" in result) {
-        notify.error("Failed to delete student", result.error);
+        notify.error(t(locale, "studentDeleteFailed"), result.error);
         return;
       }
 
       notify.success(
-        "Student account deleted",
-        "Redirecting to the students directory...",
+        t(locale, "studentAccountDeleted"),
+        t(locale, "studentRedirectingToDirectory"),
       );
 
       router.push("/supervisor/students");
     } catch {
       notify.error(
-        "Failed to delete student",
-        "An unexpected error occurred. Please try again.",
+        t(locale, "studentDeleteFailed"),
+        t(locale, "studentUnexpectedError"),
       );
     } finally {
       setIsDeleting(false);
@@ -231,50 +244,54 @@ export default function StudentDetailsPage({
   };
 
   if (loading) {
-    return <LoadingState />;
+    return <LoadingState locale={locale} />;
   }
 
   if (error || !student) {
-    return <ErrorState message={error || "Student not found."} />;
+    return (
+      <ErrorState
+        message={error || t(locale, "studentNotFound")}
+      />
+    );
   }
 
   const passwordStatus = student.mustChangePassword
     ? {
-        label: "Change required",
-        description: "The student must change their password at sign-in.",
-        icon: CircleAlert,
-        className:
-          "border-amber-500/25 bg-amber-500/10 text-amber-700 dark:text-amber-300",
-      }
+      label: t(locale, "studentPasswordChangeRequired"),
+      description: t(locale, "studentMustChangePasswordAtSignIn"),
+      icon: CircleAlert,
+      className:
+        "border-amber-500/25 bg-amber-500/10 text-amber-700 dark:text-amber-300",
+    }
     : {
-        label: "No change required",
-        description: "No initial password change is currently required.",
-        icon: CheckCircle2,
-        className:
-          "border-emerald-500/25 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300",
-      };
+      label: t(locale, "studentPasswordChangeNotRequired"),
+      description: t(locale, "studentNoInitialPasswordChangeRequired"),
+      icon: CheckCircle2,
+      className:
+        "border-emerald-500/25 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300",
+    };
 
   const PasswordStatusIcon = passwordStatus.icon;
 
   return (
     <main className="mx-auto w-full min-w-0 space-y-6 pb-8">
       <PageHeading
-        eyebrow="Student account"
+        eyebrow={t(locale, "studentAccountEyebrow")}
         title={student.name}
-        description="Review the student's account information, help restore account access, or manage account removal."
+        description={t(locale, "studentDetailsPageDescription")}
         action={
           <Link
             href="/supervisor/students"
-            className="inline-flex min-h-10 items-center justify-center gap-2 self-start rounded-xl border border-border bg-background px-4 py-2 text-sm font-semibold text-foreground transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            className="inline-flex min-h-10 items-center justify-center gap-2 self-start rounded-xl border border-border bg-background px-4 py-2 text-lg py-1 font-semibold text-foreground transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
           >
             <ArrowLeft size={16} aria-hidden="true" />
-            <span>Students</span>
+            <span>{t(locale, "studentsDirectoryLink")}</span>
           </Link>
         }
       />
 
       <section
-        aria-label="Student identity"
+        aria-label={t(locale, "studentIdentitySection")}
         className="relative overflow-hidden rounded-2xl border border-border/70 bg-card shadow-sm"
       >
         <div
@@ -289,23 +306,23 @@ export default function StudentDetailsPage({
             </span>
 
             <div className="min-w-0 flex-1 space-y-2">
-              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-                Student profile
+              <p className="text-[16px] py-1 font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+                {t(locale, "studentProfile")}
               </p>
               <h2 className="break-words text-xl font-bold tracking-tight text-foreground sm:text-2xl [overflow-wrap:anywhere]">
                 {student.name}
               </h2>
 
               <div className="flex min-w-0 flex-wrap items-center gap-2">
-                <span className="inline-flex max-w-full items-center gap-1.5 rounded-full border border-border bg-muted/50 px-3 py-1 text-xs font-medium text-muted-foreground">
+                <span className="inline-flex max-w-full items-center gap-1.5 rounded-full border border-border bg-muted/50 px-3 py-1 text-[16px] py-1 font-medium text-muted-foreground">
                   <Fingerprint size={13} aria-hidden="true" />
                   <span className="break-all">
-                    Login ID: {student.loginId}
+                    {t(locale, "studentLoginId")}: {student.loginId}
                   </span>
                 </span>
 
                 <span
-                  className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-semibold ${passwordStatus.className}`}
+                  className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-[16px] py-1 font-semibold ${passwordStatus.className}`}
                 >
                   <PasswordStatusIcon size={13} aria-hidden="true" />
                   {passwordStatus.label}
@@ -320,8 +337,8 @@ export default function StudentDetailsPage({
               className="shrink-0 text-muted-foreground"
               aria-hidden="true"
             />
-            <p className="text-xs leading-5 text-muted-foreground">
-              Supervisor account management
+            <p className="text-[16px] py-1 leading-5 text-muted-foreground">
+              {t(locale, "supervisorAccountManagement")}
             </p>
           </div>
         </div>
@@ -337,44 +354,44 @@ export default function StudentDetailsPage({
 
               <div className="min-w-0">
                 <h2 className="font-bold tracking-tight text-foreground">
-                  Account details
+                  {t(locale, "studentAccountDetails")}
                 </h2>
-                <p className="mt-1 text-sm leading-5 text-muted-foreground">
-                  Reference information associated with this student account.
+                <p className="mt-1 text-lg py-1 leading-5 text-muted-foreground">
+                  {t(locale, "studentAccountDetailsDescription")}
                 </p>
               </div>
             </div>
 
             <dl className="grid min-w-0 gap-3 p-4 sm:grid-cols-2 sm:p-5">
               <DetailItem
-                label="Full name"
+                label={t(locale, "studentFullName")}
                 value={student.name}
                 icon={UserRound}
-                description="The student's current display name."
+                description={t(locale, "studentDisplayNameDescription")}
               />
               <DetailItem
-                label="College ID"
-                value={student.collegeId ?? "Not provided"}
+                label={t(locale, "studentCollegeId")}
+                value={student.collegeId ?? t(locale, "notProvided")}
                 icon={GraduationCap}
-                description="The college identifier recorded for this account."
+                description={t(locale, "studentCollegeIdDescription")}
               />
               <DetailItem
-                label="Login ID"
+                label={t(locale, "studentLoginIdLabel")}
                 value={student.loginId}
                 icon={Fingerprint}
-                description="The identifier used to sign in."
+                description={t(locale, "studentLoginIdDescription")}
               />
               <DetailItem
-                label="Email address"
-                value={student.email ?? "Not provided"}
+                label={t(locale, "studentEmailAddress")}
+                value={student.email ?? t(locale, "notProvided")}
                 icon={Mail}
-                description="An email address associated with the account, if provided."
+                description={t(locale, "studentEmailDescription")}
               />
               <DetailItem
-                label="Account created"
+                label={t(locale, "studentAccountCreated")}
                 value={formatDate(student.createdAt)}
                 icon={CalendarDays}
-                description="The account creation date."
+                description={t(locale, "studentAccountCreatedDescription")}
               />
 
               <div className="flex min-w-0 gap-3 rounded-xl border border-border/60 bg-background/50 p-4">
@@ -383,13 +400,13 @@ export default function StudentDetailsPage({
                 </span>
 
                 <div className="min-w-0 flex-1 space-y-1">
-                  <dt className="text-xs font-medium text-muted-foreground">
-                    Password setup
+                  <dt className="text-[16px] py-1 font-medium text-muted-foreground">
+                    {t(locale, "studentPasswordSetup")}
                   </dt>
-                  <dd className="text-sm font-semibold leading-5 text-foreground">
+                  <dd className="text-lg py-1 font-semibold leading-5 text-foreground">
                     {passwordStatus.label}
                   </dd>
-                  <p className="text-xs leading-5 text-muted-foreground">
+                  <p className="text-[16px] py-1 leading-5 text-muted-foreground">
                     {passwordStatus.description}
                   </p>
                 </div>
@@ -402,9 +419,8 @@ export default function StudentDetailsPage({
                 className="mt-0.5 shrink-0 text-muted-foreground"
                 aria-hidden="true"
               />
-              <p className="text-xs leading-5 text-muted-foreground">
-                Students manage their own display name, email, and password.
-                Their college ID remains fixed.
+              <p className="text-[16px] py-1 leading-5 text-muted-foreground">
+                {t(locale, "studentAccountEditableFieldsNote")}
               </p>
             </div>
           </section>
@@ -417,11 +433,10 @@ export default function StudentDetailsPage({
 
               <div className="min-w-0">
                 <h2 className="font-bold tracking-tight text-foreground">
-                  Reset student password
+                  {t(locale, "resetStudentPasswordTitle")}
                 </h2>
-                <p className="mt-1 text-sm leading-5 text-muted-foreground">
-                  Assign a new temporary password if the student cannot access
-                  their account.
+                <p className="mt-1 text-lg py-1 leading-5 text-muted-foreground">
+                  {t(locale, "resetStudentPasswordDescription")}
                 </p>
               </div>
             </div>
@@ -433,17 +448,16 @@ export default function StudentDetailsPage({
                   className="mt-0.5 shrink-0 text-primary"
                   aria-hidden="true"
                 />
-                <p className="text-xs leading-5 text-muted-foreground">
-                  Share the temporary password with the student through a
-                  secure channel. Do not share credentials in public messages.
+                <p className="text-[16px] py-1 leading-5 text-muted-foreground">
+                  {t(locale, "studentTemporaryPasswordSecurityNote")}
                 </p>
               </div>
 
               <form onSubmit={handlePasswordReset} className="space-y-5">
                 <FormField
-                  label="New temporary password"
+                  label={t(locale, "studentNewTemporaryPassword")}
                   name="password"
-                  hint="Use at least 9 characters. Maximum length: 128 characters."
+                  hint={t(locale, "studentTemporaryPasswordHint")}
                 >
                   <TextInput
                     name="password"
@@ -452,21 +466,21 @@ export default function StudentDetailsPage({
                     minLength={9}
                     maxLength={128}
                     autoComplete="new-password"
-                    placeholder="Enter a temporary password"
+                    placeholder={t(locale, "studentTemporaryPasswordPlaceholder")}
                     disabled={isResetting || isDeleting}
                   />
                 </FormField>
 
                 <div className="flex flex-col gap-3 border-t border-border/70 pt-5 sm:flex-row sm:items-center sm:justify-between">
-                  <p className="text-xs leading-5 text-muted-foreground">
-                    The reset takes effect only if the server action succeeds.
+                  <p className="text-[16px] py-1 leading-5 text-muted-foreground">
+                    {t(locale, "studentPasswordResetServerNote")}
                   </p>
 
                   <ConfirmSubmitButton
                     type="submit"
                     disabled={isResetting || isDeleting}
-                    className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground shadow-sm transition-colors hover:bg-primary/90 disabled:pointer-events-none disabled:opacity-60 sm:w-auto"
-                    confirmMessage="Are you sure you want to reset this student's password?"
+                    className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-lg py-1 font-semibold text-primary-foreground shadow-sm transition-colors hover:bg-primary/90 disabled:pointer-events-none disabled:opacity-60 sm:w-auto"
+                    confirmMessage={t(locale, "confirmStudentPasswordReset")}
                   >
                     {isResetting ? (
                       <>
@@ -475,12 +489,12 @@ export default function StudentDetailsPage({
                           className="animate-spin"
                           aria-hidden="true"
                         />
-                        Resetting…
+                        {t(locale, "studentPasswordResetting")}
                       </>
                     ) : (
                       <>
                         <KeyRound size={16} aria-hidden="true" />
-                        Reset password
+                        {t(locale, "studentResetPasswordButton")}
                       </>
                     )}
                   </ConfirmSubmitButton>
@@ -499,22 +513,21 @@ export default function StudentDetailsPage({
 
               <div className="min-w-0">
                 <h2 className="font-bold tracking-tight text-foreground">
-                  Danger zone
+                  {t(locale, "studentDangerZone")}
                 </h2>
-                <p className="mt-1 text-sm leading-5 text-muted-foreground">
-                  Actions that permanently affect this account.
+                <p className="mt-1 text-lg py-1 leading-5 text-muted-foreground">
+                  {t(locale, "studentDangerZoneDescription")}
                 </p>
               </div>
             </div>
 
             <div className="space-y-4 p-5 sm:p-6">
               <div className="space-y-2">
-                <h3 className="text-sm font-semibold text-foreground">
-                  Delete student account
+                <h3 className="text-lg py-1 font-semibold text-foreground">
+                  {t(locale, "deleteStudentAccountTitle")}
                 </h3>
-                <p className="text-sm leading-6 text-muted-foreground">
-                  Permanently removes the student's account. Shared project
-                  and AI suggestion history remains intact.
+                <p className="text-lg py-1 leading-6 text-muted-foreground">
+                  {t(locale, "deleteStudentAccountDescription")}
                 </p>
               </div>
 
@@ -524,34 +537,38 @@ export default function StudentDetailsPage({
                   className="mt-0.5 shrink-0 text-destructive"
                   aria-hidden="true"
                 />
-                <p className="text-xs leading-5 text-muted-foreground">
-                  This operation is destructive and should only be used when
-                  account removal is intended.
+                <p className="text-[16px] py-1 leading-5 text-muted-foreground">
+                  {t(locale, "studentDeleteWarning")}
                 </p>
               </div>
-
-              <ConfirmSubmitButton
-                onClick={handleDeleteStudent}
-                disabled={isDeleting || isResetting}
-                className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-destructive/30 bg-destructive/10 px-4 py-2.5 text-sm font-semibold text-destructive transition-colors hover:bg-destructive/15 disabled:pointer-events-none disabled:opacity-60"
-                confirmMessage="Permanently delete this student account? Shared project and AI suggestion history will remain."
-              >
-                {isDeleting ? (
-                  <>
-                    <Loader2
-                      size={16}
-                      className="animate-spin"
-                      aria-hidden="true"
-                    />
-                    Deleting account…
-                  </>
-                ) : (
-                  <>
-                    <Trash2 size={16} aria-hidden="true" />
-                    Delete student account
-                  </>
-                )}
-              </ConfirmSubmitButton>
+              <ConfirmDialog
+                title={t(locale, "deleteStudentConfirm")}
+                style="danger"
+                onCertain={() =>
+                  handleDeleteStudent()
+                }
+                triggerChildren={<div
+                  className="btn w-full inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-destructive/30 bg-destructive/10 px-4 py-2.5 text-lg py-1 font-semibold text-destructive transition-colors hover:bg-destructive/15 disabled:pointer-events-none disabled:opacity-60"
+                >
+                  {
+                    isDeleting ? (
+                      <>
+                        <Loader2
+                          size={16}
+                          className="animate-spin"
+                          aria-hidden="true"
+                        />
+                        {t(locale, "studentDeletingAccount")}
+                      </>
+                    ) : (
+                      <>
+                        <Trash2 size={16} aria-hidden="true" />
+                        {t(locale, "deleteStudentAccountButton")}
+                      </>
+                    )}
+                </div>
+                }
+              />
             </div>
           </section>
 
@@ -562,31 +579,23 @@ export default function StudentDetailsPage({
                 className="shrink-0 text-muted-foreground"
                 aria-hidden="true"
               />
-              <h2 className="text-sm font-bold text-foreground">
-                Account management guidance
+              <h2 className="text-lg py-1 font-bold text-foreground">
+                {t(locale, "studentAccountManagementGuidance")}
               </h2>
             </div>
 
-            <ul className="mt-4 space-y-3 text-xs leading-5 text-muted-foreground">
+            <ul className="mt-4 space-y-3 text-[16px] py-1 leading-5 text-muted-foreground">
               <li className="flex items-start gap-2">
                 <span className="mt-1 size-1.5 shrink-0 rounded-full bg-primary/70" />
-                <span>
-                  Use a password reset to restore access without removing the
-                  account.
-                </span>
+                <span>{t(locale, "studentGuidancePasswordReset")}</span>
               </li>
               <li className="flex items-start gap-2">
                 <span className="mt-1 size-1.5 shrink-0 rounded-full bg-primary/70" />
-                <span>
-                  Verify the student's identity before sharing temporary
-                  credentials.
-                </span>
+                <span>{t(locale, "studentGuidanceVerifyIdentity")}</span>
               </li>
               <li className="flex items-start gap-2">
                 <span className="mt-1 size-1.5 shrink-0 rounded-full bg-primary/70" />
-                <span>
-                  Return to the students directory to manage another account.
-                </span>
+                <span>{t(locale, "studentGuidanceReturnToDirectory")}</span>
               </li>
             </ul>
 
@@ -594,9 +603,9 @@ export default function StudentDetailsPage({
               variant="outline"
               className="mt-5 min-h-10 w-full justify-center gap-2 rounded-xl"
             >
-              <Link href="/supervisor/students">
+              <Link href="/supervisor/students" className="flex items-center gap-2">
                 <ArrowLeft size={16} aria-hidden="true" />
-                Back to students
+                {t(locale, "backToStudentsDirectory")}
               </Link>
             </Button>
           </section>

@@ -1,3 +1,4 @@
+
 import Link from "next/link";
 import {
   ArrowLeft,
@@ -6,9 +7,11 @@ import {
   GraduationCap,
 } from "lucide-react";
 
-import { ProjectForm } from "@/components/project-form"; 
+import { ProjectForm } from "@/components/project-form";
 import { getProjectByIdAction } from "@/Interfaces/getters/project.getters";
 import ErrorState from "@/components/ErrorState";
+import { getCurrentApplicationLanguage } from "@/modules/translation/services/application-language.service";
+import { t } from "@/shared/i18n/dictionary";
 
 export default async function EditProjectPage({
   params,
@@ -17,6 +20,7 @@ export default async function EditProjectPage({
 }) {
   const { projectId } = await params;
   const getProjectResult = await getProjectByIdAction(projectId);
+  const locale = await getCurrentApplicationLanguage();
 
   if ("error" in getProjectResult) {
     return <ErrorState message={getProjectResult.error} />;
@@ -29,19 +33,20 @@ export default async function EditProjectPage({
       <div className="flex min-w-0 flex-col gap-3 border-b border-border/60 pb-4 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
         <Link
           href={`/supervisor/projects/${project.id}`}
-          className="inline-flex min-h-9 items-center gap-2 self-start rounded-lg px-3 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+          className="inline-flex min-h-9 items-center gap-2 self-start rounded-lg px-3 font-medium text-muted-foreground font-semibold transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
         >
           <ArrowLeft size={16} />
-          Back to project details
+          {t(locale, "backToProjectDetails")}
         </Link>
 
-        <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+        <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground font-semibold">
           <span className="inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-card/60 px-3 py-1.5">
             <GraduationCap size={14} className="text-primary" />
             {project.projectType === "GRADUATION"
-              ? "Graduation project"
-              : "Pre-graduation project"}
+              ? t(locale, "graduationProjectType")
+              : t(locale, "preGraduationProjectType")}
           </span>
+
           {project.yearPresentation && (
             <span className="inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-card/60 px-3 py-1.5">
               <CalendarDays size={13} />
@@ -63,20 +68,22 @@ export default async function EditProjectPage({
           </span>
 
           <div className="min-w-0 flex-1">
-            <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-primary sm:text-xs">
-              Project management / Edit brief
+            <p className="text-[15px] font-bold uppercase tracking-wide text-primary">
+              {t(locale, "editBriefTrail")}
             </p>
-            <h1 className="mt-2 break-words text-2xl font-black leading-tight tracking-tight [overflow-wrap:anywhere] sm:text-3xl lg:text-4xl">
-              Update project
+
+            <h1 className="mt-2 break-words text-2xl font-black leading-relaxed tracking-tight [overflow-wrap:anywhere] sm:text-3xl lg:text-4xl">
+              {t(locale, "updateProject")}
             </h1>
-            <p className="mt-3 max-w-3xl text-sm leading-7 text-muted-foreground sm:text-base">
-              Keep the project overview, academic context, scope boundaries,
-              and technologies accurate and useful. Changes will be reflected
-              in the project catalogue.
+
+            <p className="mt-3 max-w-3xl leading-7 text-muted-foreground font-semibold sm:text-base">
+              {t(locale, "updateProjectDesc")}
             </p>
+
             <div className="mt-5 flex min-w-0 items-center gap-2 border-t border-border/60 pt-4">
               <span className="size-2 shrink-0 rounded-full bg-primary" />
-              <p className="min-w-0 break-words text-sm font-semibold text-foreground">
+
+              <p className="min-w-0 break-words font-semibold text-foreground">
                 {project.title}
               </p>
             </div>
@@ -84,7 +91,7 @@ export default async function EditProjectPage({
         </div>
       </header>
 
-      <ProjectForm project={project} />
+      <ProjectForm project={project} locale={locale} />
     </main>
   );
 }
