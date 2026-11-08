@@ -1,4 +1,4 @@
-import type { AiProvider as DbAiProvider } from "@prisma/client";
+import type { AiProvider as DbAiProvider, Language } from "@prisma/client";
 import type { AiRequestContext } from "@/infrastructure/ai/ai-observability";
 
 export type AiProviderName = "OPENROUTER" | "LOCAL";
@@ -11,6 +11,7 @@ export type AiProviderIdentity = {
 
 export type AiGenerationInput = {
   project: {
+    language:Language;
     title: string;
     summary: string;
     description: string;
@@ -21,7 +22,6 @@ export type AiGenerationInput = {
     availableResources:string|null;
     constraints:string|null;
     projectType: string;
-    projectSupervisorName: string | null;
     features: { content: string; scope: string }[];
     technologies: { name: string }[];
     existingSuggestions: { content: string; title: string }[];

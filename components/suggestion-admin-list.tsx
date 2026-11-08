@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   AlertTriangle,
   CheckCircle2,
@@ -13,11 +13,12 @@ import {
 
 import { deleteAiSuggestionAction } from "@/Interfaces/actions/ai.actions";
 import { formatDate } from "@/shared/utils/format";
-import { ConfirmSubmitButton } from "@/components/forms/confirm-submit-button";
 import { notify } from "@/components/notificationToaster";
 import type { DeleteAiSuggestionActionPayload } from "@/shared/validation/ai-action";
 import { t, type Locale } from "@/shared/i18n/dictionary";
 import { ConfirmDialog } from "./confirm-dialog";
+import { getProjectSuggestionsAction } from "@/Interfaces/getters/project.getters";
+import CardSkeleton from "./loaders/CardSkeleton";
 
 type Suggestion = {
   id: string;
@@ -28,19 +29,41 @@ type Suggestion = {
 
 type SuggestionAdminListProps = {
   projectId: string;
-  suggestions: Suggestion[];
   locale: Locale;
 };
 
 export function SuggestionAdminList({
   projectId,
-  suggestions: initialSuggestions,
   locale,
 }: SuggestionAdminListProps) {
-  const [suggestions, setSuggestions] = useState(initialSuggestions);
+  const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [deletingIds, setDeletingIds] = useState<Set<string>>(
     () => new Set(),
   );
+  const [loading,setLoading] = useState<boolean>(true);
+
+  const loadingSuggestions=async()=>{
+    if(!projectId){
+      notify.error("Misisng Project ID","Suggestions Panel missing Project ID")
+      setLoading(false);
+      return;
+    }
+    try {
+      setLoading(true);
+      const res = await getProjectSuggestionsAction(projectId);
+      if("error" in res){
+        notify.error("Error",res.error);
+      }else {
+        setSuggestions(res.data.suggestions);
+      }
+    } catch (error) {
+      notify.error(t(locale,'networkError'));
+      console.error(error);      
+    }finally{
+      setLoading(false);
+    }
+  }
+
 
   const handleDelete = async (id: string) => {
     if (deletingIds.has(id)) return;
@@ -87,8 +110,14 @@ export function SuggestionAdminList({
       });
     }
   };
+  useEffect(()=>{
+    loadingSuggestions();
+  },[])
 
-  if (suggestions.length === 0) {
+  if (loading)
+    return <CardSkeleton />
+
+  if (suggestions.length === 0 && !loading) {
     return (
       <div className="flex min-w-0 flex-col items-center rounded-2xl border border-dashed border-border/80 bg-background/40 p-6 text-center sm:p-8">
         <span className="grid size-12 place-items-center rounded-2xl border border-primary/25 bg-primary/10 text-primary shadow-sm">

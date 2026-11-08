@@ -1,3 +1,5 @@
+//@/modules/translation/types/provider-config.types"
+
 import type { TranslationProviderName } from "./translation.types";
 
 export type TranslationProviderType = TranslationProviderName;

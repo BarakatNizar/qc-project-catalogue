@@ -15,12 +15,15 @@ export default async function StudentProjectDetailsPage({
       return <ErrorState message={getProjectResult.error}/>
     }
     const { data, user } = getProjectResult;
-    const suggestions = await aiService.listSuggestions(user, projectId);
   
-
+    let enabled:boolean;
   const settings = await aiService.getPublicSettings();
+  if("error" in settings){
+    enabled=false;
+  }else 
+    enabled=settings.enabled
 
   return <div className="py-6">
-    <ProjectDetails project={data} suggestions={suggestions} canRequestAi aiEnabled={settings.enabled} />
+    <ProjectDetails project={data} canRequestAi aiEnabled={enabled}  supervisorView={user.role==='SUPERVISOR' || user.role==='ADMIN'}/>
   </div>
 }

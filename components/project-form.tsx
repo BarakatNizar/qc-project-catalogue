@@ -33,7 +33,7 @@ import {
 
 import { notify } from "@/components/notificationToaster";
 import { Button } from "@/components/ui/button";
-import type { ExtractedProject, ProjectDto } from "@/modules/project/types";
+import type { ExtractedProject, ProjectData } from "@/modules/project/types";
 import type { Locale } from "@/shared/i18n/dictionary";
 import { t } from "@/shared/i18n/dictionary";
 import type {
@@ -49,7 +49,7 @@ import {
 import FileScannerUploader from "./ProjectFileScannerUploader";
 
 type Props = {
-  project?: ProjectDto;
+  project?: ProjectData;
   locale?: Locale;
 };
 

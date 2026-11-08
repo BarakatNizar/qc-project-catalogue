@@ -106,16 +106,26 @@ function toRuntimeConfig(record: ProviderRecord): RuntimeTranslationProviderConf
 
 class ProvidersRepository {
   async getSettings() {
-    const settings = await prisma.translationServiceSettings.findUnique({ where: { id: "global" } });
-    return settings ?? { id: "global", enabled: true, updatedAt: new Date(0) };
+    try {      
+      const settings = await prisma.translationServiceSettings.findUnique({ where: { id: "global" } });
+      return settings ?? { id: "global", enabled: true, updatedAt: new Date(0) };
+    } catch (error) {
+      return { error: parseRepositoryError(error, "Get State") };
+    }
   }
 
   async setServiceEnabled(enabled: boolean) {
-    return prisma.translationServiceSettings.upsert({
-      where: { id: "global" },
-      update: { enabled },
-      create: { id: "global", enabled },
-    });
+    try {
+      return prisma.translationServiceSettings.upsert({
+        where: { id: "global" },
+        update: { enabled },
+        create: { id: "global", enabled },
+      });
+      
+    } catch (error) {
+      return { error: parseRepositoryError(error, "Dis/Enable") };
+      
+    }
   }
 
   async listAll(): Promise<ProviderRepositoryResult<TranslationProviderAdminDto[]>> {
@@ -166,10 +176,91 @@ class ProvidersRepository {
     }
   }
 
-  async update(
-    input: UpdateTranslationProviderInput,
-  ): Promise<ProviderRepositoryResult<TranslationProviderAdminDto>> {
-    try {
+//   async update(
+//     input: UpdateTranslationProviderInput,
+//   ): Promise<ProviderRepositoryResult<TranslationProviderAdminDto>> {
+//     /*
+
+// export interface UpdateTranslationProviderInput {
+//   id: string;
+//   name?: string;
+//   baseUrl?: string;
+//   apiKey?: string;
+//   clearApiKey?: boolean;
+//   region?: string | null;
+//   model?: string | null;
+//   timeoutMs?: number;
+//   enabled?: boolean;
+//   sortOrder?: number;
+// }
+
+
+
+// export interface TranslationProviderAdminDto {
+//   id: string;
+//   name: string;
+//   providerType: TranslationProviderType;
+//   baseUrl: string;
+//   hasApiKey: boolean;
+//   region: string | null;
+//   model: string | null;
+//   timeoutMs: number;
+//   enabled: boolean;
+//   sortOrder: number;
+//   createdAt: Date;
+//   updatedAt: Date;
+// }
+//     */
+//     try {
+//       const data: {
+//         name?: string;
+//         baseUrl?: string;
+//         encryptedApiKey?: string | null;
+//         region?: string | null;
+//         model?: string | null;
+//         timeoutMs?: number;
+//         enabled?: boolean;
+//         sortOrder?: number;
+//       } = {};
+
+//       if (input.name !== undefined) data.name = input.name;
+//       if (input.baseUrl !== undefined) data.baseUrl = input.baseUrl;
+//       if (input.region !== undefined) data.region = input.region;
+//       if (input.model !== undefined) data.model = input.model;
+//       if (input.timeoutMs !== undefined) data.timeoutMs = input.timeoutMs;
+//       if (input.enabled !== undefined) data.enabled = input.enabled;
+//       if (input.sortOrder !== undefined) data.sortOrder = input.sortOrder;
+
+//       if (input.clearApiKey) {
+//         data.encryptedApiKey = null;
+//       } else if (input.apiKey !== undefined) {
+//         data.encryptedApiKey = encryptProviderSecret(input.apiKey);
+//       }
+
+//       const record = await prisma.translationProviderConfig.update({
+//         where: { id: input.id },
+//         data,
+//       });
+//       return { data: toAdminDto(record as ProviderRecord) };
+//     } catch (error) {
+//       return { error: parseRepositoryError(error, "Update") };
+//     }
+//   }
+
+
+async update(
+  input: UpdateTranslationProviderInput,
+): Promise<ProviderRepositoryResult<TranslationProviderAdminDto>> {
+  try {
+    const record = await prisma.$transaction(async (tx) => {
+      const current = await tx.translationProviderConfig.findUnique({
+        where: { id: input.id },
+      });
+
+      if (!current) {
+        throw new Error("Translation provider not found.");
+      }
+
       const data: {
         name?: string;
         baseUrl?: string;
@@ -178,7 +269,6 @@ class ProvidersRepository {
         model?: string | null;
         timeoutMs?: number;
         enabled?: boolean;
-        sortOrder?: number;
       } = {};
 
       if (input.name !== undefined) data.name = input.name;
@@ -187,7 +277,6 @@ class ProvidersRepository {
       if (input.model !== undefined) data.model = input.model;
       if (input.timeoutMs !== undefined) data.timeoutMs = input.timeoutMs;
       if (input.enabled !== undefined) data.enabled = input.enabled;
-      if (input.sortOrder !== undefined) data.sortOrder = input.sortOrder;
 
       if (input.clearApiKey) {
         data.encryptedApiKey = null;
@@ -195,15 +284,91 @@ class ProvidersRepository {
         data.encryptedApiKey = encryptProviderSecret(input.apiKey);
       }
 
-      const record = await prisma.translationProviderConfig.update({
+      if (input.sortOrder !== undefined) {
+        const targetOrder = Math.max(
+          0,
+          Math.trunc(input.sortOrder),
+        );
+
+        if (targetOrder !== current.sortOrder) {
+          const providers = await tx.translationProviderConfig.findMany({
+            orderBy: { sortOrder: "asc" },
+          });
+
+          const currentIndex = providers.findIndex(
+            (provider) => provider.id === input.id,
+          );
+
+          const targetIndex = Math.min(
+            targetOrder,
+            providers.length - 1,
+          );
+
+          if (currentIndex !== targetIndex) {
+            // Temporarily move all affected providers to unique
+            // negative positions to avoid intermediate conflicts.
+            const affectedProviders = providers.slice(
+              Math.min(currentIndex, targetIndex),
+              Math.max(currentIndex, targetIndex) + 1,
+            );
+
+            for (let index = 0; index < affectedProviders.length; index++) {
+              await tx.translationProviderConfig.update({
+                where: { id: affectedProviders[index].id },
+                data: { sortOrder: -(index + 1) },
+              });
+            }
+
+            // Assign their final positions.
+            const reordered = [...providers];
+
+            const [movedProvider] = reordered.splice(currentIndex, 1);
+            reordered.splice(targetIndex, 0, movedProvider);
+
+            for (let index = 0; index < reordered.length; index++) {
+              const provider = reordered[index];
+
+              if (
+                provider.sortOrder !== index ||
+                provider.id === input.id
+              ) {
+                await tx.translationProviderConfig.update({
+                  where: { id: provider.id },
+                  data: {
+                    sortOrder: index,
+                    ...(provider.id === input.id ? data : {}),
+                  },
+                });
+              }
+            }
+
+            return tx.translationProviderConfig.findUniqueOrThrow({
+              where: { id: input.id },
+            });
+          }
+        }
+      }
+
+      return tx.translationProviderConfig.update({
         where: { id: input.id },
-        data,
+        data: {
+          ...data,
+          ...(input.sortOrder !== undefined
+            ? { sortOrder: current.sortOrder }
+            : {}),
+        },
       });
-      return { data: toAdminDto(record as ProviderRecord) };
-    } catch (error) {
-      return { error: parseRepositoryError(error, "Update") };
-    }
+    });
+
+    return {
+      data: toAdminDto(record as ProviderRecord),
+    };
+  } catch (error) {
+    return {
+      error: parseRepositoryError(error, "Update"),
+    };
   }
+}
 
   async setEnabled(
     id: string,

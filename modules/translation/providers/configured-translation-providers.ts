@@ -1,3 +1,4 @@
+//@/modules/translation/providers/configured-translation.providers
 import "server-only";
 
 import { TranslationServiceClient } from "@google-cloud/translate";
@@ -147,6 +148,29 @@ function safeProviderError(provider: string, error: unknown): string {
   });
   return `${provider} request failed.`;
 }
+function safeProviderError2(provider: string, error: unknown): string {
+  if (
+    error instanceof Error &&
+    (error.name === "TimeoutError" || error.name === "AbortError")
+  ) {
+    return `${provider} request timed out.`;
+  }
+
+  if (error instanceof Error && error.message.startsWith(`${provider} `)) {
+    return error.message;
+  }
+  console.error("raw error: ", error);
+
+  console.error(`[Translation] ${provider} adapter failed`, {
+    errorName: error instanceof Error ? error.name : "UnknownError",
+    errorMessage: error instanceof Error ? error.message : String(error),
+    stack: error instanceof Error ? error.stack : undefined,
+    cause: error instanceof Error ? error.cause : undefined,
+  });
+
+  return `${provider} request failed.`;
+}
+
 
 function requireApiKey(config: RuntimeTranslationProviderConfig, provider: string): string {
   if (!config.apiKey) throw new Error(`${provider} API key is not configured.`);
@@ -490,68 +514,469 @@ function parseJsonObject(text: string): unknown {
   return JSON.parse(candidate) as unknown;
 }
 
-async function aiChatTranslate(texts: string[], target: TranslationLanguage, config: RuntimeTranslationProviderConfig, providerName: string): Promise<TranslationResult<TranslationProviderOutput[]>> {
+// async function aiChatTranslate(texts: string[], target: TranslationLanguage, config: RuntimeTranslationProviderConfig, providerName: string): Promise<TranslationResult<TranslationProviderOutput[]>> {
+//   try {
+//     const baseUrl = requireHttpBaseUrl(config, providerName);
+//     if (!config.model) return { error: `${providerName} model is not configured.` };
+//     if (providerName === "OpenRouter AI" && !config.apiKey) return { error: "OpenRouter API key is not configured." };
+
+//     const endpoint = baseUrl.endsWith("/chat/completions") ? baseUrl : `${baseUrl}/chat/completions`;
+//     const headers: Record<string, string> = { "Content-Type": "application/json" };
+//     if (config.apiKey) headers.Authorization = `Bearer ${config.apiKey}`;
+//     const languageName = target === "ar" ? "Arabic" : "English";
+//     const chunks = chunksFor(texts, 8_000);
+//     const translated = texts.map(() => [] as string[]);
+//     const detected = texts.map(() => new Set<string>());
+
+//     for (const batch of batches(chunks, 8, 8_000)) {
+//       const inputs = batch.map((chunk, id) => ({ id, text: chunk.text }));
+//       const totalCodePoints = batch.reduce((sum, chunk) => sum + Array.from(chunk.text).length, 0);
+//       console.log("Messages :\n", JSON.stringify([
+//         { role: "system", content: `You are a precise translation engine. Translate every input into ${languageName}. Preserve meaning, formatting, identifiers, URLs, code, placeholders and technical terms. Detect the source language of each input separately. Return only valid JSON in this exact shape: {"translations":[{"id":0,"translatedText":"...","detectedSourceLanguage":"en"}]}. Use a two-letter ISO 639-1 code or null for detectedSourceLanguage. Return exactly one item for each input and preserve its id.` },
+//         { role: "user", content: JSON.stringify({ inputs }) },
+//       ]))
+//       const response = await fetch(endpoint, {
+//         method: "POST",
+//         headers,
+//         body: JSON.stringify({
+//           model: config.model,
+//           temperature: 0,
+//           stream: false,
+//           max_tokens: Math.min(8192, Math.max(1024, Math.ceil(totalCodePoints * 1.5))),
+//           response_format: { type: "json_object" },
+//           messages: [
+//             { role: "system", content: `You are a precise translation engine. Translate every input into ${languageName}. Preserve meaning, formatting, identifiers, URLs, code, placeholders and technical terms. Detect the source language of each input separately. Return only valid JSON in this exact shape: {"translations":[{"id":0,"translatedText":"...","detectedSourceLanguage":"en"}]}. Use a two-letter ISO 639-1 code or null for detectedSourceLanguage. Return exactly one item for each input and preserve its id.` },
+//             { role: "user", content: JSON.stringify({ inputs }) },
+//           ],
+//         }),
+//         signal: AbortSignal.timeout(timeoutFor(config)),
+//         cache: "no-store",
+//       });
+//       if (!response.ok) return { error: httpError(providerName, response.status) };
+//       const payload = await response.json() as { choices?: Array<{ message?: { content?: unknown } }> };
+//       console.log("PAYLOAD:  \n", payload);
+//       console.log("\n\npayload.choices.[0].message:  \n", payload.choices?.[0]?.message);
+//       console.log("\n\n\n");
+//       const rawContent = payload.choices?.[0]?.message?.content;
+//       const content = typeof rawContent === "string"
+//         ? rawContent
+//         : Array.isArray(rawContent)
+//           ? rawContent.map((part) => typeof part === "object" && part !== null && "text" in part && typeof part.text === "string" ? part.text : "").join("")
+//           : "";
+//       if (!content) return { error: `${providerName} returned an empty response.` };
+//       const parsed = parseJsonObject(content) as { translations?: ChatTranslationItem[] };
+//       if (!Array.isArray(parsed.translations) || parsed.translations.length !== batch.length) return { error: `${providerName} returned an invalid or incomplete translation response.` };
+//       const byId = new Map<number, ChatTranslationItem>();
+//       for (const item of parsed.translations) {
+//         if (typeof item.id !== "number" || byId.has(item.id)) return { error: `${providerName} returned invalid translation IDs.` };
+//         byId.set(item.id, item);
+//       }
+//       for (let index = 0; index < batch.length; index += 1) {
+//         const chunk = batch[index];
+//         const item = byId.get(index);
+//         if (!item || typeof item.translatedText !== "string") return { error: `${providerName} returned an incomplete translation.` };
+//         translated[chunk.inputIndex][chunk.chunkIndex] = item.translatedText;
+//         const detectedLanguage = normalizeLanguageCode(item.detectedSourceLanguage);
+//         if (detectedLanguage) detected[chunk.inputIndex].add(detectedLanguage);
+//       }
+//     }
+//     return { data: combineResults(texts, translated, detected) };
+//   } catch (error) {
+//     console.log("RAW FUCKEDN ERROR:\n",error)
+//     return { error: safeProviderError2(providerName, error) };
+//   }
+// }
+
+async function aiChatTranslate(
+  texts: string[],
+  target: TranslationLanguage,
+  config: RuntimeTranslationProviderConfig,
+  providerName: string
+): Promise<TranslationResult<TranslationProviderOutput[]>> {
   try {
     const baseUrl = requireHttpBaseUrl(config, providerName);
-    if (!config.model) return { error: `${providerName} model is not configured.` };
-    if (providerName === "OpenRouter AI" && !config.apiKey) return { error: "OpenRouter API key is not configured." };
 
-    const endpoint = baseUrl.endsWith("/chat/completions") ? baseUrl : `${baseUrl}/chat/completions`;
-    const headers: Record<string, string> = { "Content-Type": "application/json" };
-    if (config.apiKey) headers.Authorization = `Bearer ${config.apiKey}`;
+    if (!config.model) {
+      return { error: `${providerName} model is not configured.` };
+    }
+
+    if (providerName === "OpenRouter AI" && !config.apiKey) {
+      return { error: "OpenRouter API key is not configured." };
+    }
+
+    const endpoint = baseUrl.endsWith("/chat/completions")
+      ? baseUrl
+      : `${baseUrl}/chat/completions`;
+
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+    };
+
+    if (config.apiKey) {
+      headers.Authorization = `Bearer ${config.apiKey}`;
+    }
+
     const languageName = target === "ar" ? "Arabic" : "English";
+
     const chunks = chunksFor(texts, 8_000);
     const translated = texts.map(() => [] as string[]);
     const detected = texts.map(() => new Set<string>());
 
+    const systemPrompt = [
+      "You are a professional translation engine.",
+      `Translate every input into ${languageName}.`,
+      "Do not explain, reason aloud, or include commentary.",
+      "Preserve the original meaning, formatting, punctuation, identifiers, URLs, code, placeholders, and technical terminology.",
+      "Detect the source language of each input separately.",
+      "Return ONLY a valid JSON object.",
+      'The exact required structure is: {"translations":[{"id":0,"translatedText":"...","detectedSourceLanguage":"en"}]}.',
+      "Use a two-letter ISO 639-1 language code for detectedSourceLanguage, or null if unknown.",
+      "Return exactly one translation for every input.",
+      "Preserve every input ID exactly.",
+      "Never omit, duplicate, or invent an ID.",
+      "Never return additional properties or text outside the JSON object.",
+    ].join(" ");
+
+    //     const systemPrompt2 = `
+    // You are a professional English-to-Arabic and Arabic-to-English translator.
+
+    // Your ONLY task is translation.
+
+    // TARGET LANGUAGE:
+    // Translate every input completely into ${languageName}.
+
+    // TRANSLATION RULES:
+    // 1. Translate every sentence and every ordinary word.
+    // 2. Never leave ordinary English words untranslated when the target language is Arabic.
+    // 3. Do not mix Arabic with unrelated languages, scripts, or characters.
+    // 4. Never generate Chinese, Japanese, Cyrillic, or other unrelated characters.
+    // 5. Preserve proper nouns, product names, company names, project names, URLs, identifiers, code, and placeholders exactly when appropriate.
+    // 6. Preserve technical terms only when they are product names, identifiers, acronyms, or have no suitable established translation.
+    // 7. Translate technical terminology when a natural and accurate equivalent exists in the target language.
+    // 8. Preserve the original meaning, context, tone, formatting, and sentence structure as naturally as possible.
+    // 9. Do not summarize, paraphrase unnecessarily, omit words, or add information.
+    // 10. Use natural, grammatically correct Arabic when Arabic is the target language.
+    // 11. Treat every input independently. Do not mix the contents of different inputs.
+
+    // OUTPUT:
+    // Return ONLY valid JSON using this exact structure:
+    // {
+    //   "translations": [
+    //     {
+    //       "id": 0,
+    //       "translatedText": "...",
+    //       "detectedSourceLanguage": "en"
+    //     }
+    //   ]
+    // }
+
+    // Return exactly one translation for every input.
+    // Preserve all input IDs.
+    // Do not include explanations, comments, markdown, or additional properties.
+    // `;
+
     for (const batch of batches(chunks, 8, 8_000)) {
-      const inputs = batch.map((chunk, id) => ({ id, text: chunk.text }));
-      const totalCodePoints = batch.reduce((sum, chunk) => sum + Array.from(chunk.text).length, 0);
+      const inputs = batch.map((chunk, id) => ({
+        id,
+        text: chunk.text,
+      }));
+
+      const totalCodePoints = batch.reduce(
+        (sum, chunk) => sum + Array.from(chunk.text).length,
+        0
+      );
+
+      // Allow a larger output budget while keeping it proportional
+      // to the amount of input text.
+      const maxTokens = Math.min(
+        16_384,
+        Math.max(2_048, Math.ceil(totalCodePoints * 3))
+      );
+
+      const requestBody = {
+        model: config.model,
+
+        temperature: 0,
+
+        stream: false,
+
+        max_tokens: maxTokens,
+
+        // Request reasoning to be disabled on supported models.
+        // Excluding reasoning alone does not disable its token usage.
+        reasoning: {
+          effort: "none",
+          exclude: true,
+        },
+
+        // Require JSON output.
+        response_format: {
+          type: "json_object",
+        },
+
+        messages: [
+          {
+            role: "system",
+            content: systemPrompt,
+          },
+          {
+            role: "user",
+            content: JSON.stringify({ inputs }),
+          },
+        ],
+      };
+
       const response = await fetch(endpoint, {
         method: "POST",
         headers,
-        body: JSON.stringify({
-          model: config.model,
-          temperature: 0,
-          stream: false,
-          max_tokens: Math.min(8192, Math.max(1024, Math.ceil(totalCodePoints * 1.5))),
-          response_format: { type: "json_object" },
-          messages: [
-            { role: "system", content: `You are a precise translation engine. Translate every input into ${languageName}. Preserve meaning, formatting, identifiers, URLs, code, placeholders and technical terms. Detect the source language of each input separately. Return only valid JSON in this exact shape: {"translations":[{"id":0,"translatedText":"...","detectedSourceLanguage":"en"}]}. Use a two-letter ISO 639-1 code or null for detectedSourceLanguage. Return exactly one item for each input and preserve its id.` },
-            { role: "user", content: JSON.stringify({ inputs }) },
-          ],
-        }),
+        body: JSON.stringify(requestBody),
         signal: AbortSignal.timeout(timeoutFor(config)),
         cache: "no-store",
       });
-      if (!response.ok) return { error: httpError(providerName, response.status) };
-      const payload = await response.json() as { choices?: Array<{ message?: { content?: unknown } }> };
-      const rawContent = payload.choices?.[0]?.message?.content;
-      const content = typeof rawContent === "string"
-        ? rawContent
-        : Array.isArray(rawContent)
-          ? rawContent.map((part) => typeof part === "object" && part !== null && "text" in part && typeof part.text === "string" ? part.text : "").join("")
-          : "";
-      if (!content) return { error: `${providerName} returned an empty response.` };
-      const parsed = parseJsonObject(content) as { translations?: ChatTranslationItem[] };
-      if (!Array.isArray(parsed.translations) || parsed.translations.length !== batch.length) return { error: `${providerName} returned an invalid or incomplete translation response.` };
+
+      if (!response.ok) {
+        return {
+          error: httpError(providerName, response.status),
+        };
+      }
+
+      type ChatCompletionPayload = {
+        choices?: Array<{
+          finish_reason?: string | null;
+          native_finish_reason?: string | null;
+          message?: {
+            content?: unknown;
+            refusal?: unknown;
+          };
+        }>;
+        usage?: {
+          prompt_tokens?: number;
+          completion_tokens?: number;
+          total_tokens?: number;
+          completion_tokens_details?: {
+            reasoning_tokens?: number;
+          };
+        };
+      };
+
+      let payload: ChatCompletionPayload;
+
+      try {
+        payload = (await response.json()) as ChatCompletionPayload;
+      } catch {
+        return {
+          error: `${providerName} returned an invalid API response.`,
+        };
+      }
+      console.log("[payload]", payload);
+
+      const choice = payload.choices?.[0];
+      console.log("[choice]", choice);
+
+      if (!choice) {
+        return {
+          error: `${providerName} returned no completion choices.`,
+        };
+      }
+
+      const finishReason = choice.finish_reason;
+      const nativeFinishReason = choice.native_finish_reason;
+
+      // Detect incomplete generations before attempting to parse content.
+      if (
+        finishReason === "length" ||
+        nativeFinishReason === "length"
+      ) {
+        console.warn(`[Translation] ${providerName} response truncated`, {
+          model: config.model,
+          finishReason,
+          nativeFinishReason,
+          maxTokens,
+          completionTokens: payload.usage?.completion_tokens,
+          reasoningTokens:
+            payload.usage?.completion_tokens_details?.reasoning_tokens,
+        });
+
+        return {
+          error: `${providerName} response was truncated because the generation token limit was reached.`,
+        };
+      }
+
+      if (finishReason === "content_filter") {
+        return {
+          error: `${providerName} response was blocked by the provider's content filter.`,
+        };
+      }
+
+      const rawContent = choice.message?.content;
+
+      // OpenRouter models can return content as a string or an array
+      // of content blocks.
+      let content = "";
+
+      if (typeof rawContent === "string") {
+        content = rawContent;
+      } else if (Array.isArray(rawContent)) {
+        content = rawContent
+          .map((part: unknown) => {
+            if (
+              typeof part === "object" &&
+              part !== null &&
+              "text" in part &&
+              typeof part.text === "string"
+            ) {
+              return part.text;
+            }
+
+            return "";
+          })
+          .join("");
+      }
+
+      if (!content.trim()) {
+        console.warn(`[Translation] ${providerName} returned empty content`, {
+          model: config.model,
+          finishReason,
+          nativeFinishReason,
+          refusal: choice.message?.refusal,
+          completionTokens: payload.usage?.completion_tokens,
+          reasoningTokens:
+            payload.usage?.completion_tokens_details?.reasoning_tokens,
+        });
+
+        return {
+          error: `${providerName} returned an empty response.`,
+        };
+      }
+
+      // Parse the JSON response.
+      let parsed: unknown;
+
+      try {
+        const cleaned = content
+          .trim()
+          .replace(/^```(?:json)?\s*/iu, "")
+          .replace(/\s*```$/u, "");
+
+        const start = cleaned.indexOf("{");
+        const end = cleaned.lastIndexOf("}");
+
+        const json = start >= 0 && end > start
+          ? cleaned.slice(start, end + 1)
+          : cleaned;
+
+        parsed = JSON.parse(json) as unknown;
+      } catch {
+        console.warn(`[Translation] ${providerName} returned invalid JSON`, {
+          model: config.model,
+          finishReason,
+          contentLength: content.length,
+        });
+
+        return {
+          error: `${providerName} returned invalid JSON.`,
+        };
+      }
+
+      // Validate the root object.
+      if (
+        typeof parsed !== "object" ||
+        parsed === null ||
+        !("translations" in parsed) ||
+        !Array.isArray(parsed.translations)
+      ) {
+        return {
+          error: `${providerName} returned an invalid translation structure.`,
+        };
+      }
+
+      const translationItems = parsed.translations as ChatTranslationItem[];
+
+      // Require exactly one result per input.
+      if (translationItems.length !== batch.length) {
+        return {
+          error: `${providerName} returned an incomplete translation response.`,
+        };
+      }
+
+      // Validate IDs and prevent duplicates or unexpected IDs.
       const byId = new Map<number, ChatTranslationItem>();
-      for (const item of parsed.translations) {
-        if (typeof item.id !== "number" || byId.has(item.id)) return { error: `${providerName} returned invalid translation IDs.` };
+
+      for (const item of translationItems) {
+        if (
+          typeof item !== "object" ||
+          item === null ||
+          typeof item.id !== "number" ||
+          !Number.isInteger(item.id) ||
+          item.id < 0 ||
+          item.id >= batch.length
+        ) {
+          return {
+            error: `${providerName} returned an invalid translation ID.`,
+          };
+        }
+
+        if (byId.has(item.id)) {
+          return {
+            error: `${providerName} returned duplicate translation IDs.`,
+          };
+        }
+
+        if (
+          typeof item.translatedText !== "string" ||
+          !item.translatedText.trim()
+        ) {
+          return {
+            error: `${providerName} returned an empty or invalid translation.`,
+          };
+        }
+
         byId.set(item.id, item);
       }
+
+      // Validate and map every result back to its original input.
       for (let index = 0; index < batch.length; index += 1) {
         const chunk = batch[index];
         const item = byId.get(index);
-        if (!item || typeof item.translatedText !== "string") return { error: `${providerName} returned an incomplete translation.` };
-        translated[chunk.inputIndex][chunk.chunkIndex] = item.translatedText;
-        const detectedLanguage = normalizeLanguageCode(item.detectedSourceLanguage);
-        if (detectedLanguage) detected[chunk.inputIndex].add(detectedLanguage);
+
+        if (!item) {
+          return {
+            error: `${providerName} omitted a translation.`,
+          };
+        }
+
+        translated[chunk.inputIndex][chunk.chunkIndex] = item?.translatedText as string;
+
+        const detectedLanguage = normalizeLanguageCode(
+          item.detectedSourceLanguage
+        );
+
+        if (detectedLanguage) {
+          detected[chunk.inputIndex].add(detectedLanguage);
+        }
       }
+
+      // Log metadata only. Never log the prompt, translated content,
+      // API key, or the model's reasoning.
+      console.info(`[Translation] ${providerName} batch completed`, {
+        model: config.model,
+        inputCount: batch.length,
+        inputCodePoints: totalCodePoints,
+        maxTokens,
+        finishReason,
+        completionTokens: payload.usage?.completion_tokens,
+        reasoningTokens:
+          payload.usage?.completion_tokens_details?.reasoning_tokens,
+      });
     }
-    return { data: combineResults(texts, translated, detected) };
+
+    return {
+      data: combineResults(texts, translated, detected),
+    };
   } catch (error) {
-    return { error: safeProviderError(providerName, error) };
+    return {
+      error: safeProviderError(providerName, error),
+    };
   }
 }
 

@@ -1,6 +1,8 @@
+import { Language } from "@prisma/client";
 import { z } from "zod";
 
 export const extractedProjectResponseSchema = z.object({
+  language: z.enum(Language),
   title: z.string().trim().min(1),
   summary: z.string().trim().min(1),
   description: z.string().trim().min(1),
@@ -10,8 +12,9 @@ export const extractedProjectResponseSchema = z.object({
   targetUsers: z.string().trim().nullable().optional(),
   availableResources: z.string().trim().nullable().optional(),
   constraints: z.string().trim().nullable().optional(),
-  projectSupervisorName: z.string().trim().min(1),
-  yearPresentation: z.string().trim().min(1),
+  projectSupervisorName: z.string().trim().min(1).nullable().optional(),
+  studentsPresented:z.string().trim().min(1).optional(),
+  yearPresentation: z.string().max(6).optional(),
   projectType: z.enum([
     "Pre-Graduation", 
     "Pre Graduation", 

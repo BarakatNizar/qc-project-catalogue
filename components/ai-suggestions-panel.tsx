@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import {
   BrainCircuit,
   Sparkles,
@@ -20,6 +20,9 @@ import { Alert } from "@/components/ui/alert";
 import { formatDate } from "@/shared/utils/format";
 import { Button } from "@/components/ui/button";
 import { t, type Locale } from "@/shared/i18n/dictionary";
+import CardSkeleton from "./loaders/CardSkeleton";
+import { getProjectSuggestionsAction } from "@/Interfaces/getters/project.getters";
+import { notify } from "./notificationToaster";
 
 type Suggestion = {
   id: string;
@@ -30,7 +33,6 @@ type Suggestion = {
 
 type AiSuggestionsPanelProps = {
   projectId: string;
-  initialSuggestions: Suggestion[];
   canRequest: boolean;
   aiEnabled: boolean;
   locale: Locale;
@@ -38,15 +40,38 @@ type AiSuggestionsPanelProps = {
 
 export function AiSuggestionsPanel({
   projectId,
-  initialSuggestions,
   canRequest,
   aiEnabled,
   locale,
 }: AiSuggestionsPanelProps) {
-  const [suggestions, setSuggestions] = useState(initialSuggestions);
+  const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+
+  const [loading,setLoading] = useState<boolean>(true);
+
+  const loadingSuggestions=async()=>{
+    if(!projectId){
+      notify.error("Misisng Project ID","Suggestions Panel missing Project ID")
+      setLoading(false);
+      return;
+    }
+    try {
+      setLoading(true);
+      const res = await getProjectSuggestionsAction(projectId);
+      if("error" in res){
+        notify.error("Error",res.error);
+      }else {
+        setSuggestions(res.data.suggestions);
+      }
+    } catch (error) {
+      notify.error(t(locale,'networkError'));
+      console.error(error);      
+    }finally{
+      setLoading(false);
+    }
+  }
 
   function requestSuggestions() {
     if (isPending || !canRequest || !aiEnabled) return;
@@ -59,11 +84,12 @@ export function AiSuggestionsPanel({
 
       if ("error" in result) {
         setError(result.error);
+        notify.error("Error", result.error)
         return;
       }
 
       const incomingSuggestions: Suggestion[] =
-        result.data.suggestions.map((item) => ({
+        result.data.map((item) => ({
           id: item.id,
           title: item.title?.trim() || t(locale, "untitledSuggestion"),
           content: item.content,
@@ -95,12 +121,30 @@ export function AiSuggestionsPanel({
                 : t(locale, "suggestions"),
             ),
         );
+        notify.success(
+          t(locale, "aiSuggestionsAddedNotice")
+            .replace("{count}", String(addedCount))
+            .replace(
+              "{plural}",
+              addedCount === 1
+                ? t(locale, "suggestion")
+                : t(locale, "suggestions"),
+            ),)
       } else {
         setNotice(t(locale, "aiSuggestionsAddedNotice"));
+        notify.success(t(locale, "aiSuggestionsAddedNotice"));
       }
     });
   }
 
+  useEffect(()=>{
+    loadingSuggestions();
+  },[])
+
+
+    if (loading)
+      return <CardSkeleton />
+  
   return (
     <section
       aria-labelledby="ai-suggestions-title"

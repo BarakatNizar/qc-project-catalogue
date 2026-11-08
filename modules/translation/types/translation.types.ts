@@ -2,7 +2,7 @@
 
 export type TranslationLanguage = "en" | "ar";
 
-export type TranslationField =
+  export type TranslationField =
   | "project.title"
   | "project.summary"
   | "project.description"
@@ -12,7 +12,9 @@ export type TranslationField =
   | "project.targetUsers"
   | "project.availableResources"
   | "project.constraints"
-  | "projectFeature.content";
+  | "projectFeature.content"
+  | "projectSuggestion.title"
+  | "projectSuggestion.content";
 
 export interface TranslationInput {
   id: string;
@@ -53,16 +55,6 @@ export interface TranslationProviderOutput {
   translatedText: string;
   detectedSourceLanguage: string | null;
 }
-
-
-// export interface TranslationProvider {
-//   readonly name: TranslationProviderName;
-
-//   translateMany(
-//     texts: string[],
-//     targetLanguage: TranslationLanguage,
-//   ): Promise<TranslationResult<TranslationProviderOutput[]>>;
-// }
 
 
 /**

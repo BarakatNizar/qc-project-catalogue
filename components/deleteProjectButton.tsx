@@ -2,7 +2,6 @@
 import { notify } from './notificationToaster'
 import { deleteProjectAction,  } from '@/Interfaces/actions/projects.actions'
 import { useRouter } from 'next/navigation'
-import { ConfirmSubmitButton } from './forms/confirm-submit-button';
 import { ConfirmDialog } from './confirm-dialog';
 
 type Props = {

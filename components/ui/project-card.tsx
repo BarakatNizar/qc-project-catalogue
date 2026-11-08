@@ -11,30 +11,15 @@ import {
 } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
-import type { ProjectType, ProjectVisibility } from "@prisma/client";
 import { t, type Locale } from "@/shared/i18n/dictionary";
-
-type CardProject = {
-  id: string;
-  title: string;
-  summary: string;
-  projectSupervisorName: string | null;
-  projectType: ProjectType;
-  visibility: ProjectVisibility;
-  technologies: { name: string }[];
-  images: { id: string; mimeType: string }[];
-  counts: {
-    images: number;
-    suggestions: number;
-  };
-};
+import { ProjectListItem } from "@/modules/project/types";
 
 export function ProjectCard({
   project,
   management = false,
   locale
 }: {
-  project: CardProject;
+  project: ProjectListItem;
   management?: boolean;
   locale: Locale;
 }) {

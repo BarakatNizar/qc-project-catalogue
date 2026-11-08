@@ -4,9 +4,13 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url = env("DATABASE_URL")
+  url      = env("DATABASE_URL")
 }
 
+enum Language {
+  en
+  ar
+}
 
 enum UserRole {
   ADMIN
@@ -33,6 +37,7 @@ enum AiProvider {
   OPENROUTER
   LOCAL
 }
+
 enum AiOperation {
   SUGGESTIONS
   PROJECT_EXTRACTION
@@ -44,7 +49,6 @@ enum AiExecutionStatus {
   FAILED
 }
 
-
 enum AiLogLevel {
   INFO
   WARN
@@ -52,25 +56,23 @@ enum AiLogLevel {
 }
 
 model User {
-  id                    String               @id @default(uuid()) @db.Uuid
-  role                  UserRole
-  loginId               String               @unique @db.VarChar(120)
-  passwordHash          String               @db.VarChar(255)
-  name                  String               @db.VarChar(160)
-  email                 String?              @unique @db.VarChar(254)
-  collegeId             String?              @unique @db.VarChar(80)
-  mustChangePassword    Boolean              @default(false)
-  supervisorId          String?              @db.Uuid
-  createdAt             DateTime             @default(now())
-  updatedAt             DateTime             @updatedAt
-  supervisor            User?                @relation("StudentSupervisor", fields: [supervisorId], references: [id], onDelete: SetNull)
-  supervisedStudents    User[]               @relation("StudentSupervisor")
-  triggeredResponses    AiSuggestionResponse[] @relation("AiResponseTrigger")
-  triggeredSuggestions  AiSuggestion[]       @relation("AiSuggestionTrigger")
-  
+  id                   String                 @id @default(uuid()) @db.Uuid
+  role                 UserRole
+  loginId              String                 @unique @db.VarChar(120)
+  passwordHash         String                 @db.VarChar(255)
+  name                 String                 @db.VarChar(160)
+  email                String?                @unique @db.VarChar(254)
+  collegeId            String?                @unique @db.VarChar(80)
+  mustChangePassword   Boolean                @default(false)
+  supervisorId         String?                @db.Uuid
+  createdAt            DateTime               @default(now())
+  updatedAt            DateTime               @updatedAt
+  supervisor           User?                  @relation("StudentSupervisor", fields: [supervisorId], references: [id], onDelete: SetNull)
+  supervisedStudents   User[]                 @relation("StudentSupervisor")
+  triggeredResponses   AiSuggestionResponse[] @relation("AiResponseTrigger")
+  triggeredSuggestions AiSuggestion[]         @relation("AiSuggestionTrigger")
 
   aiLogs AiLog[] @relation("AiLogTrigger")
-
 
   @@index([role, name])
   @@index([supervisorId])
@@ -78,36 +80,36 @@ model User {
 }
 
 model Project {
-  id                   String               @id @default(uuid()) @db.Uuid
+  id String @id @default(uuid()) @db.Uuid
 
-  title                String               @db.VarChar(200)
-  summary              String               @db.VarChar(5000)
-  description          String               @db.Text
+  title       String @db.VarChar(200)
+  summary     String @db.VarChar(5000)
+  description String @db.Text
 
-  problemStatement     String              @db.Text
-  proposedSolution     String              @db.Text
-  objectives           String              @db.Text
-  projectSupervisorName String?              @db.VarChar(160)
-  features             ProjectFeature[] 
-  technologies         ProjectTechnology[]
-  targetUsers           String?  @db.Text
-  constraints           String?  @db.Text
-  availableResources    String?  @db.Text
+  language Language
 
+  problemStatement      String              @db.Text
+  proposedSolution      String              @db.Text
+  objectives            String              @db.Text
+  projectSupervisorName String?             @db.VarChar(160)
+  features              ProjectFeature[]
+  technologies          ProjectTechnology[]
+  targetUsers           String?             @db.Text
+  constraints           String?             @db.Text
+  availableResources    String?             @db.Text
 
-  yearPresentation     String?              @db.VarChar(6)
-  projectType          ProjectType
-  visibility           ProjectVisibility    @default(VISIBLE)
-  createdAt            DateTime             @default(now())
-  updatedAt            DateTime             @updatedAt
+  yearPresentation  String?           @db.VarChar(6)
+  studentsPresented String?
+  projectType       ProjectType
+  visibility        ProjectVisibility @default(VISIBLE)
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
 
-
-  images               ProjectImage[]
-  suggestionResponses  AiSuggestionResponse[]
-  suggestions          AiSuggestion[]
+  images              ProjectImage[]
+  suggestionResponses AiSuggestionResponse[]
+  suggestions         AiSuggestion[]
 
   aiLogs AiLog[]
-
 
   @@index([visibility, projectType, createdAt])
   @@index([title])
@@ -116,14 +118,14 @@ model Project {
 }
 
 model ProjectFeature {
-  id        String             @id @default(uuid()) @db.Uuid
-  projectId String             @db.Uuid
-  content   String             @db.VarChar(1000)
+  id        String              @id @default(uuid()) @db.Uuid
+  projectId String              @db.Uuid
+  content   String              @db.VarChar(1000)
   scope     ProjectFeatureScope //IN | OUT
-  sortOrder Int                @default(0)
-  createdAt DateTime           @default(now())
-  updatedAt DateTime           @updatedAt
-  project   Project            @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  sortOrder Int                 @default(0)
+  createdAt DateTime            @default(now())
+  updatedAt DateTime            @updatedAt
+  project   Project             @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
   @@index([projectId, scope, sortOrder])
   @@map("project_features")
@@ -165,45 +167,44 @@ model AiServiceSettings {
   @@map("ai_service_settings")
 }
 
-
 model AiProviderConfig {
-  id               String   @id @default(uuid()) @db.Uuid
-  name             String   @db.VarChar(80)
-  provider         AiProvider
-  baseUrl          String   @db.VarChar(500)
-  encryptedApiKey  String?  @db.Text
-  model            String   @db.VarChar(180)
-  timeoutMs        Int      @default(45000)
-  enabled          Boolean  @default(true)
-  sortOrder        Int      @default(0)
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  id              String     @id @default(uuid()) @db.Uuid
+  name            String     @db.VarChar(80)
+  provider        AiProvider
+  baseUrl         String     @db.VarChar(500)
+  encryptedApiKey String?    @db.Text
+  model           String     @db.VarChar(180)
+  timeoutMs       Int        @default(45000)
+  enabled         Boolean    @default(true)
+  sortOrder       Int        @default(0)
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
 
   suggestionResponses AiSuggestionResponse[]
 
   @@index([enabled, sortOrder])
+  @@unique([sortOrder])
   @@map("ai_provider_configs")
 }
 
 model AiSuggestionResponse {
-  id                String          @id @default(uuid()) @db.Uuid
-  projectId         String          @db.Uuid
-  triggeredByUserId String?         @db.Uuid
+  id                String  @id @default(uuid()) @db.Uuid
+  projectId         String  @db.Uuid
+  triggeredByUserId String? @db.Uuid
 
   providerConfigId String? @db.Uuid
   aiLogId          String? @unique @db.Uuid
-  
-  provider          AiProvider
-  model             String          @db.VarChar(180)
-  responseContent   Json            @db.JsonB
-  createdAt         DateTime        @default(now())
-  project           Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  triggeredByUser   User?           @relation("AiResponseTrigger", fields: [triggeredByUserId], references: [id], onDelete: SetNull)
-  suggestions       AiSuggestion[]
 
-  providerConfig   AiProviderConfig? @relation(fields: [providerConfigId], references: [id], onDelete: SetNull)
-  aiLog            AiLog? @relation(fields: [aiLogId], references: [id], onDelete: SetNull)
+  provider        AiProvider
+  model           String         @db.VarChar(180)
+  responseContent Json           @db.JsonB
+  createdAt       DateTime       @default(now())
+  project         Project        @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  triggeredByUser User?          @relation("AiResponseTrigger", fields: [triggeredByUserId], references: [id], onDelete: SetNull)
+  suggestions     AiSuggestion[]
 
+  providerConfig AiProviderConfig? @relation(fields: [providerConfigId], references: [id], onDelete: SetNull)
+  aiLog          AiLog?            @relation(fields: [aiLogId], references: [id], onDelete: SetNull)
 
   @@index([projectId, createdAt])
   @@index([triggeredByUserId])
@@ -228,42 +229,41 @@ model AiSuggestion {
   @@map("ai_suggestions")
 }
 
-
 model AiLog {
-  id                   String            @id @default(uuid()) @db.Uuid
-  traceId              String            @unique @db.VarChar(64)
-  operation            AiOperation
-  status               AiExecutionStatus @default(RUNNING)
-  level                AiLogLevel        @default(INFO)
+  id        String            @id @default(uuid()) @db.Uuid
+  traceId   String            @unique @db.VarChar(64)
+  operation AiOperation
+  status    AiExecutionStatus @default(RUNNING)
+  level     AiLogLevel        @default(INFO)
 
-  triggeredByUserId    String?           @db.Uuid
-  projectId            String?           @db.Uuid
+  triggeredByUserId String? @db.Uuid
+  projectId         String? @db.Uuid
 
-  startedAt            DateTime          @default(now())
-  finishedAt           DateTime?
-  durationMs           Int?
+  startedAt  DateTime  @default(now())
+  finishedAt DateTime?
+  durationMs Int?
 
   // Used by efficient Prisma filters without querying JSON.
-  providerTypes        String[]          @default([])
-  finalProvider        AiProvider?
-  finalProviderName    String?           @db.VarChar(80)
-  finalProviderConfigId String?          @db.Uuid
-  finalModel           String?           @db.VarChar(180)
+  providerTypes         String[]    @default([])
+  finalProvider         AiProvider?
+  finalProviderName     String?     @db.VarChar(80)
+  finalProviderConfigId String?     @db.Uuid
+  finalModel            String?     @db.VarChar(180)
 
-  errorCode            String?           @db.VarChar(80)
-  errorName            String?           @db.VarChar(120)
-  errorMessage         String?           @db.VarChar(1000)
-  failureStage         String?           @db.VarChar(80)
-  failureKind          String?           @db.VarChar(80)
+  errorCode    String? @db.VarChar(80)
+  errorName    String? @db.VarChar(120)
+  errorMessage String? @db.VarChar(1000)
+  failureStage String? @db.VarChar(80)
+  failureKind  String? @db.VarChar(80)
 
   // JSON snapshots of attempts/events, not separate rows.
-  attempts             Json              @default("[]") @db.JsonB
-  events               Json              @default("[]") @db.JsonB
-  metadata             Json?             @db.JsonB
+  attempts Json  @default("[]") @db.JsonB
+  events   Json  @default("[]") @db.JsonB
+  metadata Json? @db.JsonB
 
-  triggeredByUser      User?             @relation("AiLogTrigger", fields: [triggeredByUserId], references: [id], onDelete: SetNull)
-  project              Project?          @relation(fields: [projectId], references: [id], onDelete: SetNull)
-  suggestionResponse   AiSuggestionResponse?
+  triggeredByUser    User?                 @relation("AiLogTrigger", fields: [triggeredByUserId], references: [id], onDelete: SetNull)
+  project            Project?              @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  suggestionResponse AiSuggestionResponse?
 
   @@index([operation, startedAt])
   @@index([status, startedAt])
@@ -275,8 +275,6 @@ model AiLog {
   @@map("ai_logs")
 }
 
-
-
 model TranslationServiceSettings {
   id        String   @id @default("global") @db.VarChar(40)
   enabled   Boolean  @default(true)
@@ -284,8 +282,6 @@ model TranslationServiceSettings {
 
   @@map("translation_service_settings")
 }
-
-
 
 enum TranslationProviderType {
   google
@@ -310,7 +306,7 @@ model TranslationProviderConfig {
   sortOrder       Int                     @default(0)
   createdAt       DateTime                @default(now())
   updatedAt       DateTime                @updatedAt
-
+  @@unique([sortOrder])
   @@index([enabled, sortOrder])
   @@map("translation_provider_configs")
 }

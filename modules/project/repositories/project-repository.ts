@@ -196,37 +196,22 @@
 
 
 
-
+// modules/projects/repositories/project-repository.ts
 import "server-only";
 import { prisma } from "@/infrastructure/database/prisma";
 import { projectWithBrief } from "@/modules/project/mappers/project-mapper";
 import type { ProjectType, ProjectVisibility, ProjectFeatureScope, Prisma } from "@prisma/client"
+import { CreateProjectPayload, UpdateProjectData } from "@/shared/validation/project";
 
-export type ProjectWriteData = {
-  title: string;
-  summary: string;
-  description: string;
-  problemStatement: string;
-  proposedSolution: string;
-  objectives: string;
-  targetUsers?: string;
-  availableResources?: string;
-  constraints?: string;
-  yearPresentation?: string;
-  projectSupervisorName?: string;
-  projectType: ProjectType;
-  inScopeFeatures: string[];
-  outOfScopeFeatures: string[];
-  technologies: string[];
-  images?: { data: Uint8Array; mimeType: string; fileName?: string; fileSizeBytes: number }[];
-};
+export type ProjectWriteData = (CreateProjectPayload | UpdateProjectData) & {images?: { data: Uint8Array; mimeType: string; fileName?: string; fileSizeBytes: number }[];};
+
 
 function nestedData(input: ProjectWriteData) {
   const features = [
-    ...input.inScopeFeatures.map((content) => ({ content, scope: "IN_SCOPE" as ProjectFeatureScope })),
-    ...input.outOfScopeFeatures.map((content) => ({ content, scope: "OUT_OF_SCOPE" as ProjectFeatureScope })),
+    ...(input.inScopeFeatures??[]).map((content) => ({ content, scope: "IN_SCOPE" as ProjectFeatureScope })),
+    ...(input.outOfScopeFeatures??[]).map((content) => ({ content, scope: "OUT_OF_SCOPE" as ProjectFeatureScope })),
   ];
-  const technologies = [...new Set(input.technologies.map((value) => value.trim()).filter(Boolean))];
+  const technologies = [...new Set((input.technologies??[]).map((value) => value.trim()).filter(Boolean))];
   return {
     features: { create: features.map((feature, sortOrder) => ({ ...feature, sortOrder })) },
     technologies: { create: technologies.map((name, sortOrder) => ({ name, sortOrder })) },
@@ -234,6 +219,7 @@ function nestedData(input: ProjectWriteData) {
 }
 
 export const projectRepository = {
+  
   async list(options: { query?: string; supervisorName?: string; projectType?: ProjectType; visibility?: ProjectVisibility; includeHidden: boolean; page?: number; pageSize?: number; }) {
     const page = options.page ?? 1;
     const pageSize = options.pageSize ?? 10;
@@ -313,7 +299,7 @@ export const projectRepository = {
     };
   },
 
-  findById(id: string) {
+  async findById(id: string) {
     return prisma.project.findUnique({ where: { id }, include: projectWithBrief });
   },
 
@@ -343,7 +329,7 @@ export const projectRepository = {
     });
   },
 
-  create(input: ProjectWriteData) {
+  async create(input: CreateProjectPayload & ProjectWriteData ) {
     const related = nestedData(input);
     return prisma.project.create({
       data: {
@@ -357,7 +343,9 @@ export const projectRepository = {
         targetUsers: input.targetUsers || null,
         constraints: input.constraints || null,
         yearPresentation: input.yearPresentation || null,
-        projectSupervisorName: input.projectSupervisorName ?? "",
+        projectSupervisorName: input.projectSupervisorName ?? null,
+        studentsPresented: input.studentsPresented ?? null,
+        language:input.language,
         projectType: input.projectType,
         ...(input.images?.length ? { 
           images: { 
@@ -374,11 +362,11 @@ export const projectRepository = {
     });
   },
 
-  async update(id: string, input: ProjectWriteData) {
-    const technologies = [...new Set(input.technologies.map((value) => value.trim()).filter(Boolean))];
+  async update(id: string, input: UpdateProjectData & ProjectWriteData) {
+    const technologies = [...new Set((input.technologies??[]).map((value) => value.trim()).filter(Boolean))];
     const features = [
-      ...input.inScopeFeatures.map((content) => ({ content, scope: "IN_SCOPE" as ProjectFeatureScope })),
-      ...input.outOfScopeFeatures.map((content) => ({ content, scope: "OUT_OF_SCOPE" as ProjectFeatureScope })),
+      ...(input.inScopeFeatures??[]).map((content) => ({ content, scope: "IN_SCOPE" as ProjectFeatureScope })),
+      ...(input.outOfScopeFeatures??[]).map((content) => ({ content, scope: "OUT_OF_SCOPE" as ProjectFeatureScope })),
     ];
     return prisma.$transaction(async (tx) => {
       await tx.project.update({

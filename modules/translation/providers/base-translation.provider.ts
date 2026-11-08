@@ -1,3 +1,4 @@
+//@/modules/translation/providers/base-translation.provider
 import "server-only";
 
 import { providersRepository } from "@/modules/translation/repositories/providers.repository";
@@ -108,10 +109,13 @@ class BaseTranslationProvider {
         if ("data" in result) {
           try {
             this.options.onSuccess?.(provider);
+            console.log("BASE-PROVIDER: SUCCESS.")
+            console.log("RETURNED RESULT: ",result);
           } catch (callbackError) {
             console.error("[Translation] onSuccess callback failed", {
               errorName: callbackError instanceof Error ? callbackError.name : "UnknownError",
             });
+            console.error("[RAW ERROR]:", callbackError);
           }
 
           if (index > 0) {

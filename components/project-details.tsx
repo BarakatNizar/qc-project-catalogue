@@ -23,7 +23,7 @@ import {
   Wrench,
 } from "lucide-react";
 
-import type { ProjectDto } from "@/modules/project/types";
+import type { ProjectData } from "@/modules/project/types";
 import { AiSuggestionsPanel } from "@/components/ai-suggestions-panel";
 import { SuggestionAdminList } from "@/components/suggestion-admin-list";
 import { formatDate } from "@/shared/utils/format";
@@ -43,8 +43,7 @@ type Suggestion = {
 };
 
 type ProjectDetailsProps = {
-  project: ProjectDto;
-  suggestions: Suggestion[];
+  project: ProjectData;
   canRequestAi?: boolean;
   aiEnabled?: boolean;
   supervisorView?: boolean;
@@ -226,7 +225,7 @@ function FeatureList({
   emptyMessage,
 }: {
   title: string;
-  features: ProjectDto["features"];
+  features: ProjectData["features"];
   included: boolean;
   emptyMessage: string;
 }) {
@@ -281,7 +280,6 @@ function FeatureList({
 
 export async function ProjectDetails({
   project,
-  suggestions,
   canRequestAi = false,
   aiEnabled = true,
   supervisorView = false,
@@ -771,7 +769,6 @@ export async function ProjectDetails({
               <div className="mt-4 min-w-0 border-t border-border/60 pt-4">
                 <SuggestionAdminList
                   projectId={project.id}
-                  suggestions={suggestions}
                   locale={locale}
                 />
               </div>
@@ -780,7 +777,6 @@ export async function ProjectDetails({
             <div className="min-w-0">
               <AiSuggestionsPanel
                 projectId={project.id}
-                initialSuggestions={suggestions}
                 canRequest={canRequestAi}
                 aiEnabled={aiEnabled}
                 locale={locale}
