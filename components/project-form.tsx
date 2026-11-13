@@ -47,6 +47,7 @@ import {
   updateProjectAction,
 } from "@/Interfaces/actions/projects.actions";
 import FileScannerUploader from "./ProjectFileScannerUploader";
+import { Language } from "@prisma/client";
 
 type Props = {
   project?: ProjectData;
@@ -158,6 +159,12 @@ export function ProjectForm({ project, locale = "en" }: Props) {
   const [projectSupervisorName, setProjectSupervisorName] = useState(
     project?.projectSupervisorName ?? ""
   );
+  const [studentsPresented, setStudentsPresented] = useState(
+    project?.studentsPresented ?? ""
+  );
+  const [language, setLanguage] = useState<Language>(
+    project?.language ?? locale
+  );
   const [summary, setSummary] = useState(project?.summary ?? "");
   const [description, setDescription] = useState(project?.description ?? "");
   const [problemStatement, setProblemStatement] = useState(
@@ -212,6 +219,8 @@ export function ProjectForm({ project, locale = "en" }: Props) {
     setConstraints(extracted.constraints || "");
     setYearPresentation(extracted.yearPresentation || "");
     setProjectSupervisorName(extracted.projectSupervisorName || "");
+    setStudentsPresented(extracted.studentsPresented || "");
+    setLanguage(extracted.language || locale);
 
     const normalizedType = extracted.projectType?.toLowerCase() || "";
 
@@ -326,6 +335,8 @@ export function ProjectForm({ project, locale = "en" }: Props) {
         title,
         summary,
         description,
+        language,
+        studentsPresented,
         problemStatement,
         proposedSolution,
         objectives,
@@ -472,6 +483,34 @@ export function ProjectForm({ project, locale = "en" }: Props) {
 
           <div className="min-w-0">
             <FieldLabel
+              htmlFor="project-language"
+              icon={<Layers3 size={20} />}
+              required
+            >
+              {t(locale, "projectLanguage")}
+            </FieldLabel>
+
+            <select
+              id="project-language"
+              className={inputClass}
+              name="language"
+              value={language}
+              onChange={(event) =>
+                setLanguage(event.target.value as Language)
+              }
+            >
+              <option value="en">
+                {locale==='en'?"English":"انجليزية"}
+              </option>
+
+              <option value="ar">
+                {locale==='en'?"Arabic":"العربية"}
+              </option>
+            </select>
+          </div>
+
+          <div className="min-w-0">
+            <FieldLabel
               htmlFor="project-supervisor"
               icon={<UserRound size={20} />}
             >
@@ -491,7 +530,29 @@ export function ProjectForm({ project, locale = "en" }: Props) {
               placeholder={t(locale, "supervisorName")}
             />
 
-            <FieldHint>{t(locale, "supervisorNameHint")}</FieldHint>
+          </div>
+
+          <div className="min-w-0">
+            <FieldLabel
+              htmlFor="project-students"
+              icon={<UserRound size={20} />}
+            >
+              {t(locale, "studentsNames")}
+            </FieldLabel>
+
+            <input
+              id="project-students"
+              className={inputClass}
+              type="text"
+              name="studentsPresented"
+              maxLength={160}
+              value={studentsPresented}
+              onChange={(event) =>
+                setStudentsPresented(event.target.value)
+              }
+              placeholder={t(locale, "studentsNames")}
+            />
+
           </div>
 
           <div className="min-w-0">

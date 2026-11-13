@@ -7,6 +7,9 @@ export async function GET(_request: Request, { params }: { params: Promise<{ pro
   const { projectId, imageId } = await params;
   try {
     const image = await projectService.getImage(user, projectId, imageId);
+    if("error" in image)
+      return new Response("UnExpected Error",{status:400});
+    
     return new Response(new Uint8Array(image.data), {
       headers: {
         "Content-Type": image.mimeType,

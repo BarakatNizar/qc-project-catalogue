@@ -23,6 +23,7 @@ const dictionary = {
         homeCuratedBriefs: "Curated academic briefs",
         homeAiInspiration: "Context-aware AI inspiration",
 
+
         // Preview Card
         previewEyebrow: "Project brief preview",
         previewSubtitle: "Inside the catalogue",
@@ -74,7 +75,7 @@ const dictionary = {
         resetFilters: "Reset filters",
         noMatchingProjects: "No matching projects",
         noMatchingProjectsDesc: "Try a broader search or remove one of the filters. Only projects made visible by Supervisors appear here.",
-
+        projectLanguage:"Project Language",
         // Supervisor Management Stats & Actions
         createProject: "Create project",
         matchingProjects: "Matching projects",
@@ -164,7 +165,7 @@ const dictionary = {
         projectTitleHint: "Use a clear, specific title that describes the project.",
         preGraduationSemester: "Pre-graduation / semester",
         supervisorName: "Supervisor name",
-        supervisorNameHint: "Academic metadata; it does not need to be a user account.",
+        studentsNames: "Students names",
         presentationYearTerm: "Presentation year / term",
         presentationYearHint: "Format: 20yy-x, where x is 1–3.",
         shortSummary: "Short summary",
@@ -1208,6 +1209,7 @@ aiSuggestionValidationNotice: "AI output is validated before storage. Generation
         resetFilters: "إعادة ضبط المرشحات",
         noMatchingProjects: "لا توجد مشاريع مطابقة",
         noMatchingProjectsDesc: "جرب بحثاً أوسع أو أزل أحد المرشحات. تظهر هنا فقط المشاريع التي جعلها المشرفون مرئية.",
+        projectLanguage:"لغة المشروع",
 
         // Supervisor Management Stats & Actions
         createProject: "إنشاء مشروع",
@@ -1298,7 +1300,7 @@ aiSuggestionValidationNotice: "AI output is validated before storage. Generation
         projectTitleHint: "استخدم عنواناً واضحاً وممحصاً يصف المشروع.",
         preGraduationSemester: "الفصلي / الفصل الدراسي",
         supervisorName: "اسم المشرف",
-        supervisorNameHint: "بيانات وصفية أكاديمية؛ لا يلزم أن تكون حساب مستخدم.",
+        studentsNames: "اسماء الطلاب",
         presentationYearTerm: "سنة / فصل العرض",
         presentationYearHint: "التنسيق: 20yy-x، حيث x هو رقم الفصل 1–3.",
         shortSummary: "ملخص قصير",

@@ -26,7 +26,7 @@ export default async function AdminAiPage() {
   const actor = await requireRole("ADMIN");
   const settings = await aiService.getSettings(actor);
   const locale = await getCurrentApplicationLanguage();
-  const enabled = settings.enabled;
+  const enabled = ("error" in settings) ? false : settings.enabled;
 
   return (
     <div className="min-w-0 space-y-8 sm:space-y-10">
