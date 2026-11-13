@@ -1,16 +1,22 @@
 import { z } from "zod";
 
 const baseUrlSchema = z
-  .string()
+  .string("Base URL is required.")
+
   .trim()
   .min(1, "Base URL is required.")
-  .max(500)
+  .max(500, "Base URL must not exceed 500 characters.")
   .url("Enter a valid provider base URL.")
   .refine((value) => {
     try {
       const url = new URL(value);
-      return (url.protocol === "https:" || url.protocol === "http:") &&
-        !url.username && !url.password && !url.search && !url.hash;
+      return (
+        (url.protocol === "https:" || url.protocol === "http:") &&
+        !url.username &&
+        !url.password &&
+        !url.search &&
+        !url.hash
+      );
     } catch {
       return false;
     }
@@ -18,17 +24,34 @@ const baseUrlSchema = z
 
 export const aiProviderConfigSaveSchema = z
   .object({
-    id: z.string().uuid().optional(),
-    name: z.string().trim().min(1).max(80),
-    provider: z.enum(["OPENROUTER", "LOCAL"]),
+    id: z.uuid("Invalid provider ID format.").optional(),
+    name: z
+      .string("Provider name is required.")
+
+      .trim()
+      .min(1, "Provider name is required.")
+      .max(80, "Provider name must not exceed 80 characters."),
+    provider: z.enum(["OPENROUTER", "LOCAL"], "Select a valid provider type."),
     baseUrl: baseUrlSchema,
-    // Empty means preserve the existing key on update; create without a key is allowed only for LOCAL.
-    apiKey: z.string().max(2000).optional().default(""),
+    apiKey: z.string().max(2000, "API key must not exceed 2000 characters.").optional().default(""),
     clearApiKey: z.boolean().optional().default(false),
-    model: z.string().trim().min(1).max(180),
-    timeoutMs: z.coerce.number().int().min(1000).max(1800000),
+    model: z
+      .string("Model identifier is required.")
+
+      .trim()
+      .min(1, "Model identifier is required.")
+      .max(180, "Model identifier must not exceed 180 characters."),
+    timeoutMs: z.coerce
+      .number("Timeout must be a valid number.")
+      .int("Timeout must be an integer.")
+      .min(1000, "Timeout must be at least 1,000 ms (1 second).")
+      .max(1800000, "Timeout must not exceed 1,800,000 ms (30 minutes)."),
     enabled: z.boolean().default(true),
-    sortOrder: z.coerce.number().int().min(0).max(3),
+    sortOrder: z.coerce
+      .number("Sort order must be a valid number.")
+      .int("Sort order must be an integer.")
+      .min(0, "Sort order cannot be negative.")
+      .max(3, "Sort order cannot exceed 3."),
   })
   .superRefine((value, context) => {
     if (value.provider === "OPENROUTER") {
@@ -55,9 +78,16 @@ export const aiProviderConfigSaveSchema = z
     }
   });
 
-export const aiProviderIdSchema = z.object({ id: z.string().uuid() });
-export const aiProviderEnabledSchema = z.object({ id: z.string().uuid(), enabled: z.boolean() });
-export const aiServiceEnabledSchema = z.object({ enabled: z.boolean() });
+export const aiProviderIdSchema = z.object({ id: z.uuid("Invalid provider ID format.") });
+export const aiProviderEnabledSchema = z.object({
+  id: z.uuid("Invalid provider ID format."),
+  enabled: z.boolean("Enabled status is required."),
+
+});
+export const aiServiceEnabledSchema = z.object({
+  enabled: z.boolean("Service enabled status is required."),
+
+});
 
 export type AiProviderConfigSaveInput = z.input<typeof aiProviderConfigSaveSchema>;
 export type AiProviderConfigSave = z.output<typeof aiProviderConfigSaveSchema>;

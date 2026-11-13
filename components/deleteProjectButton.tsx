@@ -39,7 +39,7 @@ const DeleteProjectButton = ({ projectId }: Props) => {
             title="Permanently delete this project and all its features, images, AI responses, and suggestions?"
 style='danger'
 triggerChildren={
-    <div className="rounded-xl px-3.5 py-1.5 text-xs font-semibold text-destructive hover:bg-destructive/10 transition-colors" >
+    <div className="rounded-md px-3.5 py-1.5 text-xs font-semibold text-destructive hover:bg-destructive/10 transition-colors" >
         Delete project
 
     </div>

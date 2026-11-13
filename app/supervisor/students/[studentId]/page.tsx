@@ -1,8 +1,6 @@
-
 "use client";
 
 import { useState, useEffect, use } from "react";
-import type { FormEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -125,6 +123,7 @@ export default function StudentDetailsPage({
   const [student, setStudent] = useState<UserDto | null>(null);
   const [isResetting, setIsResetting] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [password, setPassword] = useState("");
 
   useEffect(() => {
     const languageCookie = document.cookie
@@ -172,19 +171,16 @@ export default function StudentDetailsPage({
   }, [studentId, locale]);
 
   const handlePasswordReset = async (
-    event: FormEvent<HTMLFormElement>,
+    e?: React.FormEvent<HTMLFormElement>,
   ) => {
-    event.preventDefault();
+    if (e) e.preventDefault();
 
     if (!student || isResetting || isDeleting) return;
-
-    const form = event.currentTarget;
-    const formData = new FormData(form);
 
     const payload: ResetStudentPasswordPayload = {
       studentId: student.id,
       data: {
-        password: String(formData.get("password") ?? ""),
+        password: password,
       },
     };
 
@@ -203,7 +199,7 @@ export default function StudentDetailsPage({
         t(locale, "studentTemporaryPasswordAssigned"),
       );
 
-      form.reset();
+      setPassword("");
     } catch {
       notify.error(
         t(locale, "studentPasswordResetFailed"),
@@ -468,6 +464,8 @@ export default function StudentDetailsPage({
                     autoComplete="new-password"
                     placeholder={t(locale, "studentTemporaryPasswordPlaceholder")}
                     disabled={isResetting || isDeleting}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
                   />
                 </FormField>
 
@@ -475,29 +473,28 @@ export default function StudentDetailsPage({
                   <p className="text-[16px] py-1 leading-5 text-muted-foreground">
                     {t(locale, "studentPasswordResetServerNote")}
                   </p>
-
-                  <ConfirmSubmitButton
-                    type="submit"
-                    disabled={isResetting || isDeleting}
+                  <ConfirmDialog
+                  onCertain={()=>handlePasswordReset()}
+                  style="warn"
+                  title={t(locale, "confirmStudentPasswordReset")}
+                  triggerChildren={<div 
                     className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-lg py-1 font-semibold text-primary-foreground shadow-sm transition-colors hover:bg-primary/90 disabled:pointer-events-none disabled:opacity-60 sm:w-auto"
-                    confirmMessage={t(locale, "confirmStudentPasswordReset")}
-                  >
-                    {isResetting ? (
-                      <>
-                        <Loader2
-                          size={16}
-                          className="animate-spin"
-                          aria-hidden="true"
-                        />
-                        {t(locale, "studentPasswordResetting")}
-                      </>
-                    ) : (
-                      <>
-                        <KeyRound size={16} aria-hidden="true" />
-                        {t(locale, "studentResetPasswordButton")}
-                      </>
-                    )}
-                  </ConfirmSubmitButton>
+                  >{isResetting ? (
+                    <>
+                      <Loader2
+                        size={16}
+                        className="animate-spin"
+                        aria-hidden="true"
+                      />
+                      {t(locale, "studentPasswordResetting")}
+                    </>
+                  ) : (
+                    <>
+                      <KeyRound size={16} aria-hidden="true" />
+                      {t(locale, "studentResetPasswordButton")}
+                    </>
+                  )}</div>}
+                  />
                 </div>
               </form>
             </div>

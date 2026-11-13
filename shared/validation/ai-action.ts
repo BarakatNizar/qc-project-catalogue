@@ -10,8 +10,8 @@ const supportedMimeTypes = new Set([
   "",
 ]);
 
-const projectIdSchema = z.uuid();
-const suggestionIdSchema = z.uuid();
+const projectIdSchema = z.uuid("Invalid project ID format.");
+const suggestionIdSchema = z.uuid("Invalid suggestion ID format.");
 
 export const requestAiSuggestionsActionSchema = z.object({
   projectId: projectIdSchema,
@@ -29,7 +29,7 @@ export type DeleteAiSuggestionActionPayload = z.infer<
 >;
 
 export const setAiEnabledActionSchema = z.object({
-  enabled: z.boolean(),
+  enabled: z.boolean("AI enabled status is required.")
 });
 export type SetAiEnabledActionPayload = z.infer<
   typeof setAiEnabledActionSchema
@@ -41,16 +41,21 @@ export type SetAiEnabledActionPayload = z.infer<
  * FormData. ArrayBuffer is serializable through React Server Functions.
  */
 export const extractProjectFromFileActionSchema = z.object({
-  fileName: z.string().trim().min(1).max(255),
-  mimeType: z.string().max(120).refine((value) => supportedMimeTypes.has(value), "Unsupported file MIME type."),
-  data: z.instanceof(ArrayBuffer).refine((value) => value.byteLength > 0, "The uploaded file is empty.").refine(
-    (value) => value.byteLength <= AI_DOCUMENT_MAX_BYTES,
-    "The uploaded file exceeds the 10 MB limit.",
-  ),
+  fileName: z
+    .string("File name is required.").trim()
+    .min(1, "File name cannot be empty.")
+    .max(255, "File name must not exceed 255 characters."),
+  mimeType: z
+    .string("MIME type is required.").max(120, "MIME type must not exceed 120 characters.")
+    .refine((value) => supportedMimeTypes.has(value), "Unsupported file MIME type."),
+  data: z
+    .instanceof(ArrayBuffer, { message: "File data must be a valid ArrayBuffer." })
+    .refine((value) => value.byteLength > 0, "The uploaded file is empty.")
+    .refine(
+      (value) => value.byteLength <= AI_DOCUMENT_MAX_BYTES,
+      "The uploaded file exceeds the 10 MB limit."
+    ),
 });
 export type ExtractProjectFromFileActionPayload = z.infer<
   typeof extractProjectFromFileActionSchema
 >;
-
-
-

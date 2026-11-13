@@ -1,10 +1,10 @@
-//shared/validation/user.ts
 import { z } from "zod";
 
 export type ValidationResult = { ok: true } | { ok: false; reason: string };
 
-const userIdSchema= z.uuid("Invalid User Id");
-export function checkUserId_Schema(id:string): ValidationResult {
+const userIdSchema = z.uuid("Invalid User ID format.");
+
+export function checkUserId_Schema(id: string): ValidationResult {
   const parsed = userIdSchema.safeParse(id);
   if (!parsed.success) {
     return {
@@ -20,15 +20,21 @@ const optionalEmail = z
   .optional()
   .transform((value) => value || undefined);
 
-const loginIdSchema= z.string().trim().min(9).max(120);
-const passwordSchema= z.string("Password must be between 9 ~ 256 characters").min(9).max(256);
+const loginIdSchema = z
+  .string("Login ID is required.").trim()
+  .min(9, "Login ID must be at least 9 characters.")
+  .max(120, "Login ID must not exceed 120 characters.");
+
+const passwordSchema = z
+  .string("Password is required.").min(9, "Password must be at least 9 characters.")
+  .max(256, "Password must not exceed 256 characters.");
+
 // ==========================================
 // Login
 // ==========================================
 export const loginSchema = z.object({
   loginId: loginIdSchema,
-  password:
-  passwordSchema,
+  password: passwordSchema,
 });
 export type LoginPayload = z.infer<typeof loginSchema>;
 
@@ -47,10 +53,17 @@ export function checkLogin_Schema(payload: LoginPayload): ValidationResult {
 // Create Supervisor
 // ==========================================
 export const createSupervisorSchema = z.object({
-  loginId: z.string().trim().min(9).max(80).regex(/^\d+$/, { message: 'Login ID must contain numbers only' }),
-  name: z.string("name must be 2 to 100 characters only").trim().min(2).max(160),
+  loginId: z
+    .string("Login ID is required.").trim()
+    .min(9, "Login ID must be at least 9 characters.")
+    .max(80, "Login ID must not exceed 80 characters.")
+    .regex(/^\d+$/, { message: "Login ID must contain numbers only." }),
+  name: z
+    .string("Supervisor name is required.").trim()
+    .min(2, "Name must be between 2 and 160 characters.")
+    .max(160, "Name must be between 2 and 160 characters."),
   email: optionalEmail,
-  password:passwordSchema,
+  password: passwordSchema,
 });
 export type CreateSupervisorPayload = z.infer<typeof createSupervisorSchema>;
 
@@ -69,9 +82,12 @@ export function checkSupervisor_Create_Schema(payload: CreateSupervisorPayload):
 // Update Supervisor
 // ==========================================
 export const updateSupervisorSchema = z.object({
-  supervisorId: z.uuid("Invalid supervisor ID format"),
+  supervisorId: z.uuid("Invalid supervisor ID format."),
   data: z.object({
-    name: z.string().trim().min(2).max(160),
+    name: z
+      .string("Supervisor name is required.").trim()
+      .min(2, "Name must be between 2 and 160 characters.")
+      .max(160, "Name must be between 2 and 160 characters."),
     email: optionalEmail,
   }),
 });
@@ -93,7 +109,7 @@ export function checkSupervisor_Update_Schema(payload: UpdateSupervisorPayload):
 // Reset Supervisor Password
 // ==========================================
 export const resetSupervisorPasswordSchema = z.object({
-  supervisorId: z.uuid("Invalid supervisor ID format"),
+  supervisorId: z.uuid("Invalid supervisor ID format."),
   data: z.object({
     password: passwordSchema,
   }),
@@ -116,8 +132,15 @@ export function checkSupervisorPassword_Reset_Schema(payload: ResetSupervisorPas
 // Create Student
 // ==========================================
 export const createStudentSchema = z.object({
-  collegeId: z.string('College ID must contain numbers only and between 9-16 digits.').trim().min(9).max(16).regex(/^\d+$/ ),
-  name: z.string("Student Name must be between 2-35 chars").trim().min(2).max(35),
+  collegeId: z
+    .string("College ID is required.").trim()
+    .min(9, "College ID must contain numbers only and between 9-16 digits.")
+    .max(16, "College ID must contain numbers only and between 9-16 digits.")
+    .regex(/^\d+$/, { message: "College ID must contain numbers only." }),
+  name: z
+    .string("Student name is required.").trim()
+    .min(2, "Student Name must be between 2-35 chars.")
+    .max(35, "Student Name must be between 2-35 chars."),
   email: optionalEmail,
 });
 export type CreateStudentPayload = z.infer<typeof createStudentSchema>;
@@ -133,18 +156,18 @@ export function checkStudent_Create_Schema(payload: CreateStudentPayload): Valid
   return { ok: true };
 }
 
-
 // ==========================================
 // Reset Student Password
 // ==========================================
 export const resetStudentPasswordSchema = z.object({
-  studentId: z.uuid("Invalid student ID format"),
+  studentId: z.uuid("Invalid student ID format."),
   data: z.object({
     password: passwordSchema,
   }),
 });
 export type ResetStudentPasswordPayload = z.infer<typeof resetStudentPasswordSchema>;
 export type ResetStudentPasswordData = ResetStudentPasswordPayload["data"];
+
 export function checkStudentPassword_Reset_Schema(payload: ResetStudentPasswordPayload): ValidationResult {
   const parsed = resetStudentPasswordSchema.safeParse(payload);
   if (!parsed.success) {
@@ -156,12 +179,16 @@ export function checkStudentPassword_Reset_Schema(payload: ResetStudentPasswordP
   return { ok: true };
 }
 
-
 // ==========================================
 // Update Profile
 // ==========================================
 export const updateProfileSchema = z.object({
-  name: z.string().trim().min(2).max(160).optional(),
+  name: z
+    .string()
+    .trim()
+    .min(2, "Name must be between 2 and 160 characters.")
+    .max(160, "Name must be between 2 and 160 characters.")
+    .optional(),
   email: optionalEmail.nullable(),
 });
 export type UpdateProfilePayload = z.infer<typeof updateProfileSchema>;
@@ -195,6 +222,7 @@ export const changePasswordSchema = z
     message: "Choose a new password different from your current password.",
   });
 export type ChangePasswordPayload = z.infer<typeof changePasswordSchema>;
+
 export function checkPassword_Change_Schema(payload: ChangePasswordPayload): ValidationResult {
   const parsed = changePasswordSchema.safeParse(payload);
   if (!parsed.success) {

@@ -314,7 +314,7 @@ export async function ProjectDetails({
         <Button
           variant="ghost"
           size="sm"
-          className="w-full justify-start gap-2 sm:w-auto"
+          className="w-full justify-start gap-2 sm:w-auto rounded-md"
         >
           <Link
             href={backHref}
@@ -407,7 +407,7 @@ export async function ProjectDetails({
               </div>
 
               {supervisorView && (
-                <Button className="w-full sm:w-auto">
+                <Button className="w-full sm:w-auto rounded-md text-[15px]">
                   <Link href={`/supervisor/projects/${project.id}/edit`}>
                     {t(locale, "editProjectBrief")}
                   </Link>

@@ -10,7 +10,7 @@ import { requireUserForService } from "@/core/auth/session";
 import { AdminTranslationProviderManager } from "@/components/admin-translation-provider-manager";
 import ErrorState from "@/components/ErrorState";
 import { getTranslationConfigurationAction } from "@/Interfaces/actions/admin-translation.actions";
-import { t, type Locale } from "@/shared/i18n/dictionary";
+import { t } from "@/shared/i18n/dictionary";
 import { getCurrentApplicationLanguage } from "@/modules/translation/services/application-language.service";
 
 export default async function AdminTranslationPage() {
@@ -62,14 +62,6 @@ export default async function AdminTranslationPage() {
 
         <div className="relative flex min-w-0 flex-col gap-6 p-5 sm:p-8 lg:flex-row lg:items-end lg:justify-between">
           <div className="min-w-0 space-y-4">
-            {/* <div className="flex flex-wrap items-center gap-2 text-[15px] font-semibold uppercase tracking-wide text-base-content/90">
-              <span>{t(locale, "adminBreadcrumb")}</span>
-              <span aria-hidden="true">/</span>
-              <span className="text-primary">
-                {t(locale, "localizationTranslationBreadcrumb")}
-              </span>
-            </div> */}
-
             <div className="flex items-start gap-3 sm:gap-4">
               <div className="flex size-12 shrink-0 items-center justify-center rounded-2xl border border-primary/20 bg-primary/10 text-primary sm:size-14">
                 <Languages className="size-6 sm:size-7" aria-hidden="true" />
@@ -110,6 +102,7 @@ export default async function AdminTranslationPage() {
       <AdminTranslationProviderManager
         initialProviders={providers.data}
         initialServiceEnabled={enabled}
+        locale={locale}
       />
     </main>
   );

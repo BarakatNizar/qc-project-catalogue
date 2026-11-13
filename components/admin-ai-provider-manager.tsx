@@ -1,7 +1,6 @@
-
 "use client";
 
-import { useMemo, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Activity,
   AlertCircle,
@@ -32,7 +31,7 @@ import {
   setAiServiceEnabledAction,
 } from "@/Interfaces/actions/admin-ai-providers";
 import { Dialog, DialogContent } from "./ui/dialog";
-import { t } from "@/shared/i18n/dictionary";
+import { t, type Locale } from "@/shared/i18n/dictionary";
 import { notify } from "./notificationToaster";
 
 type ProviderType = "OPENROUTER" | "LOCAL";
@@ -85,7 +84,8 @@ function sortProviders(providers: ProviderItem[]): ProviderItem[] {
 function getErrorMessage(error: unknown, locale: Locale): string {
   if (error instanceof Error && error.message.trim()) {
     return error.message;
-  }
+  }else if (error instanceof String)
+    return error as string;
 
   return t(locale, "unexpectedErrorTryAgain");
 }
@@ -119,6 +119,14 @@ export function AdminAiProviderManager({
   const [pending, setPending] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [isError, setIsError] = useState(false);
+
+  useEffect(() => {
+    setProviders(sortProviders(initialProviders));
+  }, [initialProviders]);
+
+  useEffect(() => {
+    setAiEnabled(initialAiEnabled);
+  }, [initialAiEnabled]);
 
   const canCreate = providers.length < 4;
 
@@ -162,8 +170,7 @@ export function AdminAiProviderManager({
     setDraft((current) => (current ? { ...current, [key]: value } : current));
   }
 
-  async function saveProvider(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
+  async function saveProvider() {
     if (!draft || pending) return;
 
     setPending(true);
@@ -182,7 +189,7 @@ export function AdminAiProviderManager({
       setProviders(sortProviders(result.data as ProviderItem[]));
       setDraft(null);
       setIsError(false);
-      notify.success(t(locale, "providerConfigurationSaved"))
+      notify.success(t(locale, "providerConfigurationSaved"));
       setMessage(t(locale, "providerConfigurationSaved"));
     } catch (error) {
       showError(error);
@@ -204,7 +211,7 @@ export function AdminAiProviderManager({
       });
 
       if ("error" in result) {
-        notify.error(t(locale,'genericErrorTitle'), result.error)
+        notify.error(t(locale, "genericErrorTitle"), result.error);
         setIsError(true);
         setMessage(result.error);
         return;
@@ -212,11 +219,13 @@ export function AdminAiProviderManager({
 
       setProviders(sortProviders(result.data as ProviderItem[]));
       setIsError(false);
-      notify.success(        `${provider.name} ${
-        provider.enabled
-          ? t(locale, "aiServiceDisabledBadge").toLowerCase()
-          : t(locale, "aiServiceEnabledBadge").toLowerCase()
-      }.`,)
+      notify.success(
+        `${provider.name} ${
+          provider.enabled
+            ? t(locale, "aiServiceDisabledBadge").toLowerCase()
+            : t(locale, "aiServiceEnabledBadge").toLowerCase()
+        }.`,
+      );
       setMessage(
         `${provider.name} ${
           provider.enabled
@@ -263,6 +272,7 @@ export function AdminAiProviderManager({
 
       setIsError(false);
       setMessage(t(locale, "providerDeletedMessage"));
+      notify.success(t(locale, "providerDeletedMessage"));
     } catch (error) {
       showError(error);
     } finally {
@@ -292,11 +302,13 @@ export function AdminAiProviderManager({
 
       setAiEnabled(result.data.enabled);
       setIsError(false);
-      notify.success(        `${t(locale, "aiServiceHeading")} ${
-        nextEnabled
-          ? t(locale, "aiServiceEnabledBadge").toLowerCase()
-          : t(locale, "aiServiceDisabledBadge").toLowerCase()
-      }.`)
+      notify.success(
+        `${t(locale, "aiServiceHeading")} ${
+          nextEnabled
+            ? t(locale, "aiServiceEnabledBadge").toLowerCase()
+            : t(locale, "aiServiceDisabledBadge").toLowerCase()
+        }.`,
+      );
       setMessage(
         `${t(locale, "aiServiceHeading")} ${
           nextEnabled
@@ -773,11 +785,9 @@ export function AdminAiProviderManager({
               </div>
 
               <div className="p-3 sm:p-4 lg:p-6">
-                <form className="space-y-7 bg-secondary/30 p-4 rounded-xl border border-primary/50 shadow-lg shadow-secondary" onSubmit={saveProvider}>
+                <form className="space-y-7 bg-secondary/30 p-4 rounded-xl border border-primary/50 shadow-lg shadow-secondary">
                   <fieldset disabled={pending} className="min-w-0 space-y-7">
-                    <legend className="sr-only">
-                      {/* {t(locale, "providerConfigurationLegend")} */}
-                    </legend>
+                    <legend className="sr-only" />
 
                     <div className="space-y-4">
                       <div>
@@ -797,7 +807,7 @@ export function AdminAiProviderManager({
                           </span>
 
                           <input
-                          dir="ltr"
+                            dir="ltr"
                             className="input input-bordered border text-[15px] mt-1 w-full"
                             required
                             maxLength={80}
@@ -821,19 +831,26 @@ export function AdminAiProviderManager({
                           <select
                             className="select select-bordered border text-[15px] mt-1 w-full"
                             value={draft.provider}
+                            disabled={Boolean(draft.id)}
                             onChange={(event) => {
                               const provider = event.target.value as ProviderType;
                               updateDraft("provider", provider);
-
                               if (
-                                provider === "OPENROUTER" &&
-                                draft.baseUrl.startsWith("http://")
-                              ) {
+                                provider === "OPENROUTER") {
                                 updateDraft(
                                   "baseUrl",
                                   "https://openrouter.ai/api/v1",
                                 );
+                                updateDraft('model', 'openrouter/free')
+                              }else if (
+                                provider === "LOCAL") {
+                                updateDraft(
+                                  "baseUrl",
+                                  "http://127.0.0.1:1234/v1",
+                                );
+                                updateDraft('model',"")
                               }
+                              
                             }}
                           >
                             <option value="LOCAL">
@@ -891,7 +908,7 @@ export function AdminAiProviderManager({
                           </span>
 
                           <input
-                          dir="ltr"
+                            dir="ltr"
                             className="input input-bordered border text-[15px] mt-1 w-full"
                             type="url"
                             required
@@ -918,7 +935,7 @@ export function AdminAiProviderManager({
                           </span>
 
                           <input
-                          dir="ltr"
+                            dir="ltr"
                             className="input input-bordered border text-[15px] mt-1 w-full"
                             required
                             maxLength={180}
@@ -940,12 +957,12 @@ export function AdminAiProviderManager({
                           </span>
 
                           <input
-                          dir="ltr"
+                            dir="ltr"
                             className="input input-bordered border text-[15px] mt-1 w-full"
                             type="number"
                             min={1000}
                             max={1800000}
-                            step={1000}
+                            step={5000}
                             required
                             value={draft.timeoutMs}
                             onChange={(event) =>
@@ -964,36 +981,56 @@ export function AdminAiProviderManager({
                         <label className="form-control min-w-0 text-lg gap-1 space-y-1 sm:col-span-2 xl:col-span-1">
                           <span className="label-text font-semibold">
                             {t(locale, "apiKeyLabel")}{" "}
-                            {draft.provider==='OPENROUTER'&&"*"}
-
+                            {draft.provider === "OPENROUTER" && "*"}
                             {draft.id
                               ? t(locale, "optionalUpdateText")
                               : draft.provider === "OPENROUTER"
                                 ? t(locale, "requiredText")
                                 : t(locale, "optionalForLocalText")}
-
                           </span>
 
-                          <input
-                          dir="ltr"
-                            className="input input-bordered border text-[15px] mt-1 w-full"
-                            type="password"
-                            autoComplete="new-password"
-                            maxLength={2000}
-                            required={!(draft.id) && draft.provider==='OPENROUTER'}
-                            value={draft.apiKey}
-                            onChange={(event) =>
-                              updateDraft("apiKey", event.target.value)
-                            }
-                            placeholder={
-                              draft.id &&
-                              providers.find(
-                                (provider) => provider.id === draft.id,
-                              )?.hasApiKey
-                                ? t(locale, "savedKeyIsHiddenPlaceholder")
-                                : t(locale, "enterApiKeyPlaceholder")
-                            }
-                          />
+                          <div className="relative flex items-center">
+                            <input
+                              dir="ltr"
+                              className="input input-bordered border text-[15px] mt-1 w-full pr-20"
+                              type="password"
+                              autoComplete="new-password"
+                              maxLength={2000}
+                              required={
+                                !draft.id && draft.provider === "OPENROUTER"
+                              }
+                              value={draft.apiKey}
+                              onChange={(event) =>
+                                updateDraft("apiKey", event.target.value)
+                              }
+                              placeholder={
+                                draft.id &&
+                                providers.find(
+                                  (provider) => provider.id === draft.id,
+                                )?.hasApiKey
+                                  ? t(locale, "savedKeyIsHiddenPlaceholder")
+                                  : t(locale, "enterApiKeyPlaceholder")
+                              }
+                            />
+                            <button
+                              type="button"
+                              className="absolute right-2 top-[calc(50%+2px)] -translate-y-1/2 btn btn-xs btn-outline"
+                              onClick={async () => {
+                                try {
+                                  const text =
+                                    await navigator.clipboard.readText();
+                                  if (text) {
+                                    updateDraft("apiKey", text);
+                                    notify.success("Pasted from clipboard");
+                                  }
+                                } catch {
+                                  notify.error("Failed to read clipboard");
+                                }
+                              }}
+                            >
+                              Paste
+                            </button>
+                          </div>
 
                           <FieldHint>
                             {draft.id
@@ -1079,7 +1116,7 @@ export function AdminAiProviderManager({
                     </button>
 
                     <button
-                      type="submit"
+                    onClick={()=>saveProvider()}
                       className="btn btn-primary w-full sm:w-auto"
                       disabled={pending}
                     >

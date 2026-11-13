@@ -38,7 +38,7 @@ const ChangeProjectVisibility = ({ projectId, currentVisibility }: Props) => {
 
     return (
         <div >
-            <Button variant="outline" size="sm"  className="rounded-xl border-border/80 font-semibold" onClick={()=>handleToggleVisibility()}>
+            <Button variant="outline" size="sm"  className="rounded border-border/80 font-semibold" onClick={()=>handleToggleVisibility()}>
                 {currentVisibility === "VISIBLE" ? "Hide from students" : "Show to students"}
             </Button>
         </div>
