@@ -6,6 +6,7 @@ import {
   Check,
   ChevronLeft,
   ChevronRight,
+  Download,
   Filter,
   FolderKanban,
   Loader2,
@@ -90,7 +91,7 @@ function LoadingSkeleton({ locale }: { locale: Locale }) {
   );
 }
 
-export default function ProjectCatalogPage({locale, isSupervisor}:{locale:Locale, isSupervisor?:boolean}) {
+export default function ProjectCatalogPage({ locale, isSupervisor }: { locale: Locale, isSupervisor?: boolean }) {
 
   const [initialLoading, setInitialLoading] = useState(true);
   const [initialError, setInitialError] = useState<string | null>(null);
@@ -241,24 +242,24 @@ export default function ProjectCatalogPage({locale, isSupervisor}:{locale:Locale
   const appliedFilterLabels = [
     appliedFilters.query
       ? {
-          label: `${t(locale, "searchFilterPrefix")}: ${appliedFilters.query}`,
-          key: "query",
-        }
+        label: `${t(locale, "searchFilterPrefix")}: ${appliedFilters.query}`,
+        key: "query",
+      }
       : null,
     appliedFilters.supervisorName
       ? {
-          label: `${t(locale, "supervisorFilterPrefix")}: ${appliedFilters.supervisorName}`,
-          key: "supervisor",
-        }
+        label: `${t(locale, "supervisorFilterPrefix")}: ${appliedFilters.supervisorName}`,
+        key: "supervisor",
+      }
       : null,
     appliedFilters.projectType
       ? {
-          label:
-            appliedFilters.projectType === "GRADUATION"
-              ? t(locale, "graduationProjectType")
-              : t(locale, "preGraduationProjectType"),
-          key: "type",
-        }
+        label:
+          appliedFilters.projectType === "GRADUATION"
+            ? t(locale, "graduationProjectType")
+            : t(locale, "preGraduationProjectType"),
+        key: "type",
+      }
       : null,
   ].filter((item) => item !== null);
 
@@ -295,22 +296,40 @@ export default function ProjectCatalogPage({locale, isSupervisor}:{locale:Locale
             </p>
           </div>
 
-          {isSupervisor? <Link
+          {isSupervisor ? <Link
             href="/supervisor/projects/new"
             className="inline-flex min-h-11 w-full shrink-0 items-center justify-center gap-2 rounded-xl bg-primary px-5 py-3 text-lg font-semibold text-primary-foreground shadow-sm transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 sm:w-auto"
           >
             <Plus size={17} />
             {t(locale, "createProjectButton")}
-          </Link>: 
-          <Badge
-          variant="outline"
-          className="rounded-full border-primary/30 bg-primary/10 px-4 py-1.5 font-mono text-[16px] font-bold text-primary backdrop-blur-md"
-        >
-          {projects.length}{" "}
-          {projects.length === 1
-            ? t(locale, "projectResultSingular")
-            : t(locale, "projectResultPlural")}
-        </Badge>
+          </Link> :
+            <Badge
+              variant="outline"
+              className="rounded-full border-primary/30 bg-primary/10 px-4 py-1.5 font-mono text-[16px] font-bold text-primary backdrop-blur-md"
+            >
+              {projects.length}{" "}
+              {projects.length === 1
+                ? t(locale, "projectResultSingular")
+                : t(locale, "projectResultPlural")}
+            </Badge>
+          }
+          {isSupervisor &&
+            <Button
+              type="button"
+              variant="outline"
+              className="min-h-11 w-full justify-center gap-2 rounded-xl border-border/70 bg-background/60 px-10"
+            >
+              <a
+                href="/project-dataset-phishaware.pdf"
+                download="project-dataset-phishaware.pdf"
+                className="flex items-center gap-2"
+              >
+                <Download size={16} />
+                <span className="text-[16px]">
+                  download a project pdf to test (Project DataSet)
+                </span>
+              </a>
+            </Button>
           }
         </div>
 
@@ -549,23 +568,23 @@ export default function ProjectCatalogPage({locale, isSupervisor}:{locale:Locale
               {totalCount === 0
                 ? t(locale, "noMatchingProjectsFound")
                 : t(locale, "showingProjectsRange")
-                    .replace("{start}", pageStart.toLocaleString(locale === "ar" ? "ar" : "en"))
-                    .replace("{end}", pageEnd.toLocaleString(locale === "ar" ? "ar" : "en"))
-                    .replace("{total}", totalCount.toLocaleString(locale === "ar" ? "ar" : "en"))}
+                  .replace("{start}", pageStart.toLocaleString(locale === "ar" ? "ar" : "en"))
+                  .replace("{end}", pageEnd.toLocaleString(locale === "ar" ? "ar" : "en"))
+                  .replace("{total}", totalCount.toLocaleString(locale === "ar" ? "ar" : "en"))}
             </p>
           </div>
 
           <p className="shrink-0 text-[16px] text-muted-foreground font-semibold">
             {pagination && pagination.totalPages > 0
               ? t(locale, "pageOfPages")
-                  .replace(
-                    "{current}",
-                    pagination.currentPage.toLocaleString(locale === "ar" ? "ar" : "en"),
-                  )
-                  .replace(
-                    "{total}",
-                    pagination.totalPages.toLocaleString(locale === "ar" ? "ar" : "en"),
-                  )
+                .replace(
+                  "{current}",
+                  pagination.currentPage.toLocaleString(locale === "ar" ? "ar" : "en"),
+                )
+                .replace(
+                  "{total}",
+                  pagination.totalPages.toLocaleString(locale === "ar" ? "ar" : "en"),
+                )
               : t(locale, "catalogueOverviewLabel")}
           </p>
         </div>
@@ -586,14 +605,13 @@ export default function ProjectCatalogPage({locale, isSupervisor}:{locale:Locale
 
         {projects.length > 0 ? (
           <div
-            className={`grid min-w-0 grid-cols-1 gap-4 transition-opacity sm:grid-cols-2 sm:gap-5 xl:grid-cols-3  ${
-              isPending ? "opacity-60" : "opacity-100"
-            }`}
+            className={`grid min-w-0 grid-cols-1 gap-4 transition-opacity sm:grid-cols-2 sm:gap-5 xl:grid-cols-3  ${isPending ? "opacity-60" : "opacity-100"
+              }`}
             aria-busy={isPending}
           >
             {projects.map((project) => (
               <ProjectCard
-              locale={locale}
+                locale={locale}
                 key={project.id}
                 project={project}
                 management={isSupervisor}
