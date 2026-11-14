@@ -153,9 +153,11 @@ export const projectRepository = {
         ...(input.images?.length ? { 
           images: { 
             create: input.images.map((image, sortOrder) => ({ 
-              ...image, 
+              fileName: image.fileName,
+              mimeType: image.mimeType,
+              fileSizeBytes: image.fileSizeBytes,
               data: Buffer.from(image.dataBase64), 
-              sortOrder 
+              sortOrder
             })) 
           } 
         } : {}),
