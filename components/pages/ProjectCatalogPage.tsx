@@ -694,7 +694,8 @@ export default function ProjectCatalogPage({ locale, isSupervisor }: { locale: L
                 type="button"
                 variant="outline"
                 disabled={!pagination.hasNextPage || isPending}
-                onClick={() => handlePageChange(currentPage + 1)}
+                onClick={() => handlePageChange(currentPage + 1
+                )}
                 className="min-h-10 gap-2 rounded-xl px-4"
               >
                 {t(locale, "nextPageButton")}
