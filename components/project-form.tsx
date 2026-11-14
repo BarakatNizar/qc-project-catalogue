@@ -1,11 +1,10 @@
-
 "use client";
 
 import {
   useState,
   useTransition,
+  useMemo,
   type ReactNode,
-  type FormEvent,
 } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -91,7 +90,7 @@ function SectionCard({
           </span>
 
           <div className="min-w-0 space-y-2">
-            <p className=" text-lg lg:text-xl font-black uppercase tracking-wide text-primary">
+            <p className="text-lg lg:text-xl font-black uppercase tracking-wide text-primary">
               {number} / {eyebrow}
             </p>
 
@@ -146,66 +145,188 @@ function FieldHint({ children }: { children: ReactNode }) {
   );
 }
 
+const MAX_IMAGE_BYTES = 4 * 1024 * 1024;
+const MAX_IMAGE_COUNT = 4;
+const ALLOWED_IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "image/avif"]);
+
+function bytesToBase64(bytes: Uint8Array): string {
+  let binary = "";
+  const chunkSize = 0x8000;
+  for (let offset = 0; offset < bytes.length; offset += chunkSize) {
+    binary += String.fromCharCode(...bytes.subarray(offset, Math.min(offset + chunkSize, bytes.length)));
+  }
+  return btoa(binary);
+}
+
+type ImageTypes = "image/jpeg" | "image/png" | "image/webp" | "image/avif";
+type EncodedImagePayload = {
+  fileName: string;
+  mimeType: ImageTypes;
+  fileSizeBytes: number;
+  dataBase64: string;
+};
+
+async function encodeImage(file: File): Promise<EncodedImagePayload> {
+  if (!ALLOWED_IMAGE_TYPES.has(file.type)) {
+    throw new Error("Only JPEG, PNG, WebP, and AVIF images are supported.");
+  }
+  if (file.size > MAX_IMAGE_BYTES) {
+    throw new Error("Each image must be 4 MB or smaller.");
+  }
+  return {
+    fileName: file.name.slice(0, 255),
+    mimeType: file.type as ImageTypes,
+    fileSizeBytes: file.size,
+    dataBase64: bytesToBase64(new Uint8Array(await file.arrayBuffer())),
+  };
+}
+
 export function ProjectForm({ project, locale = "en" }: Props) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
 
   const isEditing = Boolean(project);
 
-  const [title, setTitle] = useState(project?.title ?? "");
-  const [projectType, setProjectType] = useState<ProjectType>(
-    project?.projectType ?? "GRADUATION"
-  );
-  const [projectSupervisorName, setProjectSupervisorName] = useState(
-    project?.projectSupervisorName ?? ""
-  );
-  const [studentsPresented, setStudentsPresented] = useState(
-    project?.studentsPresented ?? ""
-  );
-  const [language, setLanguage] = useState<Language>(
-    project?.language ?? locale
-  );
-  const [summary, setSummary] = useState(project?.summary ?? "");
-  const [description, setDescription] = useState(project?.description ?? "");
-  const [problemStatement, setProblemStatement] = useState(
-    project?.problemStatement ?? ""
-  );
-  const [proposedSolution, setProposedSolution] = useState(
-    project?.proposedSolution ?? ""
-  );
-  const [objectives, setObjectives] = useState(project?.objectives ?? "");
-  const [targetUsers, setTargetUsers] = useState(project?.targetUsers ?? "");
-  const [availableResources, setAvailableResources] = useState(
-    project?.availableResources ?? ""
-  );
-  const [constraints, setConstraints] = useState(project?.constraints ?? "");
-  const [yearPresentation, setYearPresentation] = useState(
-    project?.yearPresentation ?? ""
-  );
+  // Initial values for change detection comparison
+  const initialTitle = project?.title ?? "";
+  const initialProjectType = project?.projectType ?? "GRADUATION";
+  const initialProjectSupervisorName = project?.projectSupervisorName ?? "";
+  const initialStudentsPresented = project?.studentsPresented ?? "";
+  const initialLanguage = project?.language ?? locale;
+  const initialSummary = project?.summary ?? "";
+  const initialDescription = project?.description ?? "";
+  const initialProblemStatement = project?.problemStatement ?? "";
+  const initialProposedSolution = project?.proposedSolution ?? "";
+  const initialObjectives = project?.objectives ?? "";
+  const initialTargetUsers = project?.targetUsers ?? "";
+  const initialAvailableResources = project?.availableResources ?? "";
+  const initialConstraints = project?.constraints ?? "";
+  const initialYearPresentation = project?.yearPresentation ?? "";
 
-  const [inScope, setInScope] = useState(
+  const initialInScope =
     project?.features
-      .filter((feature) => feature.scope === "IN_SCOPE")
+      ?.filter((feature) => feature.scope === "IN_SCOPE")
       .sort((a, b) => a.sortOrder - b.sortOrder)
       .map((feature) => feature.content)
-      .join("\n") ?? ""
-  );
+      .join("\n") ?? "";
 
-  const [outScope, setOutScope] = useState(
+  const initialOutScope =
     project?.features
-      .filter((feature) => feature.scope === "OUT_OF_SCOPE")
+      ?.filter((feature) => feature.scope === "OUT_OF_SCOPE")
       .sort((a, b) => a.sortOrder - b.sortOrder)
       .map((feature) => feature.content)
-      .join("\n") ?? ""
-  );
+      .join("\n") ?? "";
 
-  const [technologies, setTechnologies] = useState(
+  const initialTechnologies =
     project?.technologies
-      .slice()
+      ?.slice()
       .sort((a, b) => a.sortOrder - b.sortOrder)
       .map((technology) => technology.name)
-      .join("\n") ?? ""
+      .join("\n") ?? "";
+
+  // Form States
+  const [title, setTitle] = useState(initialTitle);
+  const [projectType, setProjectType] = useState<ProjectType>(initialProjectType);
+  const [projectSupervisorName, setProjectSupervisorName] = useState(
+    initialProjectSupervisorName
   );
+  const [studentsPresented, setStudentsPresented] = useState(
+    initialStudentsPresented
+  );
+  const [language, setLanguage] = useState<Language>(initialLanguage);
+  const [summary, setSummary] = useState(initialSummary);
+  const [description, setDescription] = useState(initialDescription);
+  const [problemStatement, setProblemStatement] = useState(
+    initialProblemStatement
+  );
+  const [proposedSolution, setProposedSolution] = useState(
+    initialProposedSolution
+  );
+  const [objectives, setObjectives] = useState(initialObjectives);
+  const [targetUsers, setTargetUsers] = useState(initialTargetUsers);
+  const [availableResources, setAvailableResources] = useState(
+    initialAvailableResources
+  );
+  const [constraints, setConstraints] = useState(initialConstraints);
+  const [yearPresentation, setYearPresentation] = useState(
+    initialYearPresentation
+  );
+  const [inScope, setInScope] = useState(initialInScope);
+  const [outScope, setOutScope] = useState(initialOutScope);
+  const [technologies, setTechnologies] = useState(initialTechnologies);
+  const [selectedImages, setSelectedImages] = useState<File[]>([]);
+
+  // Change Detector & Validation
+  const hasChanges = useMemo(() => {
+    if (!isEditing) {
+      return (
+        title.trim().length > 0 &&
+        summary.trim().length > 0 &&
+        description.trim().length > 0 &&
+        problemStatement.trim().length > 0 &&
+        proposedSolution.trim().length > 0 &&
+        objectives.trim().length > 0
+      );
+    }
+
+    return (
+      title !== initialTitle ||
+      projectType !== initialProjectType ||
+      projectSupervisorName !== initialProjectSupervisorName ||
+      studentsPresented !== initialStudentsPresented ||
+      language !== initialLanguage ||
+      summary !== initialSummary ||
+      description !== initialDescription ||
+      problemStatement !== initialProblemStatement ||
+      proposedSolution !== initialProposedSolution ||
+      objectives !== initialObjectives ||
+      targetUsers !== initialTargetUsers ||
+      availableResources !== initialAvailableResources ||
+      constraints !== initialConstraints ||
+      yearPresentation !== initialYearPresentation ||
+      inScope !== initialInScope ||
+      outScope !== initialOutScope ||
+      technologies !== initialTechnologies ||
+      selectedImages.length > 0
+    );
+  }, [
+    isEditing,
+    title,
+    projectType,
+    projectSupervisorName,
+    studentsPresented,
+    language,
+    summary,
+    description,
+    problemStatement,
+    proposedSolution,
+    objectives,
+    targetUsers,
+    availableResources,
+    constraints,
+    yearPresentation,
+    inScope,
+    outScope,
+    technologies,
+    selectedImages,
+    initialTitle,
+    initialProjectType,
+    initialProjectSupervisorName,
+    initialStudentsPresented,
+    initialLanguage,
+    initialSummary,
+    initialDescription,
+    initialProblemStatement,
+    initialProposedSolution,
+    initialObjectives,
+    initialTargetUsers,
+    initialAvailableResources,
+    initialConstraints,
+    initialYearPresentation,
+    initialInScope,
+    initialOutScope,
+    initialTechnologies,
+  ]);
 
   const handleExtractedProject = (extracted: ExtractedProject) => {
     setTitle(extracted.title || "");
@@ -223,7 +344,6 @@ export function ProjectForm({ project, locale = "en" }: Props) {
     setLanguage(extracted.language || locale);
 
     const normalizedType = extracted.projectType?.toLowerCase() || "";
-
     setProjectType(
       normalizedType.includes("pre") ? "PRE_GRADUATION" : "GRADUATION"
     );
@@ -252,10 +372,9 @@ export function ProjectForm({ project, locale = "en" }: Props) {
     );
   };
 
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-
-    const formData = new FormData(event.currentTarget);
+    if (!hasChanges) return;
 
     const inScopeFeatures = inScope
       .split("\n")
@@ -272,53 +391,54 @@ export function ProjectForm({ project, locale = "en" }: Props) {
       .map((item) => item.trim())
       .filter(Boolean);
 
-    const imageFiles = formData.getAll("images");
-
-    const hasImages = imageFiles.some(
-      (file) => file instanceof File && file.size > 0
-    );
-
-    const imagesFormData = hasImages ? new FormData() : undefined;
-
-    if (imagesFormData) {
-      imageFiles.forEach((file) => {
-        if (file instanceof File && file.size > 0) {
-          imagesFormData.append("images", file);
-        }
-      });
-    }
-
     startTransition(async () => {
-      if (isEditing && project) {
-        const payload: UpdateProjectPayload = {
-          projectId: project.id,
-          data: {
-            title,
-            summary,
-            description,
-            problemStatement,
-            proposedSolution,
-            objectives,
-            availableResources,
-            constraints,
-            targetUsers,
-            yearPresentation,
-            projectSupervisorName,
-            projectType,
-            inScopeFeatures,
-            outOfScopeFeatures,
-            technologies: techList,
-          },
-        };
+      try {
+        if (isEditing && project) {
+          // Payload Builder: Include only changed fields
+          const changedData: Partial<UpdateProjectPayload["data"]> = {};
 
-        const result = await updateProjectAction(payload, imagesFormData);
+          if (title !== initialTitle) changedData.title = title;
+          if (summary !== initialSummary) changedData.summary = summary;
+          if (description !== initialDescription) changedData.description = description;
+          if (problemStatement !== initialProblemStatement)
+            changedData.problemStatement = problemStatement;
+          if (proposedSolution !== initialProposedSolution)
+            changedData.proposedSolution = proposedSolution;
+          if (objectives !== initialObjectives) changedData.objectives = objectives;
+          if (availableResources !== initialAvailableResources)
+            changedData.availableResources = availableResources;
+          if (constraints !== initialConstraints) changedData.constraints = constraints;
+          if (targetUsers !== initialTargetUsers) changedData.targetUsers = targetUsers;
+          if (yearPresentation !== initialYearPresentation)
+            changedData.yearPresentation = yearPresentation;
+          if (projectSupervisorName !== initialProjectSupervisorName)
+            changedData.projectSupervisorName = projectSupervisorName;
+          if (projectType !== initialProjectType) changedData.projectType = projectType;
+          if (inScope !== initialInScope) changedData.inScopeFeatures = inScopeFeatures;
+          if (outScope !== initialOutScope)
+            changedData.outOfScopeFeatures = outOfScopeFeatures;
+          if (technologies !== initialTechnologies)
+            changedData.technologies = techList;
 
-        if ("error" in result) {
-          notify.error(
-            t(locale, "failedToUpdateProject"),
-            result.error
-          );
-        } else {
+          if (selectedImages.length > 0) {
+            const encodedImages: EncodedImagePayload[] = [];
+            for (const file of selectedImages) {
+              encodedImages.push(await encodeImage(file));
+            }
+            changedData.images = encodedImages;
+          }
+          const payload: UpdateProjectPayload = {
+            projectId: project.id,
+            data: changedData,
+          };
+
+          const result = await updateProjectAction(payload);
+
+          if ("error" in result) {
+            notify.error(t(locale, "failedToUpdateProject"), result.error);
+            return;
+          }
+
           notify.success(
             t(locale, "projectUpdated"),
             t(locale, "projectChangesSaved")
@@ -326,51 +446,58 @@ export function ProjectForm({ project, locale = "en" }: Props) {
 
           router.push(`/supervisor/projects/${project.id}`);
           router.refresh();
+          return;
         }
 
-        return;
-      }
+        // Creation Mode Payload with Encoded Images
+        const encodedImages: EncodedImagePayload[] = [];
+        if (selectedImages.length > 0) {
+          for (const file of selectedImages) {
+            encodedImages.push(await encodeImage(file));
+          }
+        }
 
-      const payload: CreateProjectPayload = {
-        title,
-        summary,
-        description,
-        language,
-        studentsPresented,
-        problemStatement,
-        proposedSolution,
-        objectives,
-        projectSupervisorName,
-        projectType,
-        inScopeFeatures,
-        outOfScopeFeatures,
-        technologies: techList,
-        availableResources,
-        constraints,
-        targetUsers,
-        yearPresentation,
-      };
+        const payload: CreateProjectPayload = {
+          title,
+          summary,
+          description,
+          language,
+          studentsPresented,
+          problemStatement,
+          proposedSolution,
+          objectives,
+          projectSupervisorName,
+          projectType,
+          inScopeFeatures,
+          outOfScopeFeatures,
+          technologies: techList,
+          availableResources,
+          constraints,
+          targetUsers,
+          yearPresentation,
+          images: encodedImages,
+        };
 
-      const result = await createProjectAction(payload, imagesFormData);
+        const result = await createProjectAction(payload);
 
-      if ("error" in result) {
-        notify.error(
-          t(locale, "failedToCreateProject"),
-          result.error
-        );
-      } else {
-        notify.success(
-          t(locale, "projectCreated"),
-          t(locale, "projectAddedToCatalogue")
-        );
+        if ("error" in result) {
+          notify.error(t(locale, "failedToCreateProject"), result.error);
+        } else {
+          notify.success(
+            t(locale, "projectCreated"),
+            t(locale, "projectAddedToCatalogue")
+          );
 
-        router.push("/supervisor/projects");
-        router.refresh();
+          router.push("/supervisor/projects");
+          router.refresh();
+        }
+      } catch (error: any) {
+        notify.error("Error", error.message || "An unexpected error occurred.");
       }
     });
   };
 
-  const handleDeleteImage = (imageId: string) => {
+  const handleDeleteImage = (imageId: string, image?:any) => {
     if (!project) return;
 
     const payload: DeleteProjectImagePayload = {
@@ -441,7 +568,6 @@ export function ProjectForm({ project, locale = "en" }: Props) {
               id="project-title"
               className={inputClass}
               type="text"
-              name="title"
               required
               minLength={4}
               maxLength={180}
@@ -465,7 +591,6 @@ export function ProjectForm({ project, locale = "en" }: Props) {
             <select
               id="project-type"
               className={inputClass}
-              name="projectType"
               value={projectType}
               onChange={(event) =>
                 setProjectType(event.target.value as ProjectType)
@@ -493,18 +618,17 @@ export function ProjectForm({ project, locale = "en" }: Props) {
             <select
               id="project-language"
               className={inputClass}
-              name="language"
               value={language}
               onChange={(event) =>
                 setLanguage(event.target.value as Language)
               }
             >
               <option value="en">
-                {locale==='en'?"English":"انجليزية"}
+                {locale === "en" ? "English" : "انجليزية"}
               </option>
 
               <option value="ar">
-                {locale==='en'?"Arabic":"العربية"}
+                {locale === "en" ? "Arabic" : "العربية"}
               </option>
             </select>
           </div>
@@ -521,7 +645,6 @@ export function ProjectForm({ project, locale = "en" }: Props) {
               id="project-supervisor"
               className={inputClass}
               type="text"
-              name="projectSupervisorName"
               maxLength={160}
               value={projectSupervisorName}
               onChange={(event) =>
@@ -529,7 +652,6 @@ export function ProjectForm({ project, locale = "en" }: Props) {
               }
               placeholder={t(locale, "supervisorName")}
             />
-
           </div>
 
           <div className="min-w-0">
@@ -544,7 +666,6 @@ export function ProjectForm({ project, locale = "en" }: Props) {
               id="project-students"
               className={inputClass}
               type="text"
-              name="studentsPresented"
               maxLength={160}
               value={studentsPresented}
               onChange={(event) =>
@@ -552,7 +673,6 @@ export function ProjectForm({ project, locale = "en" }: Props) {
               }
               placeholder={t(locale, "studentsNames")}
             />
-
           </div>
 
           <div className="min-w-0">
@@ -567,7 +687,6 @@ export function ProjectForm({ project, locale = "en" }: Props) {
               id="year-presentation"
               className={inputClass}
               type="text"
-              name="yearPresentation"
               maxLength={20}
               value={yearPresentation}
               onChange={(event) =>
@@ -591,7 +710,6 @@ export function ProjectForm({ project, locale = "en" }: Props) {
             <textarea
               id="project-summary"
               className={textareaClass}
-              name="summary"
               required
               minLength={20}
               maxLength={500}
@@ -633,7 +751,6 @@ export function ProjectForm({ project, locale = "en" }: Props) {
             <textarea
               id="project-description"
               className={`${textareaClass} min-h-40`}
-              name="description"
               required
               minLength={30}
               rows={6}
@@ -655,7 +772,6 @@ export function ProjectForm({ project, locale = "en" }: Props) {
             <textarea
               id="problem-statement"
               className={`${textareaClass} min-h-36`}
-              name="problemStatement"
               rows={5}
               required
               value={problemStatement}
@@ -678,7 +794,6 @@ export function ProjectForm({ project, locale = "en" }: Props) {
             <textarea
               id="proposed-solution"
               className={`${textareaClass} min-h-36`}
-              name="proposedSolution"
               rows={5}
               required
               value={proposedSolution}
@@ -701,7 +816,6 @@ export function ProjectForm({ project, locale = "en" }: Props) {
             <textarea
               id="project-objectives"
               className={textareaClass}
-              name="objectives"
               rows={4}
               required
               value={objectives}
@@ -732,7 +846,6 @@ export function ProjectForm({ project, locale = "en" }: Props) {
             <textarea
               id="target-users"
               className={textareaClass}
-              name="targetUsers"
               minLength={20}
               rows={5}
               maxLength={200}
@@ -755,7 +868,6 @@ export function ProjectForm({ project, locale = "en" }: Props) {
             <textarea
               id="resources-details"
               className={textareaClass}
-              name="availableResources"
               rows={5}
               maxLength={300}
               value={availableResources}
@@ -779,7 +891,6 @@ export function ProjectForm({ project, locale = "en" }: Props) {
             <textarea
               id="project-constraints"
               className={textareaClass}
-              name="constraints"
               minLength={20}
               maxLength={1500}
               rows={5}
@@ -817,7 +928,6 @@ export function ProjectForm({ project, locale = "en" }: Props) {
             <textarea
               id="in-scope-features"
               className={`${textareaClass} min-h-44`}
-              name="inScopeFeatures"
               rows={7}
               value={inScope}
               onChange={(event) => setInScope(event.target.value)}
@@ -842,7 +952,6 @@ export function ProjectForm({ project, locale = "en" }: Props) {
             <textarea
               id="out-scope-features"
               className={`${textareaClass} min-h-44`}
-              name="outOfScopeFeatures"
               rows={7}
               value={outScope}
               onChange={(event) => setOutScope(event.target.value)}
@@ -867,7 +976,6 @@ export function ProjectForm({ project, locale = "en" }: Props) {
             <textarea
               id="project-technologies"
               className={textareaClass}
-              name="technologies"
               rows={4}
               value={technologies}
               onChange={(event) => setTechnologies(event.target.value)}
@@ -903,9 +1011,13 @@ export function ProjectForm({ project, locale = "en" }: Props) {
             id="project-images"
             className="mt-4 block w-full min-w-0 cursor-pointer text-lg text-muted-foreground file:mr-3 file:rounded-lg file:border-0 file:bg-primary file:px-3 file:py-2 file:text-lg file:font-semibold file:text-primary-foreground hover:file:bg-primary/90"
             type="file"
-            name="images"
             accept="image/jpeg,image/png,image/webp,image/avif"
             multiple
+            onChange={(e) => {
+              if (e.target.files) {
+                setSelectedImages(Array.from(e.target.files));
+              }
+            }}
           />
         </div>
 
@@ -952,7 +1064,7 @@ export function ProjectForm({ project, locale = "en" }: Props) {
 
                       <button
                         type="button"
-                        onClick={() => handleDeleteImage(image.id)}
+                        onClick={() => handleDeleteImage(image.id, image)}
                         disabled={isPending}
                         className="inline-flex shrink-0 items-center gap-1 rounded-md px-1.5 py-1 text-[15px] font-semibold text-destructive transition-colors hover:bg-destructive/10 disabled:opacity-50"
                       >
@@ -993,7 +1105,7 @@ export function ProjectForm({ project, locale = "en" }: Props) {
 
             <Button
               type="submit"
-              disabled={isPending}
+              disabled={isPending || !hasChanges}
               className="min-w-0 flex-1 gap-2 shadow-sm shadow-primary/20 sm:min-w-40 sm:flex-none"
             >
               {isPending ? (

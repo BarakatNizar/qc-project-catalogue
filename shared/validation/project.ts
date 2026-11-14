@@ -71,6 +71,17 @@ export function checkProject_QuerySearch_Schema(
 // Project Field Validation
 // ==========================================
 
+export const projectImagePayloadSchema = z.object({
+  fileName: z.string().trim().min(1).max(255),
+  mimeType: z.enum(["image/jpeg", "image/png", "image/webp", "image/avif"]),
+  fileSizeBytes: z.number().int().positive().max(4 * 1024 * 1024),
+  dataBase64: z.string().min(4).max(6 * 1024 * 1024).regex(/^[A-Za-z0-9+/]+={0,2}$/, "Invalid image encoding."),
+});
+
+export type ProjectImagesPayload = (z.infer<typeof projectImagePayloadSchema>)[];
+
+
+
 const projectTextSchema = z.string().trim();
 
 const projectFeatureListSchema = z
@@ -163,6 +174,8 @@ export const createProjectSchema = z.object({
   outOfScopeFeatures: projectFeatureListSchema,
 
   technologies: projectTechnologyListSchema,
+  
+  images:z.array(projectImagePayloadSchema).optional(),
 });
 
 export type CreateProjectPayload = z.infer<typeof createProjectSchema>;
@@ -241,6 +254,9 @@ export const updateProjectDataSchema = z.object({
   outOfScopeFeatures: projectFeatureListSchema.nullable().optional(),
 
   technologies: projectTechnologyListSchema.nullable().optional(),
+
+  images:z.array(projectImagePayloadSchema).optional(),
+
 });
 
 export const updateProjectSchema = z.object({

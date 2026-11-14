@@ -16,6 +16,7 @@ import type {
   SetProjectVisibilityPayload,
   DeleteProjectPayload,
   DeleteProjectImagePayload,
+  ProjectImagesPayload,
 } from "@/shared/validation/project";
 
 // ==========================================
@@ -48,72 +49,49 @@ function getActionError(error: unknown): string {
 // Collect Project Images
 // ==========================================
 
-async function collectImages(formData: FormData) {
-  const files = formData
-    .getAll("images")
-    .filter(
-      (value): value is File =>
-        value instanceof File && value.size > 0,
-    );
 
-  if (files.length > MAX_IMAGE_COUNT) {
-    throw new AppError(
-      "VALIDATION",
-      `Upload no more than ${MAX_IMAGE_COUNT} images at a time.`,
-    );
+function matchesImageSignature(data: Buffer, mimeType: string): boolean {
+  if (mimeType === "image/jpeg") return data.length >= 3 && data[0] === 0xff && data[1] === 0xd8 && data[2] === 0xff;
+  if (mimeType === "image/png") return data.length >= 8 && data.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]));
+  if (mimeType === "image/webp") return data.length >= 12 && data.toString("ascii", 0, 4) === "RIFF" && data.toString("ascii", 8, 12) === "WEBP";
+  if (mimeType === "image/avif") {
+    if (data.length < 16 || data.toString("ascii", 4, 8) !== "ftyp") return false;
+    const brandBytes = data.toString("ascii", 8, Math.min(data.length, 128));
+    return brandBytes.includes("avif") || brandBytes.includes("avis");
   }
+  return false;
+}
 
-  let total = 0;
-
-  const images: {
-    data: Uint8Array;
-    mimeType: string;
-    fileName: string;
-    fileSizeBytes: number;
-  }[] = [];
-
-  for (const file of files) {
-    if (!ALLOWED_IMAGE_TYPES.has(file.type)) {
-      throw new AppError(
-        "VALIDATION",
-        "Only JPEG, PNG, WebP, and AVIF images are supported.",
-      );
+function decodeImages(images: ProjectImagesPayload):Image[] {
+  return images.map((image) => {
+    const data = Buffer.from(image.dataBase64, "base64");
+    if (data.toString("base64") !== image.dataBase64 || data.byteLength !== image.fileSizeBytes) {
+      throw new AppError("VALIDATION", "An uploaded image could not be decoded correctly. Please select it again.");
     }
-
-    if (file.size > MAX_IMAGE_BYTES) {
-      throw new AppError(
-        "VALIDATION",
-        "Each image must be 4 MB or smaller.",
-      );
+    if (!matchesImageSignature(data, image.mimeType)) {
+      throw new AppError("VALIDATION", "The selected file content does not match its declared image type.");
     }
-
-    total += file.size;
-
-    if (total > 12 * 1024 * 1024) {
-      throw new AppError(
-        "VALIDATION",
-        "The combined image upload must not exceed 12 MB.",
-      );
-    }
-
-    images.push({
-      data: new Uint8Array(await file.arrayBuffer()),
-      mimeType: file.type,
-      fileName: file.name.slice(0, 255),
-      fileSizeBytes: file.size,
-    });
-  }
-
-  return images;
+    return {
+      dataBase64: new Uint8Array(data) as Uint8Array<ArrayBuffer>,
+      mimeType: image.mimeType,
+      fileName: image.fileName.slice(0, 255),
+      fileSizeBytes: data.byteLength,
+    };
+  });
 }
 
 // ==========================================
 // Create Project
 // ==========================================
+export  type Image= {
+  dataBase64: Uint8Array;
+  mimeType: string;
+  fileName?: string;
+  fileSizeBytes: number;
+};
 
 export async function createProjectAction(
   payload: CreateProjectPayload,
-  formDataImages?: FormData,
 ): Promise<{ ok: true } | { error: string }> {
   const actor = await requireUserForService();
 
@@ -128,9 +106,7 @@ export async function createProjectAction(
   const { user } = actor;
 
   try {
-    const collectedImages = formDataImages
-      ? await collectImages(formDataImages)
-      : [];
+    const collectedImages = payload.images ? decodeImages(payload.images):[];
 
     const result = await projectService.create(
       user,
@@ -157,7 +133,6 @@ export async function createProjectAction(
 
 export async function updateProjectAction(
   payload: UpdateProjectPayload,
-  formDataImages?: FormData,
 ): Promise<{ ok: true } | { error: string }> {
   const actor = await requireUserForService();
 
@@ -173,9 +148,7 @@ export async function updateProjectAction(
   const { projectId, data } = payload;
 
   try {
-    const collectedImages = formDataImages
-      ? await collectImages(formDataImages)
-      : [];
+    const collectedImages = payload.data.images ? decodeImages(payload.data.images):[];
 
     const result = await projectService.update(
       user,
