@@ -317,7 +317,7 @@ export default function ProjectCatalogPage({ locale, isSupervisor }: { locale: L
             <Button
               type="button"
               variant="outline"
-              className="min-h-11 w-full justify-center gap-2 rounded-xl border-border/70 bg-background/60 px-10"
+              className="min-h-11 w-fit justify-center gap-2 rounded-xl border-border/70 bg-background/60 px-10"
             >
               <a
                 href="/project-dataset-phishaware.pdf"
@@ -694,8 +694,7 @@ export default function ProjectCatalogPage({ locale, isSupervisor }: { locale: L
                 type="button"
                 variant="outline"
                 disabled={!pagination.hasNextPage || isPending}
-                onClick={() => handlePageChange(currentPage + 1
-                )}
+                onClick={() => handlePageChange(currentPage + 1)}
                 className="min-h-10 gap-2 rounded-xl px-4"
               >
                 {t(locale, "nextPageButton")}
